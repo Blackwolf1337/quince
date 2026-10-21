@@ -10,8 +10,8 @@
 #include <QTranslator>
 #include <QHash>
 #include <QNetworkCookie>
-#include <QRegularExpression>
 #include <QTextStream>
+#include <QTimer>
 #include <QWebEngineCookieStore>
 #include <QWebEnginePage>
 #include <QWebEngineProfile>
@@ -50,7 +50,28 @@ int main(int argc, char *argv[])
     // closing the window without signing in must not end with exit code 0
     app.setQuitOnLastWindowClosed(false);
 
-    const QStringList args = app.arguments();
+    // test options: --app-id <id> (window class), --screenshot <base> (pictures
+    // of the page), --probe-email <address that does not exist> (is this
+    // browser let past the email step: "Couldn't find" yes, "rejected" no)
+    QStringList args = app.arguments();
+    QString screenshotBase;
+    QString probeEmail;
+    for (int i = 1; i + 1 < args.size();) {
+        if (args.at(i) == u"--probe-email") {
+            probeEmail = args.at(i + 1);
+            args.remove(i, 2);
+            continue;
+        }
+        if (args.at(i) == u"--app-id") {
+            QApplication::setDesktopFileName(args.at(i + 1));
+            args.remove(i, 2);
+        } else if (args.at(i) == u"--screenshot") {
+            screenshotBase = args.at(i + 1);
+            args.remove(i, 2);
+        } else {
+            ++i;
+        }
+    }
     if (args.size() < 2) {
         QTextStream(stderr) << "usage: quince-login <cookies.txt to write>\n";
         return 2;
@@ -59,10 +80,11 @@ int main(int argc, char *argv[])
 
     // no storage name: an off-the-record profile kept in memory only
     auto *profile = new QWebEngineProfile(&app);
-    // Google refuses sign-ins from browsers it does not know; look like Chrome
-    QString agent = profile->httpUserAgent();
-    agent.remove(QRegularExpression(QStringLiteral(" QtWebEngine/[^ ]+")));
-    profile->setHttpUserAgent(agent);
+    // The user agent stays QtWebEngine's own: Google rejects a browser that
+    // claims to be Chrome or Firefox without being it ("This browser or app
+    // may not be secure"), an honest embedded Chromium may sign in (tested
+    // 2026-10-21 with --probe-email).
+    profile->setHttpAcceptLanguage(QLocale::system().uiLanguages().join(u','));
 
     QHash<QString, QNetworkCookie> cookies;
     QWebEngineCookieStore *store = profile->cookieStore();
@@ -111,6 +133,51 @@ int main(int argc, char *argv[])
         if (reachedMusic)
             finish();
     });
+
+    QObject::connect(page, &QWebEnginePage::urlChanged, &app, [](const QUrl &url) {
+        QTextStream(stderr) << "quince-login: at " << url.host() << url.path() << "\n";
+    });
+    QObject::connect(page, &QWebEnginePage::loadFinished, &app, [](bool ok) {
+        QTextStream(stderr) << "quince-login: page loaded " << (ok ? "ok" : "with errors") << "\n";
+    });
+    // test runs: submit an address that does not exist, to see whether Google
+    // lets this browser past the email step at all
+    QObject::connect(page, &QWebEnginePage::loadFinished, &app, [page, probeEmail] {
+        if (probeEmail.isEmpty())
+            return;
+        static bool started = false;
+        if (started || !page->url().path().contains(u"identifier"))
+            return;
+        started = true;
+        // the field is rendered a moment after the load; try once a second
+        auto *retry = new QTimer(page);
+        QObject::connect(retry, &QTimer::timeout, page, [page, probeEmail, retry] {
+            page->runJavaScript(QStringLiteral(
+                "(function(){var f=document.querySelector('input[type=email]')||document.querySelector('#identifierId');"
+                " if(!f) return 'no field: '+Array.from(document.querySelectorAll('input')).map(function(i){return i.type+'#'+i.id+'/'+i.name;}).join(' ');"
+                " f.focus(); f.value='%1'; f.dispatchEvent(new Event('input',{bubbles:true}));"
+                " var b=document.querySelector('#identifierNext button')||document.querySelector('#identifierNext');"
+                " if(b) b.click(); return 'sent';})()").arg(probeEmail),
+                [retry](const QVariant &r) {
+                    QTextStream(stderr) << "quince-login: probe email " << r.toString() << "\n";
+                    if (r.toString() == u"sent")
+                        retry->stop();
+                });
+        });
+        retry->start(1000);
+        QTimer::singleShot(9000, page, [page] {
+            page->runJavaScript(QStringLiteral("document.body.innerText.replace(/\\s+/g,' ').slice(0,300)"),
+                                [](const QVariant &r) { QTextStream(stderr) << "quince-login: text " << r.toString() << "\n"; });
+        });
+    });
+    if (!screenshotBase.isEmpty()) {
+        auto *shots = new QTimer(&app);
+        QObject::connect(shots, &QTimer::timeout, &app, [&view, screenshotBase] {
+            static int n = 0;
+            view.grab().save(QStringLiteral("%1-%2.png").arg(screenshotBase).arg(n++));
+        });
+        shots->start(4000);
+    }
 
     view.load(kSignInUrl);
     view.show();
