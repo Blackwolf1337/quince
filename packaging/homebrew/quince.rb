@@ -45,7 +45,12 @@ class Quince < Formula
     system "cmake", "--build", "build"
     system "cmake", "--install", "build"
     # Quince.app lands in the prefix; the command starts the app's binary
-    (bin/"quince").write_exec_script prefix/"Quince.app/Contents/MacOS/Quince"
+    # (a script, not a symlink: the app finds its resources from its real path)
+    (bin/"quince").write <<~SH
+      #!/bin/bash
+      exec "#{opt_prefix}/Quince.app/Contents/MacOS/Quince" "$@"
+    SH
+    chmod 0755, bin/"quince"
   end
 
   def caveats
