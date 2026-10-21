@@ -66,8 +66,9 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -aiE "error|failed|not found|undefined reference|cannot find" ci.log 2>/dev/null \
-            | grep -v "^--" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
+          # each error with the lines that explain it (CMake puts them below)
+          grep -aiE -A4 "error|failed|undefined reference|cannot find" ci.log 2>/dev/null \
+            | grep -v "^--$" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
           tail -5 ci.log 2>/dev/null | sed 's/%/%25/g; s/^/::warning::/' || true
       - uses: actions/upload-artifact@v4
         with:
@@ -109,8 +110,9 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -aiE "error|failed|not found|undefined reference|cannot find" ci.log 2>/dev/null \
-            | grep -v "^--" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
+          # each error with the lines that explain it (CMake puts them below)
+          grep -aiE -A4 "error|failed|undefined reference|cannot find" ci.log 2>/dev/null \
+            | grep -v "^--$" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
           tail -5 ci.log 2>/dev/null | sed 's/%/%25/g; s/^/::warning::/' || true
       - uses: actions/upload-artifact@v4
         with:
@@ -142,8 +144,9 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -aiE "error|failed|not found|undefined reference|cannot find" ci.log 2>/dev/null \
-            | grep -v "^--" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
+          # each error with the lines that explain it (CMake puts them below)
+          grep -aiE -A4 "error|failed|undefined reference|cannot find" ci.log 2>/dev/null \
+            | grep -v "^--$" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
           tail -5 ci.log 2>/dev/null | sed 's/%/%25/g; s/^/::warning::/' || true
       - uses: actions/upload-artifact@v4
         with:

@@ -79,11 +79,20 @@ private:
             {MPV_RENDER_PARAM_OPENGL_INIT_PARAMS, &gl},
             {MPV_RENDER_PARAM_ADVANCED_CONTROL, &advanced},
         };
-        // the display lets mpv share decoded frames with the GPU (hwdec interop)
-        if (auto *wayland = qGuiApp->nativeInterface<QNativeInterface::QWaylandApplication>())
+        // the display lets mpv share decoded frames with the GPU (hwdec interop);
+        // only Linux builds of Qt have these interfaces
+        bool display = false;
+#if QT_CONFIG(wayland)
+        if (auto *wayland = qGuiApp->nativeInterface<QNativeInterface::QWaylandApplication>()) {
             params.append({MPV_RENDER_PARAM_WL_DISPLAY, wayland->display()});
-        else if (auto *x11 = qGuiApp->nativeInterface<QNativeInterface::QX11Application>())
+            display = true;
+        }
+#endif
+#if QT_CONFIG(xcb)
+        if (auto *x11 = qGuiApp->nativeInterface<QNativeInterface::QX11Application>(); x11 && !display)
             params.append({MPV_RENDER_PARAM_X11_DISPLAY, x11->display()});
+#endif
+        Q_UNUSED(display)
         params.append({MPV_RENDER_PARAM_INVALID, nullptr});
 
         if (mpv_render_context_create(&m_context, handle, params.data()) < 0) {
