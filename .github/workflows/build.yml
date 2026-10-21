@@ -18,7 +18,7 @@ jobs:
       run:
         shell: msys2 {0}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - uses: msys2/setup-msys2@v2
@@ -44,10 +44,13 @@ jobs:
             mingw-w64-ucrt-x86_64-libiconv
       - name: Build
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF
-          cmake --build build
+          set -o pipefail
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF 2>&1 | tee ci.log
+          cmake --build build 2>&1 | tee -a ci.log
       - name: Package
         run: |
+          set -o pipefail
+          exec > >(tee -a ci.log) 2>&1
           dist="$PWD/dist/Quince"
           cmake --install build --prefix "$dist"
           deploy=$(command -v windeployqt6 || command -v windeployqt-qt6 || echo /ucrt64/share/qt6/bin/windeployqt.exe)
@@ -59,6 +62,13 @@ jobs:
           ver=$(git describe --tags --always)
           (cd dist && zip -qr9 "../Quince-$ver-windows-x64.zip" Quince)
           ls -la Quince-*.zip
+      - name: Errors as annotations
+        if: failure()
+        shell: bash
+        run: |
+          grep -aiE "error|failed|not found|undefined reference|cannot find" ci.log 2>/dev/null \
+            | grep -v "^--" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
+          tail -5 ci.log 2>/dev/null | sed 's/%/%25/g; s/^/::warning::/' || true
       - uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -67,7 +77,7 @@ jobs:
   macos:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Dependencies
@@ -75,11 +85,14 @@ jobs:
       - name: Build
         run: |
           export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH"
+          set -o pipefail
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF \
-                -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
-          cmake --build build
+                -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" 2>&1 | tee ci.log
+          cmake --build build 2>&1 | tee -a ci.log
       - name: Package
         run: |
+          set -o pipefail
+          exec > >(tee -a ci.log) 2>&1
           app=build/Quince.app
           "$(brew --prefix qt)/bin/macdeployqt" "$app" -qmldir=qml
           # what macdeployqt left pointing into Homebrew (mpv's own libraries)
@@ -92,6 +105,13 @@ jobs:
           ver=$(git describe --tags --always)
           ditto -c -k --keepParent "$app" "Quince-$ver-macos-arm64.zip"
           ls -la Quince-*.zip
+      - name: Errors as annotations
+        if: failure()
+        shell: bash
+        run: |
+          grep -aiE "error|failed|not found|undefined reference|cannot find" ci.log 2>/dev/null \
+            | grep -v "^--" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
+          tail -5 ci.log 2>/dev/null | sed 's/%/%25/g; s/^/::warning::/' || true
       - uses: actions/upload-artifact@v4
         with:
           name: macos
@@ -105,18 +125,26 @@ jobs:
         run: |
           pacman -Syu --noconfirm --needed base-devel git cmake ninja qt6-base qt6-declarative qt6-tools \
             qt6-svg qt6-webengine mpv ffmpeg icu openssl
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Build
         run: |
           git config --global --add safe.directory "$PWD"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-          cmake --build build
+          set -o pipefail
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr 2>&1 | tee ci.log
+          cmake --build build 2>&1 | tee -a ci.log
           DESTDIR="$PWD/pkg" cmake --install build
           ver=$(git describe --tags --always)
           tar --zstd -cf "quince-$ver-x86_64.tar.zst" -C pkg usr
           ls -la quince-*.tar.zst
+      - name: Errors as annotations
+        if: failure()
+        shell: bash
+        run: |
+          grep -aiE "error|failed|not found|undefined reference|cannot find" ci.log 2>/dev/null \
+            | grep -v "^--" | head -45 | sed 's/%/%25/g; s/^/::error::/' || true
+          tail -5 ci.log 2>/dev/null | sed 's/%/%25/g; s/^/::warning::/' || true
       - uses: actions/upload-artifact@v4
         with:
           name: linux
