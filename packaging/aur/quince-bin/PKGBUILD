@@ -1,0 +1,25 @@
+# Maintainer: MAINTAINER
+
+# Built against Arch's libraries of the day: when Arch moves ICU, mpv or
+# FFmpeg to a new soname, the release tarball must be rebuilt (a new tag or a
+# re-run of the build job) and pkgrel raised.
+pkgname=quince-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Native YouTube Music player (Qt Quick, libmpv), prebuilt'
+arch=('x86_64')
+url='https://github.com/OWNER/quince'
+# Quince; MeCab (BSD option); QuickJS-ng; the IPADIC dictionary
+license=('GPL-3.0-or-later' 'BSD-3-Clause' 'MIT' 'LicenseRef-IPADIC')
+depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'qt6-webengine' 'mpv' 'ffmpeg' 'icu' 'openssl'
+         'hicolor-icon-theme')
+provides=('quince')
+conflicts=('quince')
+options=('!strip' '!debug')
+source=("$url/releases/download/v$pkgver/quince-v$pkgver-x86_64.tar.zst")
+noextract=("quince-v$pkgver-x86_64.tar.zst")
+sha256sums=('SKIP')
+
+package() {
+  bsdtar -xf "$srcdir/quince-v$pkgver-x86_64.tar.zst" -C "$pkgdir"
+}

@@ -1,0 +1,40 @@
+# Maintainer: MAINTAINER
+
+pkgname=quince
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='Native YouTube Music player (Qt Quick, libmpv)'
+arch=('x86_64' 'aarch64')
+url='https://github.com/OWNER/quince'
+# Quince; MeCab (BSD option); QuickJS-ng; the IPADIC dictionary
+license=('GPL-3.0-or-later' 'BSD-3-Clause' 'MIT' 'LicenseRef-IPADIC')
+depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'qt6-webengine' 'mpv' 'ffmpeg' 'icu' 'openssl'
+         'hicolor-icon-theme')
+makedepends=('cmake' 'ninja' 'qt6-tools')
+_mecab=0.996.13
+_ipadic=2.7.0-20070801
+_quickjs=0.17.0
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz"
+        "https://github.com/shogo82148/mecab/releases/download/v$_mecab/mecab-$_mecab.tar.gz"
+        "https://github.com/shogo82148/mecab/releases/download/v$_mecab/mecab-ipadic-$_ipadic.tar.gz"
+        "quickjs-$_quickjs.tar.gz::https://github.com/quickjs-ng/quickjs/archive/refs/tags/v$_quickjs.tar.gz")
+sha256sums=('SKIP'
+            '3da28541062d6d1cfbb92ab09481779f2ad735c89705d981eb66f072ef776538'
+            '74130f44264ce5b8cfa51e498b99345f71d2f854b74a9e9dfb6489e13e479e67'
+            '559bc4c420475e55c7ab4510adbc562f55d7524d75e8e89d79ce4bb02f5687d9')
+
+build() {
+  # the sources CMake would download, handed in so the build needs no network
+  cmake -S "$pkgname-$pkgver" -B build -G Ninja \
+    -DCMAKE_BUILD_TYPE=None \
+    -DCMAKE_INSTALL_PREFIX=/usr \
+    -DFETCHCONTENT_FULLY_DISCONNECTED=ON \
+    -DFETCHCONTENT_SOURCE_DIR_MECAB="$srcdir/mecab-$_mecab" \
+    -DFETCHCONTENT_SOURCE_DIR_MECAB_IPADIC="$srcdir/mecab-ipadic-$_ipadic" \
+    -DFETCHCONTENT_SOURCE_DIR_QUICKJS="$srcdir/quickjs-$_quickjs"
+  cmake --build build
+}
+
+package() {
+  DESTDIR="$pkgdir" cmake --install build
+}

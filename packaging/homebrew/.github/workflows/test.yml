@@ -1,0 +1,22 @@
+# Workflow of the tap repo: builds the formula from source and runs its test
+name: test
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  formula:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - name: Tap
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/${GITHUB_REPOSITORY_OWNER,,}"
+          ln -s "$PWD" "$(brew --repository)/Library/Taps/${GITHUB_REPOSITORY_OWNER,,}/homebrew-quince"
+      - name: Audit
+        run: brew audit --strict --formula "${GITHUB_REPOSITORY_OWNER,,}/quince/quince"
+      - name: Install
+        run: brew install --build-from-source --verbose "${GITHUB_REPOSITORY_OWNER,,}/quince/quince"
+      - name: Test
+        run: brew test "${GITHUB_REPOSITORY_OWNER,,}/quince/quince"
