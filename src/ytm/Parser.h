@@ -27,6 +27,9 @@ struct Page
 {
     QVariantMap header;
     QVariantList chips;
+    // a sort menu (library pages): title (the order in use), options [{title, token, selected}];
+    // an option's token reloads the page through BrowsePage::sortBy
+    QVariantMap sort;
     QVariantList shelves;
     QVariantList items; // continuation of a list shelf
 

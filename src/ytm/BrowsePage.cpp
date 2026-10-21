@@ -191,6 +191,37 @@ void BrowsePage::loadMore()
         });
 }
 
+void BrowsePage::sortBy(const QString &token)
+{
+    if (token.isEmpty())
+        return;
+    const int generation = ++m_generation;
+    setError({});
+    setLoading(true);
+    AppController::instance()->innerTube()->continuation(
+        endpoint(), body(), token, true, this,
+        [this, generation](const QJsonObject &response, const QString &error) {
+            if (generation != m_generation)
+                return;
+            setLoading(false);
+            if (!error.isEmpty()) {
+                setError(error);
+                return;
+            }
+            ytm::Page page = ytm::parseContinuation(response);
+            // an answer of another shape leaves the page as it was
+            if (page.shelves.isEmpty()) {
+                qCWarning(lcPage) << "sort: no sections in the answer";
+                return;
+            }
+            // what the reload leaves out stays as it was
+            page.header = m_header;
+            if (page.chips.isEmpty())
+                page.chips = m_chips;
+            applyPage(page, true);
+        });
+}
+
 void BrowsePage::applyPage(const ytm::Page &page, bool replace)
 {
     QList<Row> rows;
@@ -199,12 +230,14 @@ void BrowsePage::applyPage(const ytm::Page &page, bool replace)
         m_pending.clear();
         m_header = page.header;
         m_chips = page.chips;
+        m_sort = page.sort;
         emit headerChanged();
 
         if (!m_header.isEmpty())
             rows.append({QStringLiteral("header"), m_header, -1});
-        if (!m_chips.isEmpty())
-            rows.append({QStringLiteral("chips"), {{QStringLiteral("chips"), m_chips}}, -1});
+        if (!m_chips.isEmpty() || !m_sort.isEmpty())
+            rows.append({QStringLiteral("chips"), {{QStringLiteral("chips"), m_chips}, {QStringLiteral("sort"), m_sort}},
+                         -1});
     }
 
     appendShelves(page.shelves, rows);

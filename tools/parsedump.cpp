@@ -49,6 +49,7 @@ int main(int argc, char *argv[])
         out = {
             {QStringLiteral("header"), page.header},
             {QStringLiteral("chips"), page.chips},
+            {QStringLiteral("sort"), page.sort},
             {QStringLiteral("shelves"), page.shelves},
             {QStringLiteral("items"), page.items},
             {QStringLiteral("continuation"), page.continuation.left(24)},

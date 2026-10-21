@@ -61,6 +61,8 @@ public:
 
     Q_INVOKABLE void reload();
     Q_INVOKABLE void loadMore();
+    // the page again in another order (an option token of the chips row's sort menu)
+    Q_INVOKABLE void sortBy(const QString &token);
     // all items of a shelf, e.g. to queue an album from the track that was clicked
     Q_INVOKABLE QVariantList shelfItems(int shelf) const;
     // video ids of the page's track rows loaded so far (album, playlist)
@@ -107,6 +109,7 @@ private:
 
     QVariantMap m_header;
     QVariantList m_chips;
+    QVariantMap m_sort;
     QVariantList m_shelves;
     QList<Row> m_rows;
     QList<Pending> m_pending;

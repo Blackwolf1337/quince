@@ -16,6 +16,9 @@ Item {
     function applyChip(chip) {
         if (chip.selected) {
             page.params = ""
+            // library filters lead back to the library itself
+            if (chip.deselectBrowseId)
+                page.browseId = chip.deselectBrowseId
             return
         }
         page.params = chip.params || ""
@@ -64,6 +67,7 @@ Item {
                 ChipsRow {
                     width: ListView.view.width
                     onChipClicked: chip => view.applyChip(chip)
+                    onSortChosen: token => page.sortBy(token)
                 }
             }
             DelegateChoice {

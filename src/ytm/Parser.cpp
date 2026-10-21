@@ -648,10 +648,68 @@ QVariantList parseShelves(const QJsonArray &contents, bool typeLabel)
     return shelves;
 }
 
-QVariantList parseChips(const QJsonValue &chipCloud)
+// the browse endpoint a command runs: itself, or the first of a command list
+// (library chips run a browse plus a command that remembers the choice)
+QJsonValue browseCommandOf(const QJsonValue &command)
+{
+    if (command.toObject().contains(u"browseEndpoint"))
+        return command;
+    for (const QJsonValue &c : at(command, {"commandExecutorCommand", "commands"}).toArray()) {
+        if (c.toObject().contains(u"browseEndpoint"))
+            return c;
+    }
+    return {};
+}
+
+// chips sit in the section list's header, or on its left side next to a sort menu
+QJsonValue chipCloudOf(const QJsonValue &header)
+{
+    if (header.toObject().contains(u"chipCloudRenderer"))
+        return header;
+    for (const QJsonValue &v : at(header, {"musicSideAlignedItemRenderer", "startItems"}).toArray()) {
+        if (v.toObject().contains(u"chipCloudRenderer"))
+            return v;
+    }
+    return {};
+}
+
+QVariantMap parseSort(const QJsonValue &header)
+{
+    for (const QJsonValue &v : at(header, {"musicSideAlignedItemRenderer", "endItems"}).toArray()) {
+        const QJsonValue button = v[u"musicSortFilterButtonRenderer"];
+        if (button.isUndefined())
+            continue;
+        const QString title = textOf(button[u"title"]);
+        QVariantList options;
+        for (const QJsonValue &o : at(button, {"menu", "musicMultiSelectMenuRenderer", "options"}).toArray()) {
+            const QJsonValue option = o[u"musicMultiSelectMenuItemRenderer"];
+            // the commands mark the choice in the page's form, then reload the section list
+            QString token;
+            for (const QJsonValue &c : at(option, {"selectedCommand", "commandExecutorCommand", "commands"}).toArray()) {
+                const QString t = at(c, {"browseSectionListReloadEndpoint", "continuation", "reloadContinuationData",
+                                         "continuation"}).toString();
+                if (!t.isEmpty())
+                    token = t;
+            }
+            const QString name = textOf(option[u"title"]);
+            if (name.isEmpty() || token.isEmpty())
+                continue;
+            options.append(QVariantMap{
+                {QStringLiteral("title"), name},
+                {QStringLiteral("token"), token},
+                {QStringLiteral("selected"), name == title},
+            });
+        }
+        if (!options.isEmpty())
+            return {{QStringLiteral("title"), title}, {QStringLiteral("options"), options}};
+    }
+    return {};
+}
+
+QVariantList parseChips(const QJsonValue &header)
 {
     QVariantList chips;
-    for (const QJsonValue &v : at(chipCloud, {"chipCloudRenderer", "chips"}).toArray()) {
+    for (const QJsonValue &v : at(chipCloudOf(header), {"chipCloudRenderer", "chips"}).toArray()) {
         const QJsonObject chip = v.toObject().value(u"chipCloudChipRenderer").toObject();
         if (chip.isEmpty())
             continue;
@@ -659,16 +717,25 @@ QVariantList parseChips(const QJsonValue &chipCloud)
             {QStringLiteral("title"), textOf(chip.value(u"text"))},
             {QStringLiteral("selected"), chip.value(u"isSelected").toBool()},
         };
+        // a chip without text: an icon ("CLOSE" clears the library filter) and its label
+        if (const QString icon = at(chip, {"icon", "iconType"}).toString(); !icon.isEmpty()) {
+            out.insert(QStringLiteral("icon"), icon.toLower());
+            out.insert(QStringLiteral("label"), at(chip, {"accessibilityData", "accessibilityData", "label"}).toString());
+        }
         const QJsonObject endpoint = chip.value(u"navigationEndpoint").toObject();
         if (const QJsonObject search = endpoint.value(u"searchEndpoint").toObject(); !search.isEmpty()) {
             out.insert(QStringLiteral("query"), search.value(u"query").toString());
             out.insert(QStringLiteral("params"), search.value(u"params").toString());
         } else {
-            const Endpoint e = endpointOf(endpoint);
+            const Endpoint e = endpointOf(browseCommandOf(endpoint));
             if (!e.isBrowse())
                 continue;
             out.insert(QStringLiteral("browseId"), e.browseId);
             out.insert(QStringLiteral("params"), e.params);
+            // a selected library chip leads back to the page without the filter
+            const Endpoint back = endpointOf(browseCommandOf(chip.value(u"onDeselectedCommand")));
+            if (back.isBrowse())
+                out.insert(QStringLiteral("deselectBrowseId"), back.browseId);
         }
         chips.append(out);
     }
@@ -924,6 +991,7 @@ Page parseBrowse(const QJsonObject &response, const QString &browseId)
     page.shelves = parseShelves(mainContents, false);
     page.shelves.append(parseShelves(secondary.value(u"contents").toArray(), false));
     page.chips = parseChips(main.value(u"header"));
+    page.sort = parseSort(main.value(u"header"));
     setPageContinuation(page, secondary.isEmpty() ? main : secondary);
 
     if (!page.header.isEmpty()) {
@@ -981,6 +1049,9 @@ Page parseContinuation(const QJsonObject &response)
 
     if (const QJsonObject r = contents.value(u"sectionListContinuation").toObject(); !r.isEmpty()) {
         page.shelves = parseShelves(r.value(u"contents").toArray(), false);
+        // a reload (another sort order) brings its chips and menu along
+        page.chips = parseChips(r.value(u"header"));
+        page.sort = parseSort(r.value(u"header"));
         setPageContinuation(page, r);
         return page;
     }

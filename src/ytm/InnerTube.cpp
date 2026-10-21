@@ -5,6 +5,8 @@
 #include <QCryptographicHash>
 #include <QDateTime>
 #include <QJsonDocument>
+#include <QFile>
+#include <QDir>
 #include <QLocale>
 #include <QLoggingCategory>
 #include <QNetworkAccessManager>
@@ -80,6 +82,23 @@ QJsonObject InnerTube::clientContext() const
 void InnerTube::post(const QString &endpoint, const QJsonObject &body, QObject *context, Callback callback,
                      const QUrlQuery &query)
 {
+    // test runs: QUINCE_REPLAY=<browseId>=<answer.json>[;...] answers those pages from files
+    if (static const QString replay = qEnvironmentVariable("QUINCE_REPLAY"); !replay.isEmpty()) {
+        const QString browseId = body.value(u"browseId").toString();
+        for (const QString &pair : replay.split(u';')) {
+            if (browseId.isEmpty() || pair.section(u'=', 0, 0) != browseId)
+                continue;
+            QFile file(pair.section(u'=', 1));
+            const QJsonObject response = file.open(QIODevice::ReadOnly)
+                ? QJsonDocument::fromJson(file.readAll()).object() : QJsonObject();
+            QPointer<QObject> guard(context);
+            QMetaObject::invokeMethod(this, [guard, callback, response] {
+                if (guard)
+                    callback(response, {});
+            }, Qt::QueuedConnection);
+            return;
+        }
+    }
     QUrl url(kBase + endpoint);
     QUrlQuery fullQuery(query);
     fullQuery.addQueryItem(QStringLiteral("prettyPrint"), QStringLiteral("false"));
@@ -149,6 +168,16 @@ void InnerTube::finish(QNetworkReply *reply, QObject *context, Callback callback
 
         const QByteArray data = reply->readAll();
         const QJsonObject response = QJsonDocument::fromJson(data).object();
+
+        // development aid: QUINCE_DUMP_DIR=<folder> keeps every answer as <n>-<endpoint>.json
+        if (static const QString dumpDir = qEnvironmentVariable("QUINCE_DUMP_DIR"); !dumpDir.isEmpty()) {
+            static int count = 0;
+            QDir().mkpath(dumpDir);
+            QFile file(QStringLiteral("%1/%2-%3.json").arg(dumpDir).arg(++count, 3, 10, QLatin1Char('0'))
+                           .arg(QString(endpoint).replace(u'/', u'_')));
+            if (file.open(QIODevice::WriteOnly))
+                file.write(data);
+        }
 
         if (reply->error() != QNetworkReply::NoError) {
             QString message = ytm::at(response, {"error", "message"}).toString();

@@ -97,6 +97,8 @@ qt_add_qml_module(quince
         qml/icons/captions.svg
         qml/icons/chevron-left.svg
         qml/icons/chevron-right.svg
+        qml/icons/chevron-down.svg
+        qml/icons/close.svg
         qml/icons/dislike.svg
         qml/icons/download.svg
         qml/icons/explore.svg
