@@ -136,8 +136,15 @@ void TestDriver::run(const QString &line)
         const QString argument = parts.mid(3).join(u' ');
         bool number = false;
         const int value = argument.toInt(&number);
+        // key=value,key=value passes a map (e.g. an item)
+        QVariantMap map;
+        if (argument.contains(u'=')) {
+            for (const QString &pair : argument.split(u','))
+                map.insert(pair.section(u'=', 0, 0), pair.section(u'=', 1));
+        }
         const bool ok = !target ? false
             : parts.size() <= 3 ? QMetaObject::invokeMethod(target, method.constData())
+            : !map.isEmpty() ? QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QVariantMap, map))
             : (number && QMetaObject::invokeMethod(target, method.constData(), Q_ARG(int, value)))
                 || (number && QMetaObject::invokeMethod(target, method.constData(), Q_ARG(double, value)))
                 || QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, argument));

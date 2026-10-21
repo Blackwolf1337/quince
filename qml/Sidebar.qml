@@ -94,6 +94,11 @@ ColumnLayout {
         icon.source: "icons/history.svg"
         enabled: App.account.signedIn
     }
+    SideItem {
+        name: "downloads"
+        text: App.downloads.running > 0 ? qsTr("Downloads (%1)").arg(App.downloads.running) : qsTr("Downloads")
+        icon.source: "icons/download.svg"
+    }
 
     Rectangle {
         Layout.fillWidth: true

@@ -20,6 +20,8 @@ constexpr qint64 kExpireMarginSecs = 10 * 60;
 // 774 is the 256 kbit/s Opus format YouTube Music serves to Premium accounts,
 // 251 the 160 kbit/s Opus format everybody gets.
 const QList<int> kAudioFormats{774, 251, 250, 140, 249, 139};
+// AAC: 141 (256 kbit/s, Premium) and 140 (128 kbit/s)
+const QList<int> kAacFormats{141, 140, 139};
 constexpr int kPremiumFormat = 774;
 
 const QByteArray kVisionUserAgent = QByteArrayLiteral(
@@ -85,9 +87,11 @@ QString unplayableReason(const QJsonObject &answer)
     return reason;
 }
 
-// the best audio format by kAudioFormats, else the audio format with the highest bitrate
-QJsonObject pickAudio(const QJsonObject &answer)
+// the best audio format by kAudioFormats (kAacFormats), else the audio format
+// with the highest bitrate
+QJsonObject pickAudio(const QJsonObject &answer, bool aac = false)
 {
+    const QList<int> &order = aac ? kAacFormats : kAudioFormats;
     QJsonObject best;
     int bestRank = INT_MAX;
     for (const QJsonValue &value : ytm::at(answer, {"streamingData", "adaptiveFormats"}).toArray()) {
@@ -96,7 +100,9 @@ QJsonObject pickAudio(const QJsonObject &answer)
             continue;
         if (format.contains(u"drmFamilies"))
             continue;
-        const int known = kAudioFormats.indexOf(format.value(u"itag").toInt());
+        if (aac && !format.value(u"mimeType").toString().startsWith(u"audio/mp4"))
+            continue;
+        const int known = order.indexOf(format.value(u"itag").toInt());
         const int rank = known >= 0 ? known : 100 - qMin(99, format.value(u"bitrate").toInt() / 10000);
         if (rank < bestRank) {
             bestRank = rank;
@@ -209,7 +215,7 @@ StreamResolver::StreamResolver(InnerTube *innerTube, JsSolver *solver, QObject *
         for (const QString &key : waiting) {
             const Pending pending = m_pending.take(key);
             if (m_solver->ready())
-                resolve(pending.videoId, pending.video);
+                start(pending.videoId, pending.video, pending.aac);
             else
                 fail(pending.videoId, tr("YouTube's player could not be loaded."));
         }
@@ -237,9 +243,9 @@ void StreamResolver::setVideoHeight(int height)
     }
 }
 
-QString StreamResolver::keyOf(const QString &videoId, bool video)
+QString StreamResolver::keyOf(const QString &videoId, bool video, bool aac)
 {
-    return video ? videoId + QStringLiteral("#v") : videoId;
+    return aac ? videoId + QStringLiteral("#aac") : video ? videoId + QStringLiteral("#v") : videoId;
 }
 
 bool StreamResolver::isCached(const QString &videoId, bool video) const
@@ -278,8 +284,19 @@ void StreamResolver::fail(const QString &videoId, const QString &error)
 
 void StreamResolver::resolve(const QString &videoId, bool video)
 {
-    const QString key = keyOf(videoId, video);
-    if (isCached(videoId, video)) {
+    start(videoId, video, false);
+}
+
+void StreamResolver::resolveAac(const QString &videoId)
+{
+    start(videoId, false, true);
+}
+
+void StreamResolver::start(const QString &videoId, bool video, bool aac)
+{
+    const QString key = keyOf(videoId, video, aac);
+    const auto cached = m_cache.constFind(key);
+    if (cached != m_cache.cend() && QDateTime::currentDateTimeUtc().secsTo(cached->expires) > kExpireMarginSecs) {
         QMetaObject::invokeMethod(this, [this, key] {
             emit resolved(m_cache.value(key));
         }, Qt::QueuedConnection);
@@ -291,6 +308,7 @@ void StreamResolver::resolve(const QString &videoId, bool video)
     Pending &pending = m_pending[key];
     pending.videoId = videoId;
     pending.video = video;
+    pending.aac = aac;
     pending.webAllowed = forcedClient() == u"web" || (!m_webFailed.contains(videoId) && forcedClient() != u"vision");
     const bool premiumLikely = m_cookies && m_cookies->signedIn();
     if (pending.webAllowed && (premiumLikely || forcedClient() == u"web")) {
@@ -364,12 +382,13 @@ void StreamResolver::onAnswer(const QString &key)
 }
 
 // the stream's formats of an answer: audio, and in video mode the picture
-bool StreamResolver::pickFormats(const QJsonObject &answer, bool video, QJsonObject *audio, QJsonObject *picture) const
+bool StreamResolver::pickFormats(const QJsonObject &answer, const Pending &pending, QJsonObject *audio,
+                                 QJsonObject *picture) const
 {
-    *audio = pickAudio(answer);
+    *audio = pickAudio(answer, pending.aac);
     if (audio->isEmpty())
         return false;
-    if (video) {
+    if (pending.video) {
         *picture = pickVideo(answer, m_videoHeight);
         // no picture to have: the sound alone
     }
@@ -380,7 +399,7 @@ bool StreamResolver::finishWeb(const QString &key, const Pending &pending)
 {
     QJsonObject audio;
     QJsonObject picture;
-    if (!pickFormats(pending.web, pending.video, &audio, &picture))
+    if (!pickFormats(pending.web, pending, &audio, &picture))
         return false;
 
     struct Part
@@ -408,6 +427,7 @@ bool StreamResolver::finishWeb(const QString &key, const Pending &pending)
 
     Stream stream = streamOf(pending.videoId, QStringLiteral("WEB_REMIX"), audio, picture);
     stream.videoAsked = pending.video;
+    stream.aacAsked = pending.aac;
     stream.headers = {
         {QByteArrayLiteral("User-Agent"), InnerTube::userAgent()},
         {QByteArrayLiteral("Origin"), QByteArrayLiteral("https://music.youtube.com")},
@@ -470,10 +490,11 @@ bool StreamResolver::finishVision(const QString &key, const Pending &pending)
         return false;
     QJsonObject audio;
     QJsonObject picture;
-    if (!pickFormats(pending.vision, pending.video, &audio, &picture))
+    if (!pickFormats(pending.vision, pending, &audio, &picture))
         return false;
     Stream stream = streamOf(pending.videoId, QStringLiteral("VISIONOS"), audio, picture);
     stream.videoAsked = pending.video;
+    stream.aacAsked = pending.aac;
     if (stream.video) {
         stream.audioUrl = QUrl(audio.value(u"url").toString());
         stream.url = QUrl(picture.value(u"url").toString());

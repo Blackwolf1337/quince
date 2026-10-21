@@ -106,6 +106,14 @@ Item {
                     onPlayRequested: header.playRequested()
                 }
                 RoundButton {
+                    icon.source: "icons/download.svg"
+                    flat: true
+                    visible: !!header.row.browseId && (header.row.kind === "album" || header.row.kind === "playlist")
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Download")
+                    onClicked: App.downloads.download(header.row)
+                }
+                RoundButton {
                     icon.source: "icons/more.svg"
                     flat: true
                     visible: App.account.signedIn

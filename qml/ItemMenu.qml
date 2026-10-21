@@ -36,6 +36,11 @@ StyledMenu {
         onTriggered: App.requestDialog("addToPlaylist", {item: menu.item})
     }
     MenuItem {
+        text: qsTr("Download")
+        enabled: !!menu.item.videoId || ((menu.item.kind === "album" || menu.item.kind === "playlist") && !!menu.item.browseId)
+        onTriggered: App.downloads.download(menu.item)
+    }
+    MenuItem {
         text: qsTr("Remove from queue")
         enabled: menu.queueIndex >= 0 && menu.queueIndex !== App.playback.queue.current
         height: menu.queueIndex >= 0 ? implicitHeight : 0

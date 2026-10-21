@@ -15,7 +15,10 @@ ApplicationWindow {
     function goSection(name, browseId) {
         section = name
         forwardPages = []
-        stack.replace(null, browseComponent, {browseId: browseId || ""})
+        if (name === "downloads")
+            stack.replace(null, downloadsComponent)
+        else
+            stack.replace(null, browseComponent, {browseId: browseId || ""})
     }
 
     function openPage(properties) {
@@ -55,7 +58,8 @@ ApplicationWindow {
         if (stack.depth <= 1)
             return
         const page = stack.currentItem
-        forwardPages = forwardPages.concat([{browseId: page.browseId, params: page.params, query: page.query}])
+        if (page.browseId !== undefined)
+            forwardPages = forwardPages.concat([{browseId: page.browseId, params: page.params, query: page.query}])
         stack.pop()
     }
 
@@ -404,6 +408,10 @@ ApplicationWindow {
     Component {
         id: browseComponent
         BrowseView {}
+    }
+    Component {
+        id: downloadsComponent
+        DownloadsView {}
     }
     Component {
         id: signInComponent

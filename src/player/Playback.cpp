@@ -638,6 +638,8 @@ void Playback::prefetchUpcoming()
 
 void Playback::onResolved(const Stream &stream)
 {
+    if (stream.aacAsked)
+        return;
     if (!m_wantedId.isEmpty() && stream.videoId == m_wantedStream && stream.videoAsked == m_wantedVideo) {
         const QString queueId = std::exchange(m_wantedId, QString());
         rememberPlayerInfo(stream, queueId);

@@ -18,6 +18,8 @@ const QString kVideoMode = QStringLiteral("video/mode");
 const QString kVideoHeight = QStringLiteral("video/height");
 const QString kCaptionLanguage = QStringLiteral("video/captions");
 const QString kVisualizer = QStringLiteral("look/visualizer");
+const QString kDownloadFormat = QStringLiteral("downloads/format");
+const QString kDownloadFolder = QStringLiteral("downloads/folder");
 const QString kCompactSidebar = QStringLiteral("look/compactSidebar");
 const QString kClock = QStringLiteral("look/clock");
 const QString kTransparentWindow = QStringLiteral("look/transparentWindow");
@@ -91,6 +93,15 @@ void Settings::setVideoHeight(int height) { set(kVideoHeight, height); }
 void Settings::setCaptionLanguage(const QString &language) { set(kCaptionLanguage, language); }
 QString Settings::visualizer() const { return m_store.value(kVisualizer).toString(); }
 void Settings::setVisualizer(const QString &style) { set(kVisualizer, style); }
+QString Settings::downloadFormat() const { return m_store.value(kDownloadFormat, QStringLiteral("opus")).toString(); }
+QString Settings::downloadFolder() const
+{
+    const QString folder = m_store.value(kDownloadFolder).toString();
+    return !folder.isEmpty() ? folder
+                             : QStandardPaths::writableLocation(QStandardPaths::MusicLocation) + QStringLiteral("/Quince");
+}
+void Settings::setDownloadFormat(const QString &format) { set(kDownloadFormat, format); }
+void Settings::setDownloadFolder(const QString &folder) { set(kDownloadFolder, folder); }
 bool Settings::compactSidebar() const { return m_store.value(kCompactSidebar, false).toBool(); }
 bool Settings::clock() const { return m_store.value(kClock, false).toBool(); }
 bool Settings::transparentWindow() const { return m_store.value(kTransparentWindow, false).toBool(); }

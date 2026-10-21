@@ -36,6 +36,9 @@ class Settings : public QObject
     Q_PROPERTY(QString captionLanguage READ captionLanguage WRITE setCaptionLanguage NOTIFY changed)
     // visualizer style in the Now Playing view ("" off): bars, wave, spectrum, scope
     Q_PROPERTY(QString visualizer READ visualizer WRITE setVisualizer NOTIFY changed)
+    // downloads: opus, m4a or mp3; the folder they go into
+    Q_PROPERTY(QString downloadFormat READ downloadFormat WRITE setDownloadFormat NOTIFY changed)
+    Q_PROPERTY(QString downloadFolder READ downloadFolder WRITE setDownloadFolder NOTIFY changed)
     Q_PROPERTY(bool compactSidebar READ compactSidebar WRITE setCompactSidebar NOTIFY changed)
     Q_PROPERTY(bool clock READ clock WRITE setClock NOTIFY changed)
     // a see-through window background (the compositor may blur behind it); needs a restart
@@ -63,6 +66,8 @@ public:
     int videoHeight() const;
     QString captionLanguage() const;
     QString visualizer() const;
+    QString downloadFormat() const;
+    QString downloadFolder() const;
     bool compactSidebar() const;
     bool clock() const;
     bool transparentWindow() const;
@@ -86,6 +91,8 @@ public:
     void setVideoHeight(int height);
     void setCaptionLanguage(const QString &language);
     void setVisualizer(const QString &style);
+    void setDownloadFormat(const QString &format);
+    void setDownloadFolder(const QString &folder);
     void setCompactSidebar(bool on);
     void setClock(bool on);
     void setTransparentWindow(bool on);

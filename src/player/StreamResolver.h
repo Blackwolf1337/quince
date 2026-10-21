@@ -34,6 +34,8 @@ struct Stream
     // videoAsked without video: the track has no picture
     bool videoAsked = false;
     bool video = false;
+    // AAC asked for (downloads as .m4a); never played
+    bool aacAsked = false;
     QUrl audioUrl;
     int height = 0;
     // [{url, language, name, generated}] of the captions (video mode)
@@ -73,6 +75,8 @@ public:
     // Emits resolved or failed later, never from inside this call. video asks
     // for picture and sound (video mode); without a picture it is sound only.
     void resolve(const QString &videoId, bool video = false);
+    // sound only, AAC before Opus (downloads as .m4a)
+    void resolveAac(const QString &videoId);
     bool isCached(const QString &videoId, bool video = false) const;
     // drops a URL that failed; the next resolve of it takes the other client
     void forget(const QString &videoId);
@@ -92,6 +96,7 @@ private:
     {
         QString videoId;
         bool video = false;
+        bool aac = false;
         bool webDone = false;
         bool visionDone = false;
         bool webAllowed = false;
@@ -103,10 +108,11 @@ private:
         QString visionError;
     };
 
-    static QString keyOf(const QString &videoId, bool video);
+    static QString keyOf(const QString &videoId, bool video, bool aac = false);
+    void start(const QString &videoId, bool video, bool aac);
     void requestVision(const QString &key);
     void onAnswer(const QString &key);
-    bool pickFormats(const QJsonObject &answer, bool video, QJsonObject *audio, QJsonObject *picture) const;
+    bool pickFormats(const QJsonObject &answer, const Pending &pending, QJsonObject *audio, QJsonObject *picture) const;
     bool finishWeb(const QString &key, const Pending &pending);
     bool finishVision(const QString &key, const Pending &pending);
     static Stream streamOf(const QString &videoId, const QString &client, const QJsonObject &audio,

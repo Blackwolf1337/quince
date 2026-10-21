@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls
 import QtQuick.Controls.Material
+import QtQuick.Dialogs
 import QtQuick.Layouts
 import Quince
 
@@ -173,6 +174,46 @@ Dialog {
                     Layout.preferredWidth: 72
                     text: speedSlider.value.toFixed(2) + "×"
                     color: Style.textDim
+                }
+            }
+
+            Section {
+                text: qsTr("Downloads")
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Label {
+                    text: qsTr("Format")
+                }
+                ComboBox {
+                    Layout.fillWidth: true
+                    textRole: "name"
+                    valueRole: "id"
+                    model: [
+                        {id: "opus", name: qsTr("Opus (as YouTube sends it, best quality)")},
+                        {id: "m4a", name: qsTr("M4A / AAC (as YouTube sends it)")},
+                        {id: "mp3", name: qsTr("MP3, 320 kbit/s (converted)")},
+                    ]
+                    currentIndex: indexOfValue(dialog.settings.downloadFormat)
+                    onActivated: dialog.settings.downloadFormat = currentValue
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                TextField {
+                    Layout.fillWidth: true
+                    text: dialog.settings.downloadFolder
+                    onEditingFinished: dialog.settings.downloadFolder = text
+                }
+                Button {
+                    text: qsTr("Choose")
+                    flat: true
+                    onClicked: folderDialog.open()
+                }
+                FolderDialog {
+                    id: folderDialog
+                    currentFolder: "file://" + dialog.settings.downloadFolder
+                    onAccepted: dialog.settings.downloadFolder = decodeURIComponent(selectedFolder.toString().replace("file://", ""))
                 }
             }
 

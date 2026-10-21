@@ -95,37 +95,37 @@
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/app/AppController.cpp" line="88"/>
+        <location filename="../src/app/AppController.cpp" line="90"/>
         <source>Play or pause</source>
         <translation>Wiedergabe oder Pause</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="89"/>
+        <location filename="../src/app/AppController.cpp" line="91"/>
         <source>Next track</source>
         <translation>Nächster Titel</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="90"/>
+        <location filename="../src/app/AppController.cpp" line="92"/>
         <source>Previous track</source>
         <translation>Vorheriger Titel</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="91"/>
+        <location filename="../src/app/AppController.cpp" line="93"/>
         <source>Volume up</source>
         <translation>Lauter</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="94"/>
+        <location filename="../src/app/AppController.cpp" line="96"/>
         <source>Volume down</source>
         <translation>Leiser</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="97"/>
+        <location filename="../src/app/AppController.cpp" line="99"/>
         <source>Like or unlike the track</source>
         <translation>Titel mögen oder nicht mehr mögen</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="102"/>
+        <location filename="../src/app/AppController.cpp" line="104"/>
         <source>Show Quince</source>
         <translation>Quince anzeigen</translation>
     </message>
@@ -262,6 +262,96 @@
     </message>
 </context>
 <context>
+    <name>Downloader</name>
+    <message>
+        <location filename="../src/download/Downloader.cpp" line="159"/>
+        <source>Downloading &quot;%1&quot;.</source>
+        <translation>„%1“ wird heruntergeladen.</translation>
+    </message>
+    <message>
+        <location filename="../src/download/Downloader.cpp" line="174"/>
+        <source>Download failed: %1</source>
+        <translation>Download fehlgeschlagen: %1</translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/download/Downloader.cpp" line="218"/>
+        <source>Downloading %n track(s) of &quot;%1&quot;.</source>
+        <translation>
+            <numerusform>%n Titel von „%1“ wird heruntergeladen.</numerusform>
+            <numerusform>%n Titel von „%1“ werden heruntergeladen.</numerusform>
+        </translation>
+    </message>
+    <message>
+        <location filename="../src/download/Downloader.cpp" line="504"/>
+        <source>Unknown artist</source>
+        <translation>Unbekannter Künstler</translation>
+    </message>
+</context>
+<context>
+    <name>DownloadsView</name>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="15"/>
+        <source>Waiting</source>
+        <translation>Wartet</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="16"/>
+        <source>Starting</source>
+        <translation>Startet</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="17"/>
+        <source>Downloading</source>
+        <translation>Lädt herunter</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="18"/>
+        <source>Writing the file</source>
+        <translation>Schreibt die Datei</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="19"/>
+        <source>Done</source>
+        <translation>Fertig</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="20"/>
+        <source>Failed: %1</source>
+        <translation>Fehlgeschlagen: %1</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="36"/>
+        <source>Downloads</source>
+        <translation>Downloads</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="42"/>
+        <location filename="../qml/DownloadsView.qml" line="160"/>
+        <source>Open folder</source>
+        <translation>Ordner öffnen</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="47"/>
+        <source>Clear finished</source>
+        <translation>Fertige entfernen</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="55"/>
+        <source>Into %1. Right-click a song, album or playlist and choose Download.</source>
+        <translation>Nach %1. Rechtsklick auf einen Song, ein Album oder eine Playlist und Herunterladen wählen.</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="152"/>
+        <source>Retry</source>
+        <translation>Nochmal</translation>
+    </message>
+    <message>
+        <location filename="../qml/DownloadsView.qml" line="171"/>
+        <source>Nothing downloaded yet.</source>
+        <translation>Noch nichts heruntergeladen.</translation>
+    </message>
+</context>
+<context>
     <name>EqualizerDialog</name>
     <message>
         <location filename="../qml/EqualizerDialog.qml" line="17"/>
@@ -282,22 +372,27 @@
 <context>
     <name>HeaderRow</name>
     <message>
-        <location filename="../qml/HeaderRow.qml" line="114"/>
+        <location filename="../qml/HeaderRow.qml" line="113"/>
+        <source>Download</source>
+        <translation>Herunterladen</translation>
+    </message>
+    <message>
+        <location filename="../qml/HeaderRow.qml" line="122"/>
         <source>More</source>
         <translation>Mehr</translation>
     </message>
     <message>
-        <location filename="../qml/HeaderRow.qml" line="120"/>
+        <location filename="../qml/HeaderRow.qml" line="128"/>
         <source>Like all songs</source>
         <translation>Alle Songs mögen</translation>
     </message>
     <message>
-        <location filename="../qml/HeaderRow.qml" line="125"/>
+        <location filename="../qml/HeaderRow.qml" line="133"/>
         <source>Dislike all songs</source>
         <translation>Alle Songs nicht mögen</translation>
     </message>
     <message>
-        <location filename="../qml/HeaderRow.qml" line="130"/>
+        <location filename="../qml/HeaderRow.qml" line="138"/>
         <source>Remove all ratings</source>
         <translation>Alle Bewertungen entfernen</translation>
     </message>
@@ -334,21 +429,26 @@
     </message>
     <message>
         <location filename="../qml/ItemMenu.qml" line="39"/>
+        <source>Download</source>
+        <translation>Herunterladen</translation>
+    </message>
+    <message>
+        <location filename="../qml/ItemMenu.qml" line="44"/>
         <source>Remove from queue</source>
         <translation>Aus Wiedergabeliste entfernen</translation>
     </message>
     <message>
-        <location filename="../qml/ItemMenu.qml" line="47"/>
+        <location filename="../qml/ItemMenu.qml" line="52"/>
         <source>Go to album</source>
         <translation>Zum Album</translation>
     </message>
     <message>
-        <location filename="../qml/ItemMenu.qml" line="52"/>
+        <location filename="../qml/ItemMenu.qml" line="57"/>
         <source>Go to %1</source>
         <translation>Zu %1</translation>
     </message>
     <message>
-        <location filename="../qml/ItemMenu.qml" line="52"/>
+        <location filename="../qml/ItemMenu.qml" line="57"/>
         <source>Go to artist</source>
         <translation>Zum Künstler</translation>
     </message>
@@ -374,12 +474,12 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../qml/Main.qml" line="239"/>
+        <location filename="../qml/Main.qml" line="243"/>
         <source>Back</source>
         <translation>Zurück</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="247"/>
+        <location filename="../qml/Main.qml" line="251"/>
         <source>Forward</source>
         <translation>Vorwärts</translation>
     </message>
@@ -500,12 +600,12 @@
         <translation>YouTube Music hat dort nichts zum Abspielen.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="768"/>
+        <location filename="../src/player/Playback.cpp" line="770"/>
         <source>Could not play &quot;%1&quot;: %2</source>
         <translation>„%1“ konnte nicht abgespielt werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="812"/>
+        <location filename="../src/player/Playback.cpp" line="814"/>
         <source>Playback stopped: %1</source>
         <translation>Wiedergabe abgebrochen: %1</translation>
     </message>
@@ -621,162 +721,192 @@
 <context>
     <name>SettingsDialog</name>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="23"/>
+        <location filename="../qml/SettingsDialog.qml" line="24"/>
         <source>Settings</source>
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="61"/>
+        <location filename="../qml/SettingsDialog.qml" line="62"/>
         <source>Playback</source>
         <translation>Wiedergabe</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="64"/>
+        <location filename="../qml/SettingsDialog.qml" line="65"/>
         <source>Volume slider follows your hearing (exponential)</source>
         <translation>Lautstärkeregler folgt dem Gehör (exponentiell)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="69"/>
+        <location filename="../qml/SettingsDialog.qml" line="70"/>
         <source>Even out loudness between tracks, like YouTube</source>
         <translation>Lautheit zwischen Titeln angleichen, wie YouTube</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="74"/>
+        <location filename="../qml/SettingsDialog.qml" line="75"/>
         <source>Skip songs I disliked</source>
         <translation>Songs überspringen, die ich nicht mag</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="79"/>
+        <location filename="../qml/SettingsDialog.qml" line="80"/>
         <source>Songs I pick start paused</source>
         <translation>Ausgewählte Songs starten pausiert</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="87"/>
+        <location filename="../qml/SettingsDialog.qml" line="88"/>
         <source>Volume step of wheel and keys (%)</source>
         <translation>Lautstärkeschritt für Mausrad und Tasten (%)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="99"/>
+        <location filename="../qml/SettingsDialog.qml" line="100"/>
         <source>Output</source>
         <translation>Ausgabe</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="113"/>
+        <location filename="../qml/SettingsDialog.qml" line="114"/>
         <source>Sound</source>
         <translation>Klang</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="118"/>
+        <location filename="../qml/SettingsDialog.qml" line="119"/>
         <source>Equalizer</source>
         <translation>Equalizer</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="129"/>
+        <location filename="../qml/SettingsDialog.qml" line="130"/>
         <source>Compressor: quiet parts louder, loud parts quieter</source>
         <translation>Kompressor: leise Stellen lauter, laute leiser</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="134"/>
+        <location filename="../qml/SettingsDialog.qml" line="135"/>
         <source>Skip silences</source>
         <translation>Stille überspringen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="141"/>
+        <location filename="../qml/SettingsDialog.qml" line="142"/>
         <source>Crossfade</source>
         <translation>Überblenden</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="154"/>
+        <location filename="../qml/SettingsDialog.qml" line="155"/>
         <source>%1 s</source>
         <translation>%1 s</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="154"/>
+        <location filename="../qml/SettingsDialog.qml" line="155"/>
         <source>Off (gapless)</source>
         <translation>Aus (lückenlos)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="161"/>
+        <location filename="../qml/SettingsDialog.qml" line="162"/>
         <source>Speed</source>
         <translation>Tempo</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="180"/>
+        <location filename="../qml/SettingsDialog.qml" line="181"/>
+        <source>Downloads</source>
+        <translation>Downloads</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="186"/>
+        <source>Format</source>
+        <translation>Format</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="193"/>
+        <source>Opus (as YouTube sends it, best quality)</source>
+        <translation>Opus (wie YouTube es sendet, beste Qualität)</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="194"/>
+        <source>M4A / AAC (as YouTube sends it)</source>
+        <translation>M4A / AAC (wie YouTube es sendet)</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="195"/>
+        <source>MP3, 320 kbit/s (converted)</source>
+        <translation>MP3, 320 kbit/s (umgewandelt)</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="209"/>
+        <source>Choose</source>
+        <translation>Wählen</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="221"/>
         <source>Lyrics</source>
         <translation>Songtext</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="183"/>
+        <location filename="../qml/SettingsDialog.qml" line="224"/>
         <source>Time-synced lyrics from LRCLIB</source>
         <translation>Zeitgenaue Songtexte von LRCLIB</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="189"/>
+        <location filename="../qml/SettingsDialog.qml" line="230"/>
         <source>Look</source>
         <translation>Aussehen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="192"/>
+        <location filename="../qml/SettingsDialog.qml" line="233"/>
         <source>Colors from the album cover</source>
         <translation>Farben aus dem Albumcover</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="197"/>
+        <location filename="../qml/SettingsDialog.qml" line="238"/>
         <source>Compact sidebar (icons only)</source>
         <translation>Schmale Seitenleiste (nur Symbole)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="202"/>
+        <location filename="../qml/SettingsDialog.qml" line="243"/>
         <source>Clock in the top bar</source>
         <translation>Uhr in der oberen Leiste</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="207"/>
+        <location filename="../qml/SettingsDialog.qml" line="248"/>
         <source>See-through window, for the desktop&apos;s blur (after a restart)</source>
         <translation>Durchsichtiges Fenster, für die Unschärfe des Desktops (nach einem Neustart)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="213"/>
+        <location filename="../qml/SettingsDialog.qml" line="254"/>
         <source>Desktop</source>
         <translation>Desktop</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="216"/>
+        <location filename="../qml/SettingsDialog.qml" line="257"/>
         <source>Icon in the system tray</source>
         <translation>Symbol im Infobereich</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="221"/>
+        <location filename="../qml/SettingsDialog.qml" line="262"/>
         <source>Closing the window keeps playing in the tray</source>
         <translation>Schließen des Fensters spielt im Infobereich weiter</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="227"/>
+        <location filename="../qml/SettingsDialog.qml" line="268"/>
         <source>System-wide shortcuts (desktop portal, after a restart)</source>
         <translation>Systemweite Tastenkürzel (Desktop-Portal, nach einem Neustart)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="233"/>
+        <location filename="../qml/SettingsDialog.qml" line="274"/>
         <source>Notification when the track changes</source>
         <translation>Benachrichtigung beim Titelwechsel</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="239"/>
+        <location filename="../qml/SettingsDialog.qml" line="280"/>
         <source>Discord</source>
         <translation>Discord</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="242"/>
+        <location filename="../qml/SettingsDialog.qml" line="283"/>
         <source>Show what I listen to in Discord</source>
         <translation>In Discord zeigen, was ich höre</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="249"/>
+        <location filename="../qml/SettingsDialog.qml" line="290"/>
         <source>Application ID</source>
         <translation>Application ID</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="258"/>
+        <location filename="../qml/SettingsDialog.qml" line="299"/>
         <source>Uses Pear Desktop&apos;s Discord application. For your own, create one at discord.com/developers/applications and paste its Application ID; leave empty for Pear&apos;s.</source>
         <translation>Nutzt die Discord-Anwendung von Pear Desktop. Für eine eigene erstelle eine unter discord.com/developers/applications und füge ihre Application ID ein; leer lassen für die von Pear.</translation>
     </message>
@@ -809,22 +939,32 @@
         <translation>Verlauf</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="141"/>
+        <location filename="../qml/Sidebar.qml" line="99"/>
+        <source>Downloads (%1)</source>
+        <translation>Downloads (%1)</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="99"/>
+        <source>Downloads</source>
+        <translation>Downloads</translation>
+    </message>
+    <message>
+        <location filename="../qml/Sidebar.qml" line="146"/>
         <source>Settings</source>
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="151"/>
+        <location filename="../qml/Sidebar.qml" line="156"/>
         <source>Signed in</source>
         <translation>Angemeldet</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="151"/>
+        <location filename="../qml/Sidebar.qml" line="156"/>
         <source>Sign in</source>
         <translation>Anmelden</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="177"/>
+        <location filename="../qml/Sidebar.qml" line="182"/>
         <source>Sign out</source>
         <translation>Abmelden</translation>
     </message>
@@ -875,17 +1015,17 @@
 <context>
     <name>StreamResolver</name>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="214"/>
+        <location filename="../src/player/StreamResolver.cpp" line="220"/>
         <source>YouTube&apos;s player could not be loaded.</source>
         <translation>Der Player von YouTube konnte nicht geladen werden.</translation>
     </message>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="362"/>
+        <location filename="../src/player/StreamResolver.cpp" line="380"/>
         <source>YouTube gave no audio stream.</source>
         <translation>YouTube lieferte keinen Audiostream.</translation>
     </message>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="452"/>
+        <location filename="../src/player/StreamResolver.cpp" line="472"/>
         <source>YouTube&apos;s player puzzle could not be solved: %1</source>
         <translation>Das Player-Rätsel von YouTube konnte nicht gelöst werden: %1</translation>
     </message>

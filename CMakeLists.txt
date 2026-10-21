@@ -25,6 +25,8 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
 endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
+# downloads: remuxing and MP3 encoding (the FFmpeg mpv uses)
+pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
 
 # QuickJS-ng (MIT) runs yt-dlp's solver for YouTube's player puzzles
 include(FetchContent)
@@ -65,6 +67,7 @@ qt_add_qml_module(quince
         qml/CardRow.qml
         qml/CarouselRow.qml
         qml/ChipsRow.qml
+        qml/DownloadsView.qml
         qml/EqualizerDialog.qml
         qml/GridRow.qml
         qml/HeaderRow.qml
@@ -91,6 +94,7 @@ qt_add_qml_module(quince
         qml/icons/chevron-left.svg
         qml/icons/chevron-right.svg
         qml/icons/dislike.svg
+        qml/icons/download.svg
         qml/icons/explore.svg
         qml/icons/heart.svg
         qml/icons/history.svg
@@ -122,6 +126,10 @@ qt_add_qml_module(quince
         src/app/Settings.cpp
         src/app/ColorTheme.h
         src/app/ColorTheme.cpp
+        src/download/AudioFile.h
+        src/download/AudioFile.cpp
+        src/download/Downloader.h
+        src/download/Downloader.cpp
         src/integrations/Desktop.h
         src/integrations/Desktop.cpp
         src/integrations/Discord.h
@@ -176,7 +184,7 @@ qt_add_resources(quince ejs
 )
 
 # qmltyperegistrar includes QML-exposed headers by file name only
-target_include_directories(quince PRIVATE src src/app src/player src/ytm src/lyrics)
+target_include_directories(quince PRIVATE src src/app src/player src/ytm src/lyrics src/download)
 target_compile_definitions(quince PRIVATE PROJECT_VERSION="${PROJECT_VERSION}")
 
 if(NOT MSVC)
@@ -191,6 +199,7 @@ target_link_libraries(quince PRIVATE
     Qt6::Sql
     Qt6::OpenGL
     PkgConfig::MPV
+    PkgConfig::FFMPEG
     qjs
 )
 if(TARGET OpenSSL::Crypto)
