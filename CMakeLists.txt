@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(quince VERSION 0.1.0 LANGUAGES CXX)
+if(WIN32)
+    # the icon and version info of quince.exe
+    enable_language(RC)
+endif()
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -40,7 +44,22 @@ FetchContent_Declare(quickjs
     SYSTEM
 )
 FetchContent_MakeAvailable(quickjs)
+# its asserts carry __FILE__: keep the build machine's paths out of the binary
+if(NOT MSVC)
+    target_compile_options(qjs PRIVATE -ffile-prefix-map=${quickjs_SOURCE_DIR}/=quickjs/)
+endif()
 include(GNUInstallDirs)
+# Windows: a portable folder (quince.exe, mecab\ipadic, licenses\ side by
+# side); macOS: everything inside Quince.app; else the usual prefix layout
+if(WIN32)
+    set(QUINCE_BIN_DESTINATION .)
+    set(QUINCE_DATA_DESTINATION .)
+    set(QUINCE_LICENSE_DESTINATION licenses)
+else()
+    set(QUINCE_BIN_DESTINATION ${CMAKE_INSTALL_BINDIR})
+    set(QUINCE_DATA_DESTINATION ${CMAKE_INSTALL_DATADIR}/quince)
+    set(QUINCE_LICENSE_DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/quince)
+endif()
 include(cmake/Mecab.cmake)
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -239,10 +258,38 @@ set_target_properties(quince PROPERTIES
     WIN32_EXECUTABLE ON
     MACOSX_BUNDLE ON
 )
+if(WIN32)
+    set(QUINCE_ICO ${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/quince.ico)
+    configure_file(packaging/windows/quince.rc.in ${CMAKE_CURRENT_BINARY_DIR}/quince.rc @ONLY)
+    target_sources(quince PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/quince.rc)
+elseif(APPLE)
+    set(QUINCE_BUNDLE_ID "io.github.quince-player.quince" CACHE STRING "Bundle identifier of Quince.app")
+    target_sources(quince PRIVATE packaging/macos/quince.icns)
+    set_source_files_properties(packaging/macos/quince.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+    set_target_properties(quince PROPERTIES
+        OUTPUT_NAME Quince
+        MACOSX_BUNDLE_BUNDLE_NAME Quince
+        MACOSX_BUNDLE_GUI_IDENTIFIER ${QUINCE_BUNDLE_ID}
+        MACOSX_BUNDLE_ICON_FILE quince.icns
+        MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
+        MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
+    )
+    # the dictionary and the licenses travel inside the bundle
+    add_custom_command(TARGET quince POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory ${MECAB_DIC_DIR}
+                $<TARGET_BUNDLE_CONTENT_DIR:quince>/Resources/mecab/ipadic
+        COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${MECAB_LICENSE_FILES}
+                $<TARGET_BUNDLE_CONTENT_DIR:quince>/Resources
+        VERBATIM
+    )
+endif()
 
 # Sign-in window. Built only when QtWebEngine is there; the player itself
 # never loads Chromium.
-find_package(Qt6 6.8 QUIET COMPONENTS WebEngineWidgets)
+option(QUINCE_LOGIN "Build the sign-in window quince-login when QtWebEngine is found" ON)
+if(QUINCE_LOGIN)
+    find_package(Qt6 6.8 QUIET COMPONENTS WebEngineWidgets)
+endif()
 if(Qt6WebEngineWidgets_FOUND)
     qt_add_executable(quince-login
         login/main.cpp
@@ -294,15 +341,15 @@ qt_add_translations(TARGETS ${QUINCE_TRANSLATED}
     LUPDATE_OPTIONS -no-obsolete
 )
 
-include(GNUInstallDirs)
 install(TARGETS quince
     BUNDLE DESTINATION .
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    RUNTIME DESTINATION ${QUINCE_BIN_DESTINATION}
 )
 if(TARGET quince-login)
     # found next to the player or on PATH
-    install(TARGETS quince-login RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    install(TARGETS quince-login RUNTIME DESTINATION ${QUINCE_BIN_DESTINATION})
 endif()
+install(FILES LICENSE DESTINATION ${QUINCE_LICENSE_DESTINATION})
 if(UNIX AND NOT APPLE)
     install(FILES packaging/quince.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
     install(FILES qml/icons/quince.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)

@@ -2,7 +2,8 @@
 # readings of Japanese words for romanized lyrics. Built as a static library
 # from the release sources of the maintained fork, without its autotools;
 # IPADIC is compiled to a UTF-8 binary dictionary at build time and goes to
-# mecab/ipadic next to the binary (share/quince/mecab/ipadic when installed).
+# mecab/ipadic next to the binary (share/quince/mecab/ipadic when installed,
+# Contents/Resources in the macOS bundle).
 
 FetchContent_Declare(mecab
     URL https://github.com/shogo82148/mecab/releases/download/v0.996.13/mecab-0.996.13.tar.gz
@@ -56,6 +57,10 @@ add_library(mecab STATIC
 )
 # old code: its own warnings are not ours to fix
 target_compile_options(mecab PRIVATE $<IF:$<CXX_COMPILER_ID:MSVC>,/w,-w>)
+# its error messages carry __FILE__: keep the build machine's paths out of the binary
+if(NOT MSVC)
+    target_compile_options(mecab PRIVATE -ffile-prefix-map=${mecab_SOURCE_DIR}/=mecab/)
+endif()
 target_compile_definitions(mecab PRIVATE HAVE_CONFIG_H DIC_VERSION=102 MECAB_DEFAULT_RC="mecabrc")
 target_include_directories(mecab PRIVATE ${MECAB_CONFIG_DIR} PUBLIC ${MECAB_SRC})
 target_link_libraries(mecab PUBLIC Iconv::Iconv Threads::Threads)
@@ -83,7 +88,13 @@ add_custom_command(
 )
 add_custom_target(mecab-ipadic DEPENDS ${MECAB_DIC_DIR}/sys.dic)
 
-install(DIRECTORY ${MECAB_DIC_DIR} DESTINATION ${CMAKE_INSTALL_DATADIR}/quince/mecab)
-install(FILES ${mecab_SOURCE_DIR}/BSD DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/quince RENAME MECAB-BSD)
-install(FILES ${mecab_ipadic_SOURCE_DIR}/COPYING DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/quince
-        RENAME IPADIC-COPYING)
+# the licenses under the names they are installed as
+configure_file(${mecab_SOURCE_DIR}/BSD ${CMAKE_BINARY_DIR}/licenses/MECAB-BSD COPYONLY)
+configure_file(${mecab_ipadic_SOURCE_DIR}/COPYING ${CMAKE_BINARY_DIR}/licenses/IPADIC-COPYING COPYONLY)
+set(MECAB_LICENSE_FILES ${CMAKE_BINARY_DIR}/licenses/MECAB-BSD ${CMAKE_BINARY_DIR}/licenses/IPADIC-COPYING)
+
+# on macOS the bundle carries them (see CMakeLists.txt)
+if(NOT APPLE)
+    install(DIRECTORY ${MECAB_DIC_DIR} DESTINATION ${QUINCE_DATA_DESTINATION}/mecab)
+    install(FILES ${MECAB_LICENSE_FILES} DESTINATION ${QUINCE_LICENSE_DESTINATION})
+endif()
