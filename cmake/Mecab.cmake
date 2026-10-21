@@ -63,6 +63,11 @@ if(NOT MSVC)
 endif()
 target_compile_definitions(mecab PRIVATE HAVE_CONFIG_H DIC_VERSION=102 MECAB_DEFAULT_RC="mecabrc")
 target_include_directories(mecab PRIVATE ${MECAB_CONFIG_DIR} PUBLIC ${MECAB_SRC})
+if(WIN32)
+    # mecab.h declares its API dllimport unless DLL_EXPORT is set; this is a
+    # static library, so its users must see plain declarations too
+    target_compile_definitions(mecab PUBLIC DLL_EXPORT)
+endif()
 target_link_libraries(mecab PUBLIC Iconv::Iconv Threads::Threads)
 set_target_properties(mecab PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
