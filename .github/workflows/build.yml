@@ -27,6 +27,7 @@ jobs:
           update: true
           install: >-
             zip
+            git
             mingw-w64-ucrt-x86_64-gcc
             mingw-w64-ucrt-x86_64-cmake
             mingw-w64-ucrt-x86_64-ninja
@@ -95,7 +96,10 @@ jobs:
           set -o pipefail
           exec > >(tee -a ci.log) 2>&1
           app=build/Quince.app
-          "$(brew --prefix qt)/bin/macdeployqt" "$app" -qmldir=qml
+          # it also fails its own signature check after changing the files; the
+          # checks below and the signing at the end decide instead
+          "$(brew --prefix qt)/bin/macdeployqt" "$app" -qmldir=qml -libpath="$(brew --prefix)/lib" \
+            || echo "::warning::macdeployqt reported errors"
           # Homebrew libraries a binary of the bundle still loads (its own id aside)
           brewdeps() {
             find "$app/Contents" -type f \( -name '*.dylib' -o -perm -u+x \) | while read -r f; do
@@ -116,6 +120,7 @@ jobs:
           left=$(brewdeps)
           if [ -n "$left" ]; then echo "$left" | head -40 | sed 's/^/::error::/'; exit 1; fi
           codesign --force --deep --sign - "$app"
+          codesign --verify --deep --strict "$app"
           ver=$(git describe --tags --always)
           ditto -c -k --keepParent "$app" "Quince-$ver-macos-arm64.zip"
           ls -la Quince-*.zip
