@@ -9,14 +9,19 @@ jobs:
   formula:
     runs-on: macos-14
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Tap
-        run: |
-          mkdir -p "$(brew --repository)/Library/Taps/${GITHUB_REPOSITORY_Blackwolf1337,,}"
-          ln -s "$PWD" "$(brew --repository)/Library/Taps/${GITHUB_REPOSITORY_Blackwolf1337,,}/homebrew-quince"
+        # this checkout as the tap (macOS's bash 3.2 has no ${var,,}, so the name is spelled out)
+        run: brew tap blackwolf1337/quince "$PWD"
       - name: Audit
-        run: brew audit --strict --formula "${GITHUB_REPOSITORY_Blackwolf1337,,}/quince/quince"
+        run: brew audit --strict --formula blackwolf1337/quince/quince
       - name: Install
-        run: brew install --build-from-source --verbose "${GITHUB_REPOSITORY_Blackwolf1337,,}/quince/quince"
+        run: brew install --build-from-source --verbose blackwolf1337/quince/quince
       - name: Test
-        run: brew test "${GITHUB_REPOSITORY_Blackwolf1337,,}/quince/quince"
+        run: |
+          set -o pipefail
+          brew test --verbose blackwolf1337/quince/quince 2>&1 | tee test.log
+      - name: Test output as annotations
+        # job logs need a GitHub login, annotations do not
+        if: failure()
+        run: tail -40 test.log | sed 's/%/%25/g; s/^/::error::/' || true
