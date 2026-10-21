@@ -96,12 +96,23 @@ jobs:
           exec > >(tee -a ci.log) 2>&1
           app=build/Quince.app
           "$(brew --prefix qt)/bin/macdeployqt" "$app" -qmldir=qml
-          # what macdeployqt left pointing into Homebrew (mpv's own libraries)
-          dylibbundler -of -b -x "$app/Contents/MacOS/Quince" -d "$app/Contents/Frameworks" \
-                       -p @executable_path/../Frameworks/
-          left=$(find "$app" -type f \( -perm -u+x -o -name '*.dylib' \) -exec otool -L {} \; 2>/dev/null \
-                 | grep -E '/opt/homebrew|/usr/local/(opt|Cellar)' || true)
-          if [ -n "$left" ]; then echo "$left"; exit 1; fi
+          # Homebrew libraries a binary of the bundle still loads (its own id aside)
+          brewdeps() {
+            find "$app/Contents" -type f \( -name '*.dylib' -o -perm -u+x \) | while read -r f; do
+              file "$f" | grep -q Mach-O || continue
+              id=$(otool -D "$f" | tail -n +2)
+              otool -L "$f" | tail -n +2 | awk '{print $1}' | grep -E '^(/opt/homebrew|/usr/local/(opt|Cellar))' \
+                | grep -vxF "$id" | sed "s|^|$f -> |"
+            done
+          }
+          # what macdeployqt left (mpv's libraries, those of the Qt plugins)
+          args=()
+          for f in $(brewdeps | sed 's/ -> .*//' | sort -u); do args+=(-x "$f"); done
+          if [ ${#args[@]} -gt 0 ]; then
+            dylibbundler -of -b "${args[@]}" -d "$app/Contents/Frameworks" -p @executable_path/../Frameworks/
+          fi
+          left=$(brewdeps)
+          if [ -n "$left" ]; then echo "$left" | head -40 | sed 's/^/::error::/'; exit 1; fi
           codesign --force --deep --sign - "$app"
           ver=$(git describe --tags --always)
           ditto -c -k --keepParent "$app" "Quince-$ver-macos-arm64.zip"
