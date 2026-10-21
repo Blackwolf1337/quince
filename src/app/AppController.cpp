@@ -29,6 +29,24 @@ namespace {
 // a play counts in the account's history after this much of it was heard
 constexpr double kHistoryAfterSeconds = 10.0;
 
+// lavfi graphs from the sound to a picture ([vo]) for each visualizer style
+QString visualizerGraph(const QString &style)
+{
+    QString draw;
+    if (style == u"bars")
+        draw = QStringLiteral("showfreqs=s=1280x720:mode=bar:ascale=log:fscale=log:win_size=2048:colors=0xe8e8f0");
+    else if (style == u"wave")
+        draw = QStringLiteral("showwaves=s=1280x720:mode=cline:rate=30:scale=sqrt:colors=0xe8e8f0");
+    else if (style == u"spectrum")
+        draw = QStringLiteral("showcqt=s=1280x720:fps=30:sono_h=0:axis=0:bar_g=2");
+    else if (style == u"scope")
+        draw = QStringLiteral("avectorscope=s=720x720:r=30:zoom=1.3:draw=line:rc=230:gc=230:bc=240:rf=12:gf=12:bf=10");
+    else
+        return {};
+    // black turns see-through, so the picture lies on the view's own light
+    return QStringLiteral("[aid1]asplit[ao][a];[a]%1,format=rgba,colorkey=0x000000:0.08:0.2[vo]").arg(draw);
+}
+
 } // namespace
 
 AppController::AppController(const AppOptions &options, QObject *parent)
@@ -162,6 +180,10 @@ void AppController::applySettings()
     m_playback->setNormalizeLoudness(m_settings->normalizeLoudness());
     m_playback->setSkipDisliked(m_settings->skipDisliked());
     m_playback->setStartPaused(m_settings->startPaused());
+    m_playback->setCaptionLanguage(m_settings->captionLanguage());
+    m_playback->setVideoHeight(m_settings->videoHeight());
+    m_playback->setVideoMode(m_settings->videoMode());
+    m_player->setVisualizer(visualizerGraph(m_settings->visualizer()));
 }
 
 void AppController::setVolumeSlider(double slider)

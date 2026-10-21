@@ -77,8 +77,15 @@ bool MpvPlayer::createDeck(int index)
         return false;
     }
 
-    mpv_set_option_string(mpv, "video", "no");
+    // video only in video mode (vid per file), drawn by MpvVideoItem
+    mpv_set_option_string(mpv, "vid", "no");
+    mpv_set_option_string(mpv, "vo", "libmpv");
+    mpv_set_option_string(mpv, "hwdec", "auto-safe");
+    // pictures with alpha (the visualizer) stay see-through in the video item
+    mpv_set_option_string(mpv, "alpha", "yes");
+    mpv_set_option_string(mpv, "background", "none");
     mpv_set_option_string(mpv, "audio-display", "no");
+    mpv_set_option_string(mpv, "keep-open", "no");
     mpv_set_option_string(mpv, "ytdl", "no");
     mpv_set_option_string(mpv, "terminal", "no");
     mpv_set_option_string(mpv, "input-default-bindings", "no");
@@ -334,11 +341,29 @@ void MpvPlayer::loadFile(int deck, const Stream &stream, const QString &tag, con
     // a per-file option: mpv puts the old value back when the file ends
     options.insert(QStringLiteral("volume-gain"), QString::number(gainDb, 'f', 2));
 
+    QString url = stream.url.toString(QUrl::FullyEncoded);
+    if (stream.video) {
+        // picture and sound are two streams; an EDL joins them into one file,
+        // the way mpv's own ytdl hook does
+        const auto part = [](const QString &u) { return u'%' + QString::number(u.toUtf8().size()) + u'%' + u; };
+        url = QStringLiteral("edl://!no_clip;!no_chapters;") + part(url)
+            + QStringLiteral(";!new_stream;!no_clip;!no_chapters;") + part(stream.audioUrl.toString(QUrl::FullyEncoded));
+        options.insert(QStringLiteral("vid"), m_videoOutput ? QStringLiteral("auto") : QStringLiteral("no"));
+    } else if (!m_visualizer.isEmpty() && m_videoOutput) {
+        options.insert(QStringLiteral("lavfi-complex"), m_visualizer);
+    }
+
+    if (m_tagIsVideo.size() > 64)
+        m_tagIsVideo.clear();
+    m_tagIsVideo.insert(tag, stream.video);
+    m_tagPicture.insert(tag, stream.video && m_videoOutput);
+    if (m_tagPicture.size() > 64)
+        m_tagPicture.clear();
     const quint64 reply = m_nextReply++;
     m_decks[deck].replyTags.insert(reply, tag);
     command(deck, QVariantMap{
         {QStringLiteral("name"), QStringLiteral("loadfile")},
-        {QStringLiteral("url"), stream.url.toString(QUrl::FullyEncoded)},
+        {QStringLiteral("url"), url},
         {QStringLiteral("flags"), QString::fromLatin1(flags)},
         {QStringLiteral("index"), -1},
         {QStringLiteral("options"), options},
@@ -354,6 +379,8 @@ void MpvPlayer::load(const Stream &stream, const QString &tag, double start, boo
     Deck &deck = m_decks[m_active];
     deck.waitingNext.reset();
     deck.startingTag = tag;
+    m_activeIsVideo = stream.video;
+    m_activePicture = stream.video && m_videoOutput;
     loadFile(m_active, stream, tag, "replace", start, gainDb);
 }
 
@@ -371,6 +398,10 @@ void MpvPlayer::queueNext(const Stream &stream, const QString &tag, double gainD
 void MpvPlayer::onStarted(int deckIndex, const QString &tag)
 {
     Deck &deck = m_decks[deckIndex];
+    if (deckIndex != m_active ? tag == m_crossfadeTag : true) {
+        m_activeIsVideo = m_tagIsVideo.value(tag);
+        m_activePicture = m_tagPicture.value(tag);
+    }
     if (deckIndex != m_active) {
         if (tag != m_crossfadeTag)
             return;
@@ -379,6 +410,7 @@ void MpvPlayer::onStarted(int deckIndex, const QString &tag)
         m_crossfadeTag.clear();
         m_fadeFrom = m_active;
         m_active = deckIndex;
+        emit activeDeckChanged();
         m_position = m_reportedPosition = 0;
         m_duration = 0;
         m_idle = false;
@@ -523,6 +555,43 @@ void MpvPlayer::setFilters(const QString &filters)
         return;
     m_filters = filters;
     setMpvProperty("af", filters);
+}
+
+void MpvPlayer::setVisualizer(const QString &graph)
+{
+    if (graph == m_visualizer)
+        return;
+    m_visualizer = graph;
+    // the file playing gets it now, later files with their load
+    if (m_videoOutput && !m_activeIsVideo)
+        setDeckProperty(m_active, "lavfi-complex", graph);
+}
+
+void MpvPlayer::setVideoOutput(bool on)
+{
+    if (on == m_videoOutput)
+        return;
+    m_videoOutput = on;
+    // the file playing: its picture (or the visualizer) on or off
+    if (m_activeIsVideo) {
+        if (on && !m_activePicture) {
+            emit pictureNeedsReload();
+        } else if (!on) {
+            setDeckProperty(m_active, "vid", QStringLiteral("no"));
+            m_activePicture = false;
+        }
+    }
+    else if (!m_visualizer.isEmpty())
+        setDeckProperty(m_active, "lavfi-complex", on ? m_visualizer : QString());
+}
+
+void MpvPlayer::setSubtitle(const QUrl &url)
+{
+    if (url.isEmpty()) {
+        setDeckProperty(m_active, "sid", QStringLiteral("no"));
+        return;
+    }
+    command(m_active, QVariantList{QStringLiteral("sub-add"), url.toString(QUrl::FullyEncoded), QStringLiteral("select")});
 }
 
 void MpvPlayer::setSpeed(double speed)

@@ -63,6 +63,17 @@ public:
 
     // mpv's audio filter chain (af), set on both decks
     void setFilters(const QString &filters);
+    // An audio visualization (lavfi graph from audio to [vo], e.g. showcqt)
+    // drawn as video while no real video plays; empty for none.
+    void setVisualizer(const QString &graph);
+    // captions of the video playing: a WebVTT URL, or empty for none
+    void setSubtitle(const QUrl &url);
+
+    // the mpv instance a video item draws from: the active deck
+    mpv_handle *renderHandle() const { return m_decks[m_active].mpv; }
+    // A video item draws (its render context exists): only then is the
+    // picture decoded; without one mpv would fail to open its output.
+    void setVideoOutput(bool on);
     // playback speed, pitch kept; factor on top of it while skipping a silence
     void setSpeed(double speed);
     void setSpeedBoost(double factor);
@@ -108,6 +119,11 @@ signals:
     // audio runs (after a load or a seek)
     void playbackRestarted();
     void crossfadeFailed(const QString &tag);
+    // the other deck plays now (after a crossfade); video items follow it
+    void activeDeckChanged();
+    // a video item draws now, but the video playing was opened without its
+    // picture (mpv does not add it to an open file); load it again
+    void pictureNeedsReload();
     // metadata of the "silence" filter (lavfi silencedetect) of the active deck
     void silenceMetadata(const QVariantMap &values);
 
@@ -175,6 +191,15 @@ private:
     double m_speed = 1.0;
     double m_speedBoost = 1.0;
     QString m_filters;
+    QString m_visualizer;
+    bool m_videoOutput = false;
+    // the file playing on the active deck has a picture; per tag, of the
+    // files handed to mpv
+    bool m_activeIsVideo = false;
+    QHash<QString, bool> m_tagIsVideo;
+    // the file playing was opened with its picture on
+    bool m_activePicture = false;
+    QHash<QString, bool> m_tagPicture;
     QString m_audioDeviceWanted;
     QVariantList m_allAudioDevices;
     QVariantList m_audioDevices; // of the audio backend in use

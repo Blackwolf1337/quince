@@ -105,7 +105,17 @@ void TestDriver::run(const QString &line)
         const int k = keys.value(parts.value(1));
         key(k, k == Qt::Key_Space ? QStringLiteral(" ") : k == Qt::Key_Return ? QStringLiteral("\r") : QString());
     } else if (command == u"shot") {
-        m_window->grabWindow().save(parts.value(1));
+        // the main window, or the window shown instead of it (mini player)
+        QQuickWindow *target = m_window;
+        if (!m_window->isVisible()) {
+            for (QWindow *w : QGuiApplication::topLevelWindows()) {
+                if (auto *quick = qobject_cast<QQuickWindow *>(w); quick && quick->isVisible()) {
+                    target = quick;
+                    break;
+                }
+            }
+        }
+        target->grabWindow().save(parts.value(1));
     } else if (command == u"state") {
         const Playback *playback = m_app->playback();
         const MpvPlayer *player = m_app->player();

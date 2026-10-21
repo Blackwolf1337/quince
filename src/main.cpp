@@ -89,6 +89,12 @@ int main(int argc, char *argv[])
     options.restoreSession = !parser.isSet(noSessionOption);
 
     QQuickStyle::setStyle(QStringLiteral("Material"));
+    // mpv draws video through OpenGL (MpvVideoItem); the default elsewhere is
+    // Direct3D or Metal. Test runs without a GPU keep the software renderer.
+    // QUINCE_GL=1 asks for OpenGL offscreen too (test runs that draw video)
+    if ((QGuiApplication::platformName() != u"offscreen" || qEnvironmentVariableIntValue("QUINCE_GL"))
+        && qEnvironmentVariableIsEmpty("QT_QUICK_BACKEND"))
+        QQuickWindow::setGraphicsApi(QSGRendererInterface::OpenGL);
     // Inter (OFL) everywhere, so the look does not depend on the system's fonts
     QFontDatabase::addApplicationFont(QStringLiteral(":/qt/qml/Quince/qml/fonts/InterVariable.ttf"));
     QFont font(QStringLiteral("Inter Variable"));

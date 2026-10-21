@@ -24,6 +24,9 @@ Item {
 
     signal queueToggled()
     signal nowPlayingRequested()
+    // opens the Now Playing view (where a video shows), never closes it
+    signal nowPlayingShown()
+    signal miniPlayerRequested()
 
     function formatTime(seconds) {
         if (!isFinite(seconds) || seconds < 0)
@@ -239,6 +242,20 @@ Item {
             onClicked: App.account.rate(bar.track.videoId, checked ? "LIKE" : "INDIFFERENT")
         }
 
+        ToolButton {
+            icon.source: "icons/video.svg"
+            checkable: true
+            checked: App.settings.videoMode
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Switch between song and music video")
+            onClicked: {
+                App.settings.videoMode = checked
+                // the picture is in the Now Playing view
+                if (checked)
+                    bar.nowPlayingShown()
+            }
+        }
+
         Label {
             text: bar.playback.streamInfo
             visible: !!bar.track.videoId && text.length > 0
@@ -325,6 +342,13 @@ Item {
             ToolTip.visible: hovered
             ToolTip.text: qsTr("Up next")
             onClicked: bar.queueToggled()
+        }
+        ToolButton {
+            icon.source: "icons/miniplayer.svg"
+            enabled: !!bar.track.videoId
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Mini player")
+            onClicked: bar.miniPlayerRequested()
         }
         ToolButton {
             icon.source: "icons/chevron-left.svg"

@@ -14,6 +14,10 @@ const QString kNormalize = QStringLiteral("player/normalizeLoudness");
 const QString kAlbumColors = QStringLiteral("look/albumColors");
 const QString kSkipDisliked = QStringLiteral("player/skipDisliked");
 const QString kStartPaused = QStringLiteral("player/startPaused");
+const QString kVideoMode = QStringLiteral("video/mode");
+const QString kVideoHeight = QStringLiteral("video/height");
+const QString kCaptionLanguage = QStringLiteral("video/captions");
+const QString kVisualizer = QStringLiteral("look/visualizer");
 const QString kCompactSidebar = QStringLiteral("look/compactSidebar");
 const QString kClock = QStringLiteral("look/clock");
 const QString kTransparentWindow = QStringLiteral("look/transparentWindow");
@@ -79,6 +83,14 @@ bool Settings::skipDisliked() const { return m_store.value(kSkipDisliked, false)
 bool Settings::startPaused() const { return m_store.value(kStartPaused, false).toBool(); }
 void Settings::setSkipDisliked(bool on) { set(kSkipDisliked, on); }
 void Settings::setStartPaused(bool on) { set(kStartPaused, on); }
+bool Settings::videoMode() const { return m_store.value(kVideoMode, false).toBool(); }
+int Settings::videoHeight() const { return m_store.value(kVideoHeight, 1080).toInt(); }
+QString Settings::captionLanguage() const { return m_store.value(kCaptionLanguage).toString(); }
+void Settings::setVideoMode(bool on) { set(kVideoMode, on); }
+void Settings::setVideoHeight(int height) { set(kVideoHeight, height); }
+void Settings::setCaptionLanguage(const QString &language) { set(kCaptionLanguage, language); }
+QString Settings::visualizer() const { return m_store.value(kVisualizer).toString(); }
+void Settings::setVisualizer(const QString &style) { set(kVisualizer, style); }
 bool Settings::compactSidebar() const { return m_store.value(kCompactSidebar, false).toBool(); }
 bool Settings::clock() const { return m_store.value(kClock, false).toBool(); }
 bool Settings::transparentWindow() const { return m_store.value(kTransparentWindow, false).toBool(); }

@@ -17,7 +17,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 endif()
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Network Widgets Sql LinguistTools)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Network Widgets Sql OpenGL LinguistTools)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Qt6 6.8 REQUIRED COMPONENTS DBus)
     # Chromium's cookie encryption (AES-128-CBC)
@@ -56,6 +56,7 @@ qt_add_qml_module(quince
         qml/Glass.qml
         qml/GlassScrim.qml
         qml/Glow.qml
+        qml/MiniPlayer.qml
         qml/NowPlaying.qml
         qml/Skeleton.qml
         qml/SmoothScroll.qml
@@ -86,6 +87,7 @@ qt_add_qml_module(quince
         qml/fonts/InterVariable.ttf
         qml/icons/account.svg
         qml/icons/back.svg
+        qml/icons/captions.svg
         qml/icons/chevron-left.svg
         qml/icons/chevron-right.svg
         qml/icons/dislike.svg
@@ -95,6 +97,7 @@ qt_add_qml_module(quince
         qml/icons/home.svg
         qml/icons/library.svg
         qml/icons/like.svg
+        qml/icons/miniplayer.svg
         qml/icons/more.svg
         qml/icons/next.svg
         qml/icons/pause.svg
@@ -107,6 +110,8 @@ qt_add_qml_module(quince
         qml/icons/search.svg
         qml/icons/settings.svg
         qml/icons/shuffle.svg
+        qml/icons/video.svg
+        qml/icons/visualizer.svg
         qml/icons/volume.svg
         qml/icons/volume-off.svg
     SOURCES
@@ -134,6 +139,8 @@ qt_add_qml_module(quince
         src/player/MpvNode.cpp
         src/player/MpvPlayer.h
         src/player/MpvPlayer.cpp
+        src/player/MpvVideoItem.h
+        src/player/MpvVideoItem.cpp
         src/player/Playback.h
         src/player/Playback.cpp
         src/player/Queue.h
@@ -182,6 +189,7 @@ target_link_libraries(quince PRIVATE
     Qt6::Network
     Qt6::Widgets
     Qt6::Sql
+    Qt6::OpenGL
     PkgConfig::MPV
     qjs
 )

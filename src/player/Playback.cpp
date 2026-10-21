@@ -77,7 +77,8 @@ QVariantList withAlbum(QVariantList items, const QVariantMap &context)
 
 QString streamInfoOf(const Stream &stream)
 {
-    return QStringLiteral("%1 %2 kbit/s").arg(stream.codec).arg(qRound(stream.bitrate));
+    const QString audio = QStringLiteral("%1 %2 kbit/s").arg(stream.codec).arg(qRound(stream.bitrate));
+    return stream.video ? QStringLiteral("%1p • %2").arg(stream.height).arg(audio) : audio;
 }
 
 } // namespace
@@ -94,6 +95,10 @@ Playback::Playback(MpvPlayer *player, StreamResolver *resolver, InnerTube *inner
     connect(m_player, &MpvPlayer::trackStarted, this, &Playback::onTrackStarted);
     connect(m_player, &MpvPlayer::trackEnded, this, &Playback::onTrackEnded);
     connect(m_player, &MpvPlayer::positionChanged, this, &Playback::checkCrossfade);
+    connect(m_player, &MpvPlayer::pictureNeedsReload, this, [this] {
+        if (!m_loadedId.isEmpty() && m_loadedId == m_queue->videoIdAt(m_queue->current()))
+            startCurrent(m_player->position(), m_player->paused());
+    });
     connect(m_player, &MpvPlayer::crossfadeFailed, this, [this](const QString &tag) {
         if (tag != m_queuedId)
             return;
@@ -103,6 +108,10 @@ Playback::Playback(MpvPlayer *player, StreamResolver *resolver, InnerTube *inner
         m_resolver->forget(tag);
     });
     connect(m_player, &MpvPlayer::playbackRestarted, this, [this] {
+        if (m_captionPending) {
+            m_captionPending = false;
+            setCaption(m_caption);
+        }
         if (m_startTimer.isValid()) {
             qCDebug(lcPlayback) << "sound after" << m_startTimer.elapsed() << "ms";
             m_startTimer.invalidate();
@@ -301,16 +310,85 @@ double Playback::gainFor(const QString &videoId) const
     return -qMax(0.0, m_loudness.value(videoId, 0.0));
 }
 
-void Playback::rememberPlayerInfo(const Stream &stream)
+// kept under the queue entry's id, which may differ from the stream's (a song's video)
+void Playback::rememberPlayerInfo(const Stream &stream, const QString &queueId)
 {
     if (m_loudness.size() + m_tracking.size() > kMaxPlayerInfo) {
         m_loudness.clear();
         m_tracking.clear();
     }
     if (!std::isnan(stream.loudnessDb))
-        m_loudness.insert(stream.videoId, stream.loudnessDb);
+        m_loudness.insert(queueId, stream.loudnessDb);
     if (!stream.trackingUrl.isEmpty())
-        m_tracking.insert(stream.videoId, stream.trackingUrl);
+        m_tracking.insert(queueId, stream.trackingUrl);
+}
+
+Playback::Source Playback::sourceFor(const QVariantMap &item) const
+{
+    const QString id = item.value(kVideoId).toString();
+    if (!m_videoMode)
+        return {id, false, true};
+    const QString type = item.value(QStringLiteral("videoType")).toString();
+    // podcasts stay sound only; music videos and uploads are videos themselves
+    if (type == u"MUSIC_VIDEO_TYPE_PODCAST_EPISODE")
+        return {id, false, true};
+    if (!type.isEmpty() && type != u"MUSIC_VIDEO_TYPE_ATV")
+        return {id, true, true};
+    // a bare link (--play, pasted): of unknown kind, so it shows its own picture
+    if (type.isEmpty() && item.value(QStringLiteral("title")).toString().isEmpty())
+        return {id, true, true};
+    const auto it = m_counterparts.constFind(id);
+    if (it == m_counterparts.cend())
+        return {id, false, false};
+    return it->isEmpty() ? Source{id, false, true} : Source{*it, true, true};
+}
+
+// A song's music video: the first official video (OMV) by the same artist in
+// a video search. The queue gives it only to some accounts, a search to all.
+void Playback::lookupCounterpart(const QVariantMap &item, std::function<void()> done)
+{
+    const QString id = item.value(kVideoId).toString();
+    if (m_lookingUp.contains(id))
+        return;
+    m_lookingUp.insert(id);
+    QStringList artists;
+    for (const QVariant &a : item.value(QStringLiteral("artists")).toList())
+        artists.append(a.toMap().value(QStringLiteral("name")).toString());
+    if (artists.isEmpty() && !item.value(QStringLiteral("artistText")).toString().isEmpty())
+        artists.append(item.value(QStringLiteral("artistText")).toString());
+    const QString title = item.value(QStringLiteral("title")).toString();
+    const QJsonObject body{
+        {QStringLiteral("query"), (artists.value(0) + u' ' + title).trimmed()},
+        // the "Videos" filter of the search page
+        {QStringLiteral("params"), QStringLiteral("EgWKAQIQAWoMEA4QChADEAQQCRAF")},
+    };
+    m_innerTube->post(QStringLiteral("search"), body, this,
+                      [this, id, artists, done](const QJsonObject &response, const QString &error) {
+        m_lookingUp.remove(id);
+        QString found;
+        if (error.isEmpty()) {
+            const ytm::Page page = ytm::parseSearch(response);
+            for (const QVariant &shelf : page.shelves) {
+                for (const QVariant &v : shelf.toMap().value(QStringLiteral("items")).toList()) {
+                    const QVariantMap result = v.toMap();
+                    if (result.value(QStringLiteral("videoType")).toString() != u"MUSIC_VIDEO_TYPE_OMV")
+                        continue;
+                    const QString by = result.value(QStringLiteral("subtitle")).toString()
+                                       + result.value(QStringLiteral("artistText")).toString();
+                    if (!artists.isEmpty() && !by.contains(artists.first(), Qt::CaseInsensitive))
+                        continue;
+                    found = result.value(kVideoId).toString();
+                    break;
+                }
+                if (!found.isEmpty())
+                    break;
+            }
+        }
+        qCDebug(lcPlayback) << "music video of" << id << "is" << (found.isEmpty() ? QStringLiteral("none") : found);
+        // a failed search counts as no video; the song plays as sound
+        m_counterparts.insert(id, found);
+        done();
+    });
 }
 
 void Playback::setLikeStatus(const QString &videoId, const QString &status)
@@ -504,7 +582,26 @@ void Playback::startCurrent(double start, bool paused)
     m_wantedPaused = paused;
     setLoading(true);
     m_startTimer.start();
-    m_resolver->resolve(m_wantedId);
+    // A track queued behind the one playing would start by itself when the
+    // replaced file stops, and move the queue on.
+    if (!m_queuedId.isEmpty()) {
+        m_player->clearQueued();
+        m_queuedId.clear();
+        m_upcoming.reset();
+    }
+    const Source source = sourceFor(item);
+    if (!source.known) {
+        const int index = m_queue->current();
+        const QString id = m_wantedId;
+        lookupCounterpart(item, [this, index, id, start, paused] {
+            if (m_queue->current() == index && m_queue->videoIdAt(index) == id && m_wantedId == id)
+                startCurrent(start, paused);
+        });
+        return;
+    }
+    m_wantedStream = source.id;
+    m_wantedVideo = source.video;
+    m_resolver->resolve(source.id, source.video);
 }
 
 void Playback::prefetchUpcoming()
@@ -517,7 +614,8 @@ void Playback::prefetchUpcoming()
     if (m_loadedId.isEmpty() || m_loadedId != m_queue->videoIdAt(current))
         return;
 
-    const QString upcoming = m_queue->videoIdAt(nextIndex());
+    const QVariantMap item = m_queue->at(nextIndex());
+    const QString upcoming = item.value(kVideoId).toString();
     if (upcoming == m_queuedId)
         return;
     if (!m_queuedId.isEmpty()) {
@@ -525,58 +623,128 @@ void Playback::prefetchUpcoming()
         m_queuedId.clear();
         m_upcoming.reset();
     }
-    if (!upcoming.isEmpty()) {
-        m_resolver->resolve(upcoming);
+    m_upcomingQueueId = upcoming;
+    if (upcoming.isEmpty())
+        return;
+    const Source source = sourceFor(item);
+    if (!source.known) {
+        lookupCounterpart(item, [this] { prefetchUpcoming(); });
+        return;
     }
+    m_upcomingStream = source.id;
+    m_upcomingVideo = source.video;
+    m_resolver->resolve(source.id, source.video);
 }
 
 void Playback::onResolved(const Stream &stream)
 {
-    rememberPlayerInfo(stream);
-    if (stream.videoId == m_wantedId) {
-        m_wantedId.clear();
+    if (!m_wantedId.isEmpty() && stream.videoId == m_wantedStream && stream.videoAsked == m_wantedVideo) {
+        const QString queueId = std::exchange(m_wantedId, QString());
+        rememberPlayerInfo(stream, queueId);
         m_failures = 0;
         setLoading(false);
         qCDebug(lcPlayback) << "resolved after" << m_startTimer.elapsed() << "ms from" << stream.client;
-        m_player->load(stream, stream.videoId, m_wantedStart, m_wantedPaused, gainFor(stream.videoId));
-        m_loadedId = stream.videoId;
+        m_player->load(stream, queueId, m_wantedStart, m_wantedPaused, gainFor(queueId));
+        m_loadedId = queueId;
+        m_loadedStream = stream.videoId;
         m_playingFor.start();
         m_queuedId.clear();
         m_upcoming.reset();
+        m_videoPlaying = stream.video;
         setStreamInfo(streamInfoOf(stream));
+        applyCaptions(stream);
         prefetchUpcoming();
         return;
     }
 
     const int current = m_queue->current();
-    if (stream.videoId == m_queue->videoIdAt(nextIndex()) && m_loadedId == m_queue->videoIdAt(current)
-        && m_queuedId != stream.videoId) {
+    const QString nextQueueId = m_queue->videoIdAt(nextIndex());
+    if (stream.videoId == m_upcomingStream && stream.videoAsked == m_upcomingVideo
+        && nextQueueId == m_upcomingQueueId && m_loadedId == m_queue->videoIdAt(current)
+        && m_queuedId != nextQueueId) {
+        rememberPlayerInfo(stream, nextQueueId);
         // gapless: mpv appends it now; crossfade: checkCrossfade starts it
-        if (m_crossfade <= 0)
-            m_player->queueNext(stream, stream.videoId, gainFor(stream.videoId));
-        m_queuedId = stream.videoId;
+        if (crossfadeSeconds() <= 0)
+            m_player->queueNext(stream, nextQueueId, gainFor(nextQueueId));
+        m_queuedId = nextQueueId;
         m_queuedInfo = streamInfoOf(stream);
         m_upcoming = stream;
     }
+}
+
+void Playback::setVideoMode(bool on)
+{
+    if (on == m_videoMode)
+        return;
+    m_videoMode = on;
+    // the queued stream was for the other mode
+    if (!m_queuedId.isEmpty()) {
+        m_player->clearQueued();
+        m_queuedId.clear();
+        m_upcoming.reset();
+    }
+    if (!m_loadedId.isEmpty() && m_loadedId == m_queue->videoIdAt(m_queue->current()))
+        startCurrent(m_player->position(), m_player->paused());
+}
+
+void Playback::setVideoHeight(int height)
+{
+    if (height == m_videoHeight)
+        return;
+    m_videoHeight = height;
+    m_resolver->setVideoHeight(height);
+    if (m_videoPlaying && !m_loadedId.isEmpty())
+        startCurrent(m_player->position(), m_player->paused());
+}
+
+void Playback::applyCaptions(const Stream &stream)
+{
+    m_captions = stream.captions;
+    m_caption = -1;
+    m_captionPending = false;
+    if (!m_captionLanguage.isEmpty()) {
+        // a written track of the language before a generated one
+        for (int pass = 0; pass < 2 && m_caption < 0; ++pass) {
+            for (int i = 0; i < m_captions.size(); ++i) {
+                const QVariantMap c = m_captions.at(i).toMap();
+                if (c.value(QStringLiteral("language")).toString().startsWith(m_captionLanguage)
+                    && c.value(QStringLiteral("generated")).toBool() == (pass == 1)) {
+                    m_caption = i;
+                    break;
+                }
+            }
+        }
+        // mpv takes captions once the file is open
+        m_captionPending = m_caption >= 0;
+    }
+    emit captionsChanged();
+}
+
+void Playback::setCaption(int index)
+{
+    m_caption = index >= 0 && index < m_captions.size() ? index : -1;
+    m_player->setSubtitle(m_caption >= 0 ? m_captions.at(m_caption).toMap().value(QStringLiteral("url")).toUrl()
+                                         : QUrl());
+    emit captionsChanged();
 }
 
 void Playback::setCrossfade(double seconds)
 {
     const double old = m_crossfade;
     m_crossfade = seconds;
-    if (!m_upcoming || m_player->crossfading())
+    if (!m_upcoming || m_player->crossfading() || m_videoMode)
         return;
     // the queued track moves between mpv's playlist and the crossfade
     if (old <= 0 && seconds > 0)
         m_player->clearQueued();
     else if (old > 0 && seconds <= 0)
-        m_player->queueNext(*m_upcoming, m_upcoming->videoId, gainFor(m_upcoming->videoId));
+        m_player->queueNext(*m_upcoming, m_queuedId, gainFor(m_queuedId));
 }
 
 // the next track starts on the other deck when this one is that close to its end
 void Playback::checkCrossfade()
 {
-    if (m_crossfade <= 0 || !m_upcoming || m_upcoming->videoId != m_queuedId || m_player->crossfading()
+    if (crossfadeSeconds() <= 0 || !m_upcoming || m_queuedId.isEmpty() || m_player->crossfading()
         || m_player->paused())
         return;
     const double duration = m_player->duration();
@@ -593,7 +761,7 @@ void Playback::checkCrossfade()
 
 void Playback::onFailed(const QString &videoId, const QString &error)
 {
-    if (videoId != m_wantedId)
+    if (m_wantedId.isEmpty() || videoId != m_wantedStream)
         return;
     m_wantedId.clear();
     setLoading(false);
@@ -610,6 +778,11 @@ void Playback::onTrackStarted(const QString &tag)
     m_loadedId = tag;
     m_playingFor.start();
     m_queuedId.clear();
+    if (m_upcoming) {
+        m_loadedStream = m_upcoming->videoId;
+        m_videoPlaying = m_upcoming->video;
+        applyCaptions(*m_upcoming);
+    }
     m_upcoming.reset();
     setStreamInfo(m_queuedInfo);
     const int next = nextIndex();
@@ -628,7 +801,7 @@ void Playback::onTrackEnded(const QString &tag, bool eof, const QString &error)
         m_queuedId.clear();
         m_upcoming.reset();
         // googlevideo refuses some URLs (403); a fresh one, from the other client, usually works
-        m_resolver->forget(tag);
+        m_resolver->forget(m_loadedStream);
         if (!m_retried.contains(tag) && m_queue->videoIdAt(m_queue->current()) == tag) {
             m_retried.insert(tag);
             // mid-track failures go on where they stopped

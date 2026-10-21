@@ -106,6 +106,35 @@ QJsonObject pickAudio(const QJsonObject &answer)
     return best;
 }
 
+// the best picture up to maxHeight: highest first, then VP9, H.264, AV1
+QJsonObject pickVideo(const QJsonObject &answer, int maxHeight)
+{
+    const auto codecRank = [](const QString &mime) {
+        return mime.contains(u"vp9") || mime.contains(u"vp09") ? 0 : mime.contains(u"avc1") ? 1 : 2;
+    };
+    QJsonObject best;
+    for (const QJsonValue &value : ytm::at(answer, {"streamingData", "adaptiveFormats"}).toArray()) {
+        const QJsonObject format = value.toObject();
+        const QString mime = format.value(u"mimeType").toString();
+        if (!mime.startsWith(u"video/") || format.contains(u"drmFamilies"))
+            continue;
+        const int height = format.value(u"height").toInt();
+        if (height <= 0 || height > maxHeight)
+            continue;
+        if (best.isEmpty()) {
+            best = format;
+            continue;
+        }
+        const int bestHeight = best.value(u"height").toInt();
+        const int bestRank = codecRank(best.value(u"mimeType").toString());
+        if (height > bestHeight || (height == bestHeight && codecRank(mime) < bestRank)
+            || (height == bestHeight && codecRank(mime) == bestRank
+                && format.value(u"fps").toInt() > best.value(u"fps").toInt()))
+            best = format;
+    }
+    return best;
+}
+
 bool hasFormat(const QJsonObject &answer, int itag)
 {
     for (const QJsonValue &value : ytm::at(answer, {"streamingData", "adaptiveFormats"}).toArray()) {
@@ -177,12 +206,12 @@ StreamResolver::StreamResolver(InnerTube *innerTube, JsSolver *solver, QObject *
     // carried no signatureTimestamp of a real player.
     connect(m_solver, &JsSolver::prepared, this, [this] {
         const QSet<QString> waiting = std::exchange(m_waiting, {});
-        for (const QString &videoId : waiting) {
-            m_pending.remove(videoId);
+        for (const QString &key : waiting) {
+            const Pending pending = m_pending.take(key);
             if (m_solver->ready())
-                resolve(videoId);
+                resolve(pending.videoId, pending.video);
             else
-                fail(videoId, tr("YouTube's player could not be loaded."));
+                fail(pending.videoId, tr("YouTube's player could not be loaded."));
         }
     });
 }
@@ -194,9 +223,28 @@ void StreamResolver::setCookies(AccountCookies *cookies)
     m_cookies = cookies;
 }
 
-bool StreamResolver::isCached(const QString &videoId) const
+void StreamResolver::setVideoHeight(int height)
 {
-    const auto it = m_cache.constFind(videoId);
+    if (height == m_videoHeight)
+        return;
+    m_videoHeight = height;
+    // video URLs of the old quality
+    for (auto it = m_cache.begin(); it != m_cache.end();) {
+        if (it->video)
+            it = m_cache.erase(it);
+        else
+            ++it;
+    }
+}
+
+QString StreamResolver::keyOf(const QString &videoId, bool video)
+{
+    return video ? videoId + QStringLiteral("#v") : videoId;
+}
+
+bool StreamResolver::isCached(const QString &videoId, bool video) const
+{
+    const auto it = m_cache.constFind(keyOf(videoId, video));
     if (it == m_cache.cend())
         return false;
     return QDateTime::currentDateTimeUtc().secsTo(it->expires) > kExpireMarginSecs;
@@ -204,18 +252,22 @@ bool StreamResolver::isCached(const QString &videoId) const
 
 void StreamResolver::forget(const QString &videoId)
 {
-    const auto it = m_cache.constFind(videoId);
-    if (it != m_cache.cend() && it->client == u"WEB_REMIX") {
-        m_webFailed.insert(videoId);
-        // a refused URL may mean a new player; look again
-        m_solver->prepare(true);
+    for (const bool video : {false, true}) {
+        const auto it = m_cache.constFind(keyOf(videoId, video));
+        if (it == m_cache.cend())
+            continue;
+        if (it->client == u"WEB_REMIX") {
+            m_webFailed.insert(videoId);
+            // a refused URL may mean a new player; look again
+            m_solver->prepare(true);
+        }
+        m_cache.erase(it);
     }
-    m_cache.remove(videoId);
 }
 
-bool StreamResolver::isRunning(const QString &videoId) const
+bool StreamResolver::isRunning(const QString &videoId, bool video) const
 {
-    return m_pending.contains(videoId);
+    return m_pending.contains(keyOf(videoId, video));
 }
 
 void StreamResolver::fail(const QString &videoId, const QString &error)
@@ -224,18 +276,21 @@ void StreamResolver::fail(const QString &videoId, const QString &error)
     emit failed(videoId, error);
 }
 
-void StreamResolver::resolve(const QString &videoId)
+void StreamResolver::resolve(const QString &videoId, bool video)
 {
-    if (isCached(videoId)) {
-        QMetaObject::invokeMethod(this, [this, videoId] {
-            emit resolved(m_cache.value(videoId));
+    const QString key = keyOf(videoId, video);
+    if (isCached(videoId, video)) {
+        QMetaObject::invokeMethod(this, [this, key] {
+            emit resolved(m_cache.value(key));
         }, Qt::QueuedConnection);
         return;
     }
-    if (m_pending.contains(videoId))
+    if (m_pending.contains(key))
         return;
 
-    Pending &pending = m_pending[videoId];
+    Pending &pending = m_pending[key];
+    pending.videoId = videoId;
+    pending.video = video;
     pending.webAllowed = forcedClient() == u"web" || (!m_webFailed.contains(videoId) && forcedClient() != u"vision");
     const bool premiumLikely = m_cookies && m_cookies->signedIn();
     if (pending.webAllowed && (premiumLikely || forcedClient() == u"web")) {
@@ -243,43 +298,44 @@ void StreamResolver::resolve(const QString &videoId)
         m_solver->warm();
     }
     pending.playerId = m_solver->playerId();
-    qCDebug(lcResolve) << "resolving" << videoId << "web" << pending.webAllowed;
+    qCDebug(lcResolve) << "resolving" << videoId << (video ? "video" : "audio") << "web" << pending.webAllowed;
 
     m_innerTube->post(QStringLiteral("player"), playerBody(videoId, m_solver->signatureTimestamp()), this,
-                      [this, videoId](const QJsonObject &answer, const QString &error) {
-        auto it = m_pending.find(videoId);
+                      [this, key](const QJsonObject &answer, const QString &error) {
+        auto it = m_pending.find(key);
         if (it == m_pending.end())
             return;
         it->webDone = true;
         it->web = answer;
         it->webError = error;
         if (!it->visionSent)
-            requestVision(videoId);
-        onAnswer(videoId);
+            requestVision(key);
+        onAnswer(key);
     });
     // the first request of a run waits for the visitor id the answer above brings
     if (m_innerTube->hasVisitorData())
-        requestVision(videoId);
+        requestVision(key);
 }
 
-void StreamResolver::requestVision(const QString &videoId)
+void StreamResolver::requestVision(const QString &key)
 {
-    m_pending[videoId].visionSent = true;
-    m_innerTube->postAs(visionClient(), QStringLiteral("player"), visionBody(videoId), this,
-                        [this, videoId](const QJsonObject &answer, const QString &error) {
-        auto it = m_pending.find(videoId);
+    Pending &pending = m_pending[key];
+    pending.visionSent = true;
+    m_innerTube->postAs(visionClient(), QStringLiteral("player"), visionBody(pending.videoId), this,
+                        [this, key](const QJsonObject &answer, const QString &error) {
+        auto it = m_pending.find(key);
         if (it == m_pending.end())
             return;
         it->visionDone = true;
         it->vision = answer;
         it->visionError = error;
-        onAnswer(videoId);
+        onAnswer(key);
     });
 }
 
-void StreamResolver::onAnswer(const QString &videoId)
+void StreamResolver::onAnswer(const QString &key)
 {
-    const Pending pending = m_pending.value(videoId);
+    const Pending pending = m_pending.value(key);
     if (!pending.webDone || !pending.visionDone)
         return;
 
@@ -287,21 +343,16 @@ void StreamResolver::onAnswer(const QString &videoId)
     // bot check) go through WEB_REMIX too.
     const bool web = pending.webAllowed && !pending.playerId.isEmpty() && playable(pending.web)
         && (hasFormat(pending.web, kPremiumFormat) || !playable(pending.vision) || forcedClient() == u"web");
-    if (web) {
-        const QJsonObject format = pickAudio(pending.web);
-        if (!format.isEmpty()) {
-            finishWeb(videoId, pending, format);
-            return;
-        }
-    }
-    if (finishVision(videoId, pending))
+    if (web && finishWeb(key, pending))
+        return;
+    if (finishVision(key, pending))
         return;
     if (pending.webAllowed && playable(pending.web) && pending.playerId.isEmpty() && m_solver->preparing()) {
-        m_waiting.insert(videoId);
+        m_waiting.insert(key);
         return;
     }
 
-    m_pending.remove(videoId);
+    m_pending.remove(key);
     QString reason = unplayableReason(pending.web);
     if (reason.isEmpty())
         reason = unplayableReason(pending.vision);
@@ -309,91 +360,154 @@ void StreamResolver::onAnswer(const QString &videoId)
         reason = !pending.webError.isEmpty() ? pending.webError : pending.visionError;
     if (reason.isEmpty())
         reason = tr("YouTube gave no audio stream.");
-    fail(videoId, reason);
+    fail(pending.videoId, reason);
 }
 
-void StreamResolver::finishWeb(const QString &videoId, const Pending &pending, const QJsonObject &format)
+// the stream's formats of an answer: audio, and in video mode the picture
+bool StreamResolver::pickFormats(const QJsonObject &answer, bool video, QJsonObject *audio, QJsonObject *picture) const
 {
-    QUrl url(format.value(u"url").toString());
-    QString signature;
-    QString signatureKey;
-    if (url.isEmpty()) {
-        const QHash<QString, QString> cipher = formDecode(format.value(u"signatureCipher").toString());
-        url = QUrl(cipher.value(QStringLiteral("url")));
-        signature = cipher.value(QStringLiteral("s"));
-        signatureKey = cipher.value(QStringLiteral("sp"), QStringLiteral("signature"));
+    *audio = pickAudio(answer);
+    if (audio->isEmpty())
+        return false;
+    if (video) {
+        *picture = pickVideo(answer, m_videoHeight);
+        // no picture to have: the sound alone
     }
-    const QString n = QUrlQuery(url).queryItemValue(QStringLiteral("n"), QUrl::FullyDecoded);
+    return true;
+}
 
-    Stream stream;
-    stream.videoId = videoId;
-    stream.client = QStringLiteral("WEB_REMIX");
-    stream.formatId = QString::number(format.value(u"itag").toInt());
-    stream.codec = codecOf(format.value(u"mimeType").toString());
-    stream.bitrate = format.value(u"averageBitrate").toDouble(format.value(u"bitrate").toDouble()) / 1000;
-    stream.duration = format.value(u"approxDurationMs").toString().toDouble() / 1000;
+bool StreamResolver::finishWeb(const QString &key, const Pending &pending)
+{
+    QJsonObject audio;
+    QJsonObject picture;
+    if (!pickFormats(pending.web, pending.video, &audio, &picture))
+        return false;
+
+    struct Part
+    {
+        QUrl url;
+        QString n;
+        QString signature;
+        QString signatureKey;
+    };
+    const auto partOf = [](const QJsonObject &format) {
+        Part part;
+        part.url = QUrl(format.value(u"url").toString());
+        if (part.url.isEmpty()) {
+            const QHash<QString, QString> cipher = formDecode(format.value(u"signatureCipher").toString());
+            part.url = QUrl(cipher.value(QStringLiteral("url")));
+            part.signature = cipher.value(QStringLiteral("s"));
+            part.signatureKey = cipher.value(QStringLiteral("sp"), QStringLiteral("signature"));
+        }
+        part.n = QUrlQuery(part.url).queryItemValue(QStringLiteral("n"), QUrl::FullyDecoded);
+        return part;
+    };
+    QList<Part> parts{partOf(audio)};
+    if (!picture.isEmpty())
+        parts.append(partOf(picture));
+
+    Stream stream = streamOf(pending.videoId, QStringLiteral("WEB_REMIX"), audio, picture);
+    stream.videoAsked = pending.video;
     stream.headers = {
         {QByteArrayLiteral("User-Agent"), InnerTube::userAgent()},
         {QByteArrayLiteral("Origin"), QByteArrayLiteral("https://music.youtube.com")},
         {QByteArrayLiteral("Referer"), QByteArrayLiteral("https://music.youtube.com/")},
     };
-    stream.url = url;
 
     QStringList nList;
-    if (!n.isEmpty())
-        nList.append(n);
     QStringList sigList;
-    if (!signature.isEmpty())
-        sigList.append(signature);
+    for (const Part &part : parts) {
+        if (!part.n.isEmpty() && !nList.contains(part.n))
+            nList.append(part.n);
+        if (!part.signature.isEmpty())
+            sigList.append(part.signature);
+    }
 
     m_solver->solve(pending.playerId, nList, sigList, this,
-                    [this, videoId, pending, stream, n, signature, signatureKey](
-                        const QHash<QString, QString> &nOut, const QHash<QString, QString> &sigOut,
-                        const QString &error) mutable {
-        const QString solvedN = nOut.value(n);
-        const QString solvedSig = sigOut.value(signature);
-        if (!error.isEmpty() || (!n.isEmpty() && solvedN.isEmpty())
-            || (!signature.isEmpty() && solvedSig.isEmpty())) {
-            qCWarning(lcResolve) << videoId << "JS solve failed, taking VISIONOS:" << error;
-            if (!finishVision(videoId, pending)) {
-                m_pending.remove(videoId);
-                fail(videoId, tr("YouTube's player puzzle could not be solved: %1").arg(error));
+                    [this, key, pending, stream, parts](const QHash<QString, QString> &nOut,
+                                                        const QHash<QString, QString> &sigOut,
+                                                        const QString &error) mutable {
+        QList<QUrl> urls;
+        QString problem = error;
+        for (const Part &part : parts) {
+            QUrl url = part.url;
+            if (!part.n.isEmpty()) {
+                const QString solved = nOut.value(part.n);
+                if (solved.isEmpty())
+                    problem = QStringLiteral("n not solved");
+                url = withQueryItem(url, QStringLiteral("n"), solved);
+            }
+            if (!part.signature.isEmpty()) {
+                const QString solved = sigOut.value(part.signature);
+                if (solved.isEmpty())
+                    problem = QStringLiteral("signature not solved");
+                url = withQueryItem(url, part.signatureKey, solved);
+            }
+            urls.append(url);
+        }
+        if (!problem.isEmpty()) {
+            qCWarning(lcResolve) << pending.videoId << "JS solve failed, taking VISIONOS:" << problem;
+            if (!finishVision(key, pending)) {
+                m_pending.remove(key);
+                fail(pending.videoId, tr("YouTube's player puzzle could not be solved: %1").arg(problem));
             }
             return;
         }
-        if (!n.isEmpty())
-            stream.url = withQueryItem(stream.url, QStringLiteral("n"), solvedN);
-        if (!signature.isEmpty())
-            stream.url = withQueryItem(stream.url, signatureKey, solvedSig);
-        deliver(stream, pending);
+        if (stream.video) {
+            stream.audioUrl = urls.at(0);
+            stream.url = urls.at(1);
+        } else {
+            stream.url = urls.at(0);
+        }
+        deliver(key, stream, pending);
     });
-}
-
-bool StreamResolver::finishVision(const QString &videoId, const Pending &pending)
-{
-    if (!playable(pending.vision))
-        return false;
-    const QJsonObject format = pickAudio(pending.vision);
-    const QUrl url(format.value(u"url").toString());
-    if (url.isEmpty())
-        return false;
-
-    Stream stream;
-    stream.videoId = videoId;
-    stream.client = QStringLiteral("VISIONOS");
-    stream.url = url;
-    stream.formatId = QString::number(format.value(u"itag").toInt());
-    stream.codec = codecOf(format.value(u"mimeType").toString());
-    stream.bitrate = format.value(u"averageBitrate").toDouble(format.value(u"bitrate").toDouble()) / 1000;
-    stream.duration = format.value(u"approxDurationMs").toString().toDouble() / 1000;
-    stream.headers = {{QByteArrayLiteral("User-Agent"), kVisionUserAgent}};
-    deliver(stream, pending);
     return true;
 }
 
-void StreamResolver::deliver(Stream stream, const Pending &pending)
+bool StreamResolver::finishVision(const QString &key, const Pending &pending)
 {
-    m_pending.remove(stream.videoId);
+    if (!playable(pending.vision))
+        return false;
+    QJsonObject audio;
+    QJsonObject picture;
+    if (!pickFormats(pending.vision, pending.video, &audio, &picture))
+        return false;
+    Stream stream = streamOf(pending.videoId, QStringLiteral("VISIONOS"), audio, picture);
+    stream.videoAsked = pending.video;
+    if (stream.video) {
+        stream.audioUrl = QUrl(audio.value(u"url").toString());
+        stream.url = QUrl(picture.value(u"url").toString());
+    } else {
+        stream.url = QUrl(audio.value(u"url").toString());
+    }
+    if (stream.url.isEmpty())
+        return false;
+    stream.headers = {{QByteArrayLiteral("User-Agent"), kVisionUserAgent}};
+    deliver(key, stream, pending);
+    return true;
+}
+
+Stream StreamResolver::streamOf(const QString &videoId, const QString &client, const QJsonObject &audio,
+                                const QJsonObject &picture)
+{
+    Stream stream;
+    stream.videoId = videoId;
+    stream.client = client;
+    stream.formatId = QString::number(audio.value(u"itag").toInt());
+    stream.codec = codecOf(audio.value(u"mimeType").toString());
+    stream.bitrate = audio.value(u"averageBitrate").toDouble(audio.value(u"bitrate").toDouble()) / 1000;
+    stream.duration = audio.value(u"approxDurationMs").toString().toDouble() / 1000;
+    if (!picture.isEmpty()) {
+        stream.video = true;
+        stream.height = picture.value(u"height").toInt();
+        stream.formatId = QString::number(picture.value(u"itag").toInt()) + u'+' + stream.formatId;
+    }
+    return stream;
+}
+
+void StreamResolver::deliver(const QString &key, Stream stream, const Pending &pending)
+{
+    m_pending.remove(key);
 
     // the track itself is described best by YouTube Music's answer
     const QJsonObject &info = playable(pending.web) ? pending.web : pending.vision;
@@ -413,13 +527,30 @@ void StreamResolver::deliver(Stream stream, const Pending &pending)
         stream.loudnessDb = loudness.toDouble();
     stream.trackingUrl = ytm::at(pending.web, {"playbackTracking", "videostatsPlaybackUrl", "baseUrl"}).toString();
 
+    if (stream.video) {
+        // captions as WebVTT, which mpv reads
+        const QJsonArray tracks = ytm::at(info, {"captions", "playerCaptionsTracklistRenderer", "captionTracks"}).toArray();
+        for (const QJsonValue &track : tracks) {
+            QUrl url(track[u"baseUrl"].toString());
+            if (url.isRelative())
+                url = QUrl(QStringLiteral("https://www.youtube.com")).resolved(url);
+            url = withQueryItem(url, QStringLiteral("fmt"), QStringLiteral("vtt"));
+            stream.captions.append(QVariantMap{
+                {QStringLiteral("url"), url},
+                {QStringLiteral("language"), track[u"languageCode"].toString()},
+                {QStringLiteral("name"), ytm::textOf(track[u"name"])},
+                {QStringLiteral("generated"), track[u"kind"].toString() == u"asr"},
+            });
+        }
+    }
+
     const qint64 expire = QUrlQuery(stream.url).queryItemValue(QStringLiteral("expire")).toLongLong();
     stream.expires = expire > 0 ? QDateTime::fromSecsSinceEpoch(expire, QTimeZone::UTC)
                                 : QDateTime::currentDateTimeUtc().addSecs(3600);
 
     qCDebug(lcResolve) << "resolved" << stream.videoId << stream.client << stream.formatId << stream.codec
-                       << stream.bitrate << "kbit/s";
-    m_cache.insert(stream.videoId, stream);
+                       << stream.bitrate << "kbit/s" << (stream.video ? QStringLiteral("%1p").arg(stream.height) : QString());
+    m_cache.insert(key, stream);
     emit resolved(stream);
 }
 

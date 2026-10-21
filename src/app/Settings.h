@@ -30,6 +30,12 @@ class Settings : public QObject
     Q_PROPERTY(bool globalShortcuts READ globalShortcuts WRITE setGlobalShortcuts NOTIFY changed)
     Q_PROPERTY(bool skipDisliked READ skipDisliked WRITE setSkipDisliked NOTIFY changed)
     Q_PROPERTY(bool startPaused READ startPaused WRITE setStartPaused NOTIFY changed)
+    // video-toggle, the highest picture (360 ... 2160) and the caption language ("" none)
+    Q_PROPERTY(bool videoMode READ videoMode WRITE setVideoMode NOTIFY changed)
+    Q_PROPERTY(int videoHeight READ videoHeight WRITE setVideoHeight NOTIFY changed)
+    Q_PROPERTY(QString captionLanguage READ captionLanguage WRITE setCaptionLanguage NOTIFY changed)
+    // visualizer style in the Now Playing view ("" off): bars, wave, spectrum, scope
+    Q_PROPERTY(QString visualizer READ visualizer WRITE setVisualizer NOTIFY changed)
     Q_PROPERTY(bool compactSidebar READ compactSidebar WRITE setCompactSidebar NOTIFY changed)
     Q_PROPERTY(bool clock READ clock WRITE setClock NOTIFY changed)
     // a see-through window background (the compositor may blur behind it); needs a restart
@@ -53,6 +59,10 @@ public:
     bool globalShortcuts() const;
     bool skipDisliked() const;
     bool startPaused() const;
+    bool videoMode() const;
+    int videoHeight() const;
+    QString captionLanguage() const;
+    QString visualizer() const;
     bool compactSidebar() const;
     bool clock() const;
     bool transparentWindow() const;
@@ -72,6 +82,10 @@ public:
     void setGlobalShortcuts(bool on);
     void setSkipDisliked(bool on);
     void setStartPaused(bool on);
+    void setVideoMode(bool on);
+    void setVideoHeight(int height);
+    void setCaptionLanguage(const QString &language);
+    void setVisualizer(const QString &style);
     void setCompactSidebar(bool on);
     void setClock(bool on);
     void setTransparentWindow(bool on);

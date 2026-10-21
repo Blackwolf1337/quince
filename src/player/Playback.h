@@ -12,6 +12,7 @@
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
+#include <functional>
 #include <optional>
 
 class InnerTube;
@@ -39,6 +40,11 @@ class Playback : public QObject
     Q_PROPERTY(QString error READ error NOTIFY errorChanged)
     Q_PROPERTY(bool hasNext READ hasNext NOTIFY queueStateChanged)
     Q_PROPERTY(bool hasPrevious READ hasPrevious NOTIFY queueStateChanged)
+    // the stream playing has a picture (video mode found a video for it)
+    Q_PROPERTY(bool videoPlaying READ videoPlaying NOTIFY streamInfoChanged)
+    // [{name, language, generated}] of the video playing, and the one shown (-1: none)
+    Q_PROPERTY(QVariantList captions READ captions NOTIFY captionsChanged)
+    Q_PROPERTY(int caption READ caption WRITE setCaption NOTIFY captionsChanged)
 
 public:
     Playback(MpvPlayer *player, StreamResolver *resolver, InnerTube *innerTube, QObject *parent = nullptr);
@@ -52,6 +58,10 @@ public:
     QString error() const { return m_error; }
     bool hasNext() const;
     bool hasPrevious() const;
+    bool videoPlaying() const { return m_videoPlaying; }
+    QVariantList captions() const { return m_captions; }
+    int caption() const { return m_caption; }
+    void setCaption(int index);
 
     // A song, video or episode plays at once and its queue follows; an
     // album, playlist or station plays its queue from the start.
@@ -75,8 +85,14 @@ public:
     // disable-autoplay: a track or list the user picks starts paused
     void setStartPaused(bool on) { m_startPaused = on; }
     // crossfade: seconds the next track fades in over the end of this one;
-    // 0 plays them gapless
+    // 0 plays them gapless (also in video mode)
     void setCrossfade(double seconds);
+    // video-toggle: videos play with their picture, songs with their music
+    // video when YouTube has one; the track playing restarts in the new mode
+    void setVideoMode(bool on);
+    void setVideoHeight(int height);
+    // caption language picked by itself in video mode ("" none)
+    void setCaptionLanguage(const QString &language) { m_captionLanguage = language; }
     // where a play of videoId is reported to the account's history; empty
     // until the player answer for it arrived
     QString trackingUrl(const QString &videoId) const { return m_tracking.value(videoId); }
@@ -92,6 +108,7 @@ signals:
     void loadingChanged();
     void errorChanged();
     void queueStateChanged();
+    void captionsChanged();
 
 private:
     enum class QueueMode {
@@ -122,7 +139,19 @@ private:
     void setLoading(bool loading);
     void setError(const QString &error);
     void scheduleSave();
-    void rememberPlayerInfo(const Stream &stream);
+    void rememberPlayerInfo(const Stream &stream, const QString &queueId);
+    // what plays for a queue entry: its own stream, or in video mode a song's
+    // music video; known is false while that is being looked up
+    struct Source
+    {
+        QString id;
+        bool video = false;
+        bool known = true;
+    };
+    Source sourceFor(const QVariantMap &item) const;
+    void lookupCounterpart(const QVariantMap &item, std::function<void()> done);
+    void applyCaptions(const Stream &stream);
+    double crossfadeSeconds() const { return m_videoMode ? 0 : m_crossfade; }
     void checkCrossfade();
     double gainFor(const QString &videoId) const;
 
@@ -145,6 +174,24 @@ private:
     // its stream, for a crossfade (gapless hands it to mpv at once)
     std::optional<Stream> m_upcoming;
     double m_crossfade = 0;
+    // streams asked for the current and the next entry
+    QString m_wantedStream;
+    bool m_wantedVideo = false;
+    QString m_loadedStream;
+    QString m_upcomingStream;
+    bool m_upcomingVideo = false;
+    QString m_upcomingQueueId;
+
+    bool m_videoMode = false;
+    int m_videoHeight = 1080;
+    bool m_videoPlaying = false;
+    // song id to its music video id ("" when it has none)
+    QHash<QString, QString> m_counterparts;
+    QSet<QString> m_lookingUp;
+    QVariantList m_captions; // with url, for setCaption
+    int m_caption = -1;
+    QString m_captionLanguage;
+    bool m_captionPending = false;
     int m_failures = 0;
     // a stream URL that fails is resolved again once before the track is skipped
     QSet<QString> m_retried;

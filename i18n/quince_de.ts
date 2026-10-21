@@ -95,37 +95,37 @@
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/app/AppController.cpp" line="70"/>
+        <location filename="../src/app/AppController.cpp" line="88"/>
         <source>Play or pause</source>
         <translation>Wiedergabe oder Pause</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="71"/>
+        <location filename="../src/app/AppController.cpp" line="89"/>
         <source>Next track</source>
         <translation>Nächster Titel</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="72"/>
+        <location filename="../src/app/AppController.cpp" line="90"/>
         <source>Previous track</source>
         <translation>Vorheriger Titel</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="73"/>
+        <location filename="../src/app/AppController.cpp" line="91"/>
         <source>Volume up</source>
         <translation>Lauter</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="76"/>
+        <location filename="../src/app/AppController.cpp" line="94"/>
         <source>Volume down</source>
         <translation>Leiser</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="79"/>
+        <location filename="../src/app/AppController.cpp" line="97"/>
         <source>Like or unlike the track</source>
         <translation>Titel mögen oder nicht mehr mögen</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="84"/>
+        <location filename="../src/app/AppController.cpp" line="102"/>
         <source>Show Quince</source>
         <translation>Quince anzeigen</translation>
     </message>
@@ -374,20 +374,28 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../qml/Main.qml" line="221"/>
+        <location filename="../qml/Main.qml" line="239"/>
         <source>Back</source>
         <translation>Zurück</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="229"/>
+        <location filename="../qml/Main.qml" line="247"/>
         <source>Forward</source>
         <translation>Vorwärts</translation>
     </message>
 </context>
 <context>
+    <name>MiniPlayer</name>
+    <message>
+        <location filename="../qml/MiniPlayer.qml" line="111"/>
+        <source>Back to the full window</source>
+        <translation>Zurück zum großen Fenster</translation>
+    </message>
+</context>
+<context>
     <name>MpvPlayer</name>
     <message>
-        <location filename="../src/player/MpvPlayer.cpp" line="503"/>
+        <location filename="../src/player/MpvPlayer.cpp" line="535"/>
         <source>System default</source>
         <translation>Systemstandard</translation>
     </message>
@@ -395,9 +403,70 @@
 <context>
     <name>NowPlaying</name>
     <message>
-        <location filename="../qml/NowPlaying.qml" line="135"/>
+        <location filename="../qml/NowPlaying.qml" line="156"/>
         <source>Close</source>
         <translation>Schließen</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="312"/>
+        <source>Visualizer</source>
+        <translation>Visualisierung</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="321"/>
+        <location filename="../qml/NowPlaying.qml" line="382"/>
+        <source>Off</source>
+        <translation>Aus</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="322"/>
+        <source>Spectrum</source>
+        <translation>Spektrum</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="323"/>
+        <source>Bars</source>
+        <translation>Balken</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="324"/>
+        <source>Wave</source>
+        <translation>Welle</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="325"/>
+        <source>Stereo scope</source>
+        <translation>Stereo-Oszilloskop</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="340"/>
+        <source>Video</source>
+        <translation>Video</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="340"/>
+        <source>Song</source>
+        <translation>Song</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="345"/>
+        <source>Switch between song and music video</source>
+        <translation>Zwischen Song und Musikvideo wechseln</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="352"/>
+        <source>Video quality</source>
+        <translation>Videoqualität</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="374"/>
+        <source>Captions</source>
+        <translation>Untertitel</translation>
+    </message>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="395"/>
+        <source>(generated)</source>
+        <translation>(automatisch)</translation>
     </message>
 </context>
 <context>
@@ -421,22 +490,22 @@
 <context>
     <name>Playback</name>
     <message>
-        <location filename="../src/player/Playback.cpp" line="270"/>
+        <location filename="../src/player/Playback.cpp" line="279"/>
         <source>That is not a YouTube link or video id.</source>
         <translation>Das ist kein YouTube-Link und keine Video-ID.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="426"/>
+        <location filename="../src/player/Playback.cpp" line="504"/>
         <source>YouTube Music has nothing to play there.</source>
         <translation>YouTube Music hat dort nichts zum Abspielen.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="600"/>
+        <location filename="../src/player/Playback.cpp" line="768"/>
         <source>Could not play &quot;%1&quot;: %2</source>
         <translation>„%1“ konnte nicht abgespielt werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="639"/>
+        <location filename="../src/player/Playback.cpp" line="812"/>
         <source>Playback stopped: %1</source>
         <translation>Wiedergabe abgebrochen: %1</translation>
     </message>
@@ -444,27 +513,37 @@
 <context>
     <name>PlayerBar</name>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="229"/>
+        <location filename="../qml/PlayerBar.qml" line="232"/>
         <source>Dislike</source>
         <translation>Mag ich nicht</translation>
     </message>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="238"/>
+        <location filename="../qml/PlayerBar.qml" line="241"/>
         <source>Like</source>
         <translation>Mag ich</translation>
     </message>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="257"/>
+        <location filename="../qml/PlayerBar.qml" line="250"/>
+        <source>Switch between song and music video</source>
+        <translation>Zwischen Song und Musikvideo wechseln</translation>
+    </message>
+    <message>
+        <location filename="../qml/PlayerBar.qml" line="274"/>
         <source>Speed</source>
         <translation>Tempo</translation>
     </message>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="326"/>
+        <location filename="../qml/PlayerBar.qml" line="343"/>
         <source>Up next</source>
         <translation>Als Nächstes</translation>
     </message>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="334"/>
+        <location filename="../qml/PlayerBar.qml" line="350"/>
+        <source>Mini player</source>
+        <translation>Miniplayer</translation>
+    </message>
+    <message>
+        <location filename="../qml/PlayerBar.qml" line="358"/>
         <source>Now playing</source>
         <translation>Läuft gerade</translation>
     </message>
@@ -796,17 +875,17 @@
 <context>
     <name>StreamResolver</name>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="185"/>
+        <location filename="../src/player/StreamResolver.cpp" line="214"/>
         <source>YouTube&apos;s player could not be loaded.</source>
         <translation>Der Player von YouTube konnte nicht geladen werden.</translation>
     </message>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="311"/>
+        <location filename="../src/player/StreamResolver.cpp" line="362"/>
         <source>YouTube gave no audio stream.</source>
         <translation>YouTube lieferte keinen Audiostream.</translation>
     </message>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="360"/>
+        <location filename="../src/player/StreamResolver.cpp" line="452"/>
         <source>YouTube&apos;s player puzzle could not be solved: %1</source>
         <translation>Das Player-Rätsel von YouTube konnte nicht gelöst werden: %1</translation>
     </message>

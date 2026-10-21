@@ -36,4 +36,6 @@ QtObject {
     property Item backdrop: null
     // shader effects (blur, masks); the software renderer has none
     property bool effects: true
+    // the mini player is open (it then draws the video, not the main window)
+    property bool miniPlayer: false
 }

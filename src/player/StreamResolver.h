@@ -10,6 +10,7 @@
 #include <QSet>
 #include <QString>
 #include <QUrl>
+#include <QVariantList>
 
 #include <cmath>
 
@@ -28,6 +29,15 @@ struct Stream
     double duration = 0; // seconds
     QDateTime expires;
     QString client; // the InnerTube client the URL came from
+
+    // video mode: url is the picture, audioUrl the sound (mpv joins them);
+    // videoAsked without video: the track has no picture
+    bool videoAsked = false;
+    bool video = false;
+    QUrl audioUrl;
+    int height = 0;
+    // [{url, language, name, generated}] of the captions (video mode)
+    QVariantList captions;
 
     // from YouTube Music's player answer
     double loudnessDb = NAN;
@@ -60,12 +70,15 @@ public:
     // signed in, WEB_REMIX requests carry the account (Premium formats)
     void setCookies(AccountCookies *cookies);
 
-    // Emits resolved or failed later, never from inside this call.
-    void resolve(const QString &videoId);
-    bool isCached(const QString &videoId) const;
+    // Emits resolved or failed later, never from inside this call. video asks
+    // for picture and sound (video mode); without a picture it is sound only.
+    void resolve(const QString &videoId, bool video = false);
+    bool isCached(const QString &videoId, bool video = false) const;
     // drops a URL that failed; the next resolve of it takes the other client
     void forget(const QString &videoId);
-    bool isRunning(const QString &videoId) const;
+    bool isRunning(const QString &videoId, bool video = false) const;
+    // highest picture of video mode (720, 1080 ...)
+    void setVideoHeight(int height);
 
     // Video id from a watch URL, youtu.be link or a bare id; empty if none.
     static QString extractVideoId(const QString &text);
@@ -77,6 +90,8 @@ signals:
 private:
     struct Pending
     {
+        QString videoId;
+        bool video = false;
         bool webDone = false;
         bool visionDone = false;
         bool webAllowed = false;
@@ -88,20 +103,26 @@ private:
         QString visionError;
     };
 
-    void requestVision(const QString &videoId);
-    void onAnswer(const QString &videoId);
-    void finishWeb(const QString &videoId, const Pending &pending, const QJsonObject &format);
-    bool finishVision(const QString &videoId, const Pending &pending);
-    void deliver(Stream stream, const Pending &pending);
+    static QString keyOf(const QString &videoId, bool video);
+    void requestVision(const QString &key);
+    void onAnswer(const QString &key);
+    bool pickFormats(const QJsonObject &answer, bool video, QJsonObject *audio, QJsonObject *picture) const;
+    bool finishWeb(const QString &key, const Pending &pending);
+    bool finishVision(const QString &key, const Pending &pending);
+    static Stream streamOf(const QString &videoId, const QString &client, const QJsonObject &audio,
+                           const QJsonObject &picture);
+    void deliver(const QString &key, Stream stream, const Pending &pending);
     void fail(const QString &videoId, const QString &error);
 
     InnerTube *m_innerTube = nullptr;
     JsSolver *m_solver = nullptr;
     AccountCookies *m_cookies = nullptr;
+    // by key: the video id, with "#v" for video mode
     QHash<QString, Stream> m_cache;
     QHash<QString, Pending> m_pending;
     // ids whose WEB_REMIX URL failed; they take VISIONOS from now on
     QSet<QString> m_webFailed;
+    int m_videoHeight = 1080;
     // answered, waiting for the first solved player
     QSet<QString> m_waiting;
 };

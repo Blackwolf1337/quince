@@ -14,6 +14,11 @@ Item {
     readonly property MpvPlayer player: App.player
     readonly property Playback playback: App.playback
     readonly property var track: playback.track
+    // a visualizer instead of the cover while no video plays
+    readonly property bool showVisualizer: App.settings.visualizer !== "" && !playback.videoPlaying
+    // the video draws here only with a GPU, while the view is open
+    readonly property bool showVideo: (playback.videoPlaying || showVisualizer) && Style.effects && progress > 0
+                                      && !Style.miniPlayer
 
     property bool open: false
     // 0 closed .. 1 open
@@ -115,6 +120,22 @@ Item {
                 GradientStop { position: 1.0; color: Qt.alpha(Style.background, 0.85) }
             }
         }
+        // ambient-mode: the video, much enlarged and blurred, as its own light
+        MultiEffect {
+            x: cover.x - cover.width * 0.05
+            y: cover.y - cover.height * 0.1
+            width: cover.width * 1.1
+            height: cover.height * 1.2
+            visible: !!video.item && video.item.ready
+            source: video.item ? video.item.picture : null
+            // the blur runs out softly beyond the picture
+            autoPaddingEnabled: true
+            blurEnabled: true
+            blur: 1.0
+            blurMax: 64
+            saturation: 0.3
+            opacity: 0.6
+        }
         // light behind the cover
         Glow {
             width: Math.max(cover.width * 2.4, 400)
@@ -151,18 +172,23 @@ Item {
 
         ColumnLayout {
             Layout.fillHeight: true
-            Layout.preferredWidth: slot.width
+            Layout.preferredWidth: slot.Layout.preferredWidth
             Layout.alignment: Qt.AlignVCenter
             spacing: 14
 
             Item {
                 Layout.fillHeight: true
             }
-            // where the cover sits when open (the cover itself flies above)
+            // where the cover (or the video) sits when open; the cover itself flies above
             Item {
                 id: slot
-                Layout.preferredWidth: Math.max(200, Math.min(520, view.width * 0.38, view.height - 400))
-                Layout.preferredHeight: Layout.preferredWidth
+                readonly property bool wide: view.showVideo
+                Layout.preferredWidth: wide ? Math.max(320, Math.min(view.width * 0.52, (view.height - 400) * 16 / 9))
+                                            : Math.max(200, Math.min(520, view.width * 0.38, view.height - 400))
+                Layout.preferredHeight: wide ? Layout.preferredWidth * 9 / 16 : Layout.preferredWidth
+                Behavior on Layout.preferredWidth {
+                    NumberAnimation { duration: Style.slow; easing.type: Easing.OutCubic }
+                }
             }
             Label {
                 Layout.topMargin: 14
@@ -272,6 +298,113 @@ Item {
                     onClicked: App.account.rate(view.track.videoId, checked ? "LIKE" : "INDIFFERENT")
                 }
             }
+            // video-toggle, its quality and captions; the visualizer
+            RowLayout {
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 6
+
+                ToolButton {
+                    icon.source: "icons/visualizer.svg"
+                    visible: Style.effects && !view.playback.videoPlaying
+                    checkable: true
+                    checked: App.settings.visualizer !== ""
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Visualizer")
+                    onClicked: {
+                        checked = Qt.binding(() => App.settings.visualizer !== "")
+                        visualizerMenu.popup(this, 0, height)
+                    }
+                    StyledMenu {
+                        id: visualizerMenu
+                        Repeater {
+                            model: [
+                                {id: "", name: qsTr("Off")},
+                                {id: "spectrum", name: qsTr("Spectrum")},
+                                {id: "bars", name: qsTr("Bars")},
+                                {id: "wave", name: qsTr("Wave")},
+                                {id: "scope", name: qsTr("Stereo scope")},
+                            ]
+                            MenuItem {
+                                required property var modelData
+                                text: modelData.name
+                                checkable: true
+                                checked: App.settings.visualizer === modelData.id
+                                onTriggered: App.settings.visualizer = modelData.id
+                            }
+                        }
+                    }
+                }
+
+                ToolButton {
+                    icon.source: "icons/video.svg"
+                    text: App.settings.videoMode ? qsTr("Video") : qsTr("Song")
+                    display: AbstractButton.TextBesideIcon
+                    checkable: true
+                    checked: App.settings.videoMode
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Switch between song and music video")
+                    onClicked: App.settings.videoMode = checked
+                }
+                ToolButton {
+                    text: App.settings.videoHeight + "p"
+                    visible: view.playback.videoPlaying
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Video quality")
+                    onClicked: qualityMenu.popup(this, 0, height)
+                    StyledMenu {
+                        id: qualityMenu
+                        Repeater {
+                            model: [2160, 1440, 1080, 720, 480, 360]
+                            MenuItem {
+                                required property int modelData
+                                text: modelData + "p"
+                                checkable: true
+                                checked: App.settings.videoHeight === modelData
+                                onTriggered: App.settings.videoHeight = modelData
+                            }
+                        }
+                    }
+                }
+                ToolButton {
+                    icon.source: "icons/captions.svg"
+                    visible: view.playback.videoPlaying && view.playback.captions.length > 0
+                    checkable: true
+                    checked: view.playback.caption >= 0
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Captions")
+                    onClicked: {
+                        checked = Qt.binding(() => view.playback.caption >= 0)
+                        captionMenu.popup(this, 0, height)
+                    }
+                    StyledMenu {
+                        id: captionMenu
+                        MenuItem {
+                            text: qsTr("Off")
+                            checkable: true
+                            checked: view.playback.caption < 0
+                            onTriggered: {
+                                view.playback.caption = -1
+                                App.settings.captionLanguage = ""
+                            }
+                        }
+                        Repeater {
+                            model: view.playback.captions
+                            MenuItem {
+                                required property var modelData
+                                required property int index
+                                text: modelData.name + (modelData.generated ? " " + qsTr("(generated)") : "")
+                                checkable: true
+                                checked: view.playback.caption === index
+                                onTriggered: {
+                                    view.playback.caption = index
+                                    // the next videos take this language by themselves
+                                    App.settings.captionLanguage = modelData.language
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             Item {
                 Layout.fillHeight: true
             }
@@ -294,8 +427,17 @@ Item {
         cover.x = mix(from.x, target.x)
         cover.y = mix(from.y, target.y)
         cover.width = mix(from.width, slot.width)
+        cover.height = mix(from.height, slot.height)
     }
     onProgressChanged: placeCover()
+    // the layout moves the place without an animation running (cover to video)
+    Connections {
+        target: slot
+        function onWidthChanged() { Qt.callLater(view.placeCover) }
+        function onHeightChanged() { Qt.callLater(view.placeCover) }
+        function onXChanged() { Qt.callLater(view.placeCover) }
+        function onYChanged() { Qt.callLater(view.placeCover) }
+    }
     Connections {
         target: view.visible ? view.Window.window : null
         function onAfterAnimating() {
@@ -305,8 +447,53 @@ Item {
 
     Art {
         id: cover
-        height: width
         radius: view.mix(8, Style.radiusLarge)
         source: view.track.thumbnail || ""
+        opacity: video.item && video.item.ready ? 0 : 1
+        Behavior on opacity {
+            NumberAnimation { duration: Style.slow }
+        }
+    }
+
+    // The video over the cover's place, with its own light behind it
+    // (ambient-mode: the picture, much enlarged and blurred).
+    Loader {
+        id: video
+        active: view.showVideo
+        x: cover.x
+        y: cover.y
+        width: cover.width
+        height: cover.height
+
+        sourceComponent: Item {
+            // the first frame came
+            property bool ready: false
+            readonly property Item picture: picture
+
+            MpvVideoItem {
+                id: picture
+                anchors.fill: parent
+                player: App.player
+            }
+            // the cover stays until the video runs (opening it may load the
+            // track again with its picture)
+            Connections {
+                target: App.player
+                function onPlaybackRestarted() {
+                    readyTimer.restart()
+                }
+            }
+            Timer {
+                id: readyTimer
+                interval: 250
+                onTriggered: parent.ready = true
+            }
+            // a visualizer switched on mid-track may not restart playback
+            Timer {
+                interval: 1500
+                running: view.showVisualizer
+                onTriggered: parent.ready = true
+            }
+        }
     }
 }

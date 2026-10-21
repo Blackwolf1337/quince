@@ -33,6 +33,20 @@ ApplicationWindow {
         openPage({query: query})
     }
 
+    // the mini player takes the window's place, and gives it back
+    function openMiniPlayer() {
+        Style.miniPlayer = true
+        miniPlayer.show()
+        window.hide()
+    }
+    function closeMiniPlayer() {
+        window.show()
+        window.raise()
+        window.requestActivate()
+        miniPlayer.hide()
+        Style.miniPlayer = false
+    }
+
     function back() {
         if (nowPlaying.open) {
             nowPlaying.hide()
@@ -186,6 +200,10 @@ ApplicationWindow {
             window.queueOpen = true
             sidePanel.tab = 1
         }
+    }
+    Shortcut {
+        sequence: "Ctrl+Shift+M"
+        onActivated: window.openMiniPlayer()
     }
     Shortcut {
         sequence: "Ctrl+P"
@@ -365,6 +383,8 @@ ApplicationWindow {
                 queueOpen: window.queueOpen
                 onQueueToggled: window.queueOpen = !window.queueOpen
                 onNowPlayingRequested: nowPlaying.open ? nowPlaying.hide() : nowPlaying.show(playerBar.artItem)
+                onNowPlayingShown: nowPlaying.show(playerBar.artItem)
+                onMiniPlayerRequested: window.openMiniPlayer()
             }
         }
     }
@@ -372,6 +392,13 @@ ApplicationWindow {
     NowPlaying {
         id: nowPlaying
         anchors.fill: parent
+    }
+
+    MiniPlayer {
+        id: miniPlayer
+        visible: false
+        onRestoreRequested: window.closeMiniPlayer()
+        onClosing: window.closeMiniPlayer()
     }
 
     Component {
