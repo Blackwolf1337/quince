@@ -105,8 +105,9 @@ jobs:
             find "$app/Contents" -type f \( -name '*.dylib' -o -perm -u+x \) | while read -r f; do
               file "$f" | grep -q Mach-O || continue
               id=$(otool -D "$f" | tail -n +2)
+              # no match is the good case: grep's status must not end the step
               otool -L "$f" | tail -n +2 | awk '{print $1}' | grep -E '^(/opt/homebrew|/usr/local/(opt|Cellar))' \
-                | grep -vxF "$id" | sed "s|^|$f -> |"
+                | grep -vxF "$id" | sed "s|^|$f -> |" || true
             done
           }
           # what macdeployqt left (mpv's libraries, those of the Qt plugins)
