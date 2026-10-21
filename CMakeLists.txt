@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(quince VERSION 0.1.0 LANGUAGES CXX)
+project(quince VERSION 0.1.1 LANGUAGES CXX)
 if(WIN32)
     # the icon and version info of quince.exe
     enable_language(RC)
