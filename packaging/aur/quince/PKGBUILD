@@ -1,7 +1,7 @@
 # Maintainer: MAINTAINER
 
 pkgname=quince
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc='Native YouTube Music player (Qt Quick, libmpv)'
 arch=('x86_64' 'aarch64')
@@ -18,7 +18,7 @@ source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz"
         "https://github.com/shogo82148/mecab/releases/download/v$_mecab/mecab-$_mecab.tar.gz"
         "https://github.com/shogo82148/mecab/releases/download/v$_mecab/mecab-ipadic-$_ipadic.tar.gz"
         "quickjs-$_quickjs.tar.gz::https://github.com/quickjs-ng/quickjs/archive/refs/tags/v$_quickjs.tar.gz")
-sha256sums=('243ac0e143939bd793dc734e5d80d75e10c8eb1beb919b947c3642ddef97d168'
+sha256sums=('1f3201ab47a0a8dc1905cfb987bd257a2011f95567645beb5b2d9effb7153c02'
             '3da28541062d6d1cfbb92ab09481779f2ad735c89705d981eb66f072ef776538'
             '74130f44264ce5b8cfa51e498b99345f71d2f854b74a9e9dfb6489e13e479e67'
             '559bc4c420475e55c7ab4510adbc562f55d7524d75e8e89d79ce4bb02f5687d9')

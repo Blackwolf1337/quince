@@ -4,7 +4,7 @@
 # FFmpeg to a new soname, the release tarball must be rebuilt (a new tag or a
 # re-run of the build job) and pkgrel raised.
 pkgname=quince-bin
-pkgver=0.1.0
+pkgver=0.1.1
 pkgrel=1
 pkgdesc='Native YouTube Music player (Qt Quick, libmpv), prebuilt'
 arch=('x86_64')
