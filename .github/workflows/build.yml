@@ -1,0 +1,140 @@
+# Builds Quince for Windows (portable zip), macOS (Quince.app zip) and Arch
+# Linux (the tarball of quince-bin); a tag v* makes a release with all three.
+name: build
+
+on:
+  push:
+    branches: [master, packaging]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            zip
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-qt6-declarative
+            mingw-w64-ucrt-x86_64-qt6-tools
+            mingw-w64-ucrt-x86_64-qt6-svg
+            mingw-w64-ucrt-x86_64-qt6-imageformats
+            mingw-w64-ucrt-x86_64-qt6-translations
+            mingw-w64-ucrt-x86_64-mpv
+            mingw-w64-ucrt-x86_64-ffmpeg
+            mingw-w64-ucrt-x86_64-icu
+            mingw-w64-ucrt-x86_64-libiconv
+      - name: Build
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF
+          cmake --build build
+      - name: Package
+        run: |
+          dist="$PWD/dist/Quince"
+          cmake --install build --prefix "$dist"
+          deploy=$(command -v windeployqt6 || command -v windeployqt-qt6 || echo /ucrt64/share/qt6/bin/windeployqt.exe)
+          "$deploy" --release --qmldir qml --no-compiler-runtime "$dist/quince.exe"
+          # every DLL of the MSYS2 prefix that the exe and the Qt plugins load
+          find "$dist" -name '*.exe' -o -name '*.dll' | while read -r f; do ntldd -R "$f"; done \
+            | sed -n 's/.*=> \(.*\.dll\) (0x.*/\1/p' | tr '\\' '/' | grep -i '/ucrt64/' | sort -u \
+            | while read -r dll; do cp -n "$(cygpath -u "$dll")" "$dist/"; done
+          ver=$(git describe --tags --always)
+          (cd dist && zip -qr9 "../Quince-$ver-windows-x64.zip" Quince)
+          ls -la Quince-*.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: Quince-*-windows-x64.zip
+
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Dependencies
+        run: brew install cmake ninja pkgconf qt mpv ffmpeg icu4c dylibbundler
+      - name: Build
+        run: |
+          export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF \
+                -DCMAKE_PREFIX_PATH="$(brew --prefix qt)"
+          cmake --build build
+      - name: Package
+        run: |
+          app=build/Quince.app
+          "$(brew --prefix qt)/bin/macdeployqt" "$app" -qmldir=qml
+          # what macdeployqt left pointing into Homebrew (mpv's own libraries)
+          dylibbundler -of -b -x "$app/Contents/MacOS/Quince" -d "$app/Contents/Frameworks" \
+                       -p @executable_path/../Frameworks/
+          left=$(find "$app" -type f \( -perm -u+x -o -name '*.dylib' \) -exec otool -L {} \; 2>/dev/null \
+                 | grep -E '/opt/homebrew|/usr/local/(opt|Cellar)' || true)
+          if [ -n "$left" ]; then echo "$left"; exit 1; fi
+          codesign --force --deep --sign - "$app"
+          ver=$(git describe --tags --always)
+          ditto -c -k --keepParent "$app" "Quince-$ver-macos-arm64.zip"
+          ls -la Quince-*.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: Quince-*-macos-arm64.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Dependencies
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git cmake ninja qt6-base qt6-declarative qt6-tools \
+            qt6-svg qt6-webengine mpv ffmpeg icu openssl
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$PWD"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
+          cmake --build build
+          DESTDIR="$PWD/pkg" cmake --install build
+          ver=$(git describe --tags --always)
+          tar --zstd -cf "quince-$ver-x86_64.tar.zst" -C pkg usr
+          ls -la quince-*.tar.zst
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux
+          path: quince-*-x86_64.tar.zst
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Quince ${GITHUB_REF_NAME#v}" \
+            --generate-notes Quince-*.zip quince-*.tar.zst
