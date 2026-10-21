@@ -54,6 +54,33 @@ On the author's machine it uses about 270 MiB of memory while playing, against a
 - Linux: MPRIS and system-wide shortcuts through the desktop portal.
 - Language: Settings has a choice of as the system, English or Deutsch. It applies at once, also to YouTube's own texts on pages loaded after the change.
 
+## Install
+
+Downloads are on the releases page: https://github.com/Blackwolf1337/quince/releases
+
+Windows (64-bit): download `Quince-<version>-windows-x64.zip`, unzip it anywhere and run `quince.exe` in the `Quince` folder. It is portable, there is no installer. The exe is not code-signed, so Windows SmartScreen may warn on the first start ("More info", then "Run anyway"). The Windows build has no sign-in window (quince-login needs QtWebEngine, which it lacks). Sign in by importing cookies from Firefox. Chrome and Edge cookies cannot be read on Windows, because Chrome encrypts them with app-bound encryption since version 127.
+
+macOS (Apple Silicon only): download `Quince-<version>-macos-arm64.zip`, unzip it and move Quince.app to Applications. The app is not notarized, so the first start is blocked. Open System Settings, Privacy & Security, and click "Open Anyway" (or right-click the app and choose Open).
+
+Homebrew on macOS builds from source with Homebrew's Qt and mpv:
+
+```
+brew tap blackwolf1337/quince
+brew install quince
+```
+
+Then link the app once, so Launchpad and Spotlight find it:
+
+```
+ln -sf "$(brew --prefix quince)/Quince.app" ~/Applications/Quince.app
+```
+
+The command `quince` also starts it.
+
+Arch Linux / EndeavourOS: there is no AUR package yet, build from source (see below). A tarball for Arch (`quince-<version>-x86_64.tar.zst`, files under usr/) is on the releases page too. It is built against Arch's libraries of the release day.
+
+Other Linux: build from source.
+
 ## Requirements
 
 Package names for Arch / EndeavourOS.
@@ -86,6 +113,8 @@ cmake --install build --prefix ~/.local
 # or for all users
 sudo cmake --install build --prefix /usr
 ```
+
+The Windows build can be made on Linux with Docker: `packaging/windows/cross-build.sh`. It uses MSYS2's Windows libraries, keeps a cache of about 3 GB in `~/.cache/quince-windows` and puts the zip in the repo folder. macOS can only be built on a Mac, or by the GitHub workflow in `.github/workflows/build.yml`.
 
 ## Command line
 
@@ -161,7 +190,7 @@ Signed out, YouTube sometimes answers a request from an IP with "Sign in to conf
 
 ## Platforms
 
-Developed and tested on Linux (Wayland, Hyprland). The code is meant for Windows and macOS too, but those builds have not been made yet, and the macOS Chromium cookie import is written but has never been run. The window uses OpenGL on every system (mpv draws video through it). Windows media controls and the macOS Now Playing panel are not written yet. MPRIS and portal shortcuts are Linux only.
+Developed on Linux (Wayland, Hyprland). Windows builds exist and are made by the GitHub workflow. They were tested under Wine and on Windows 11 in a virtual machine (start, home page, playback, lyrics, settings). The very first start on Windows can take a while; later starts take about a second. macOS builds exist (Apple Silicon), but the developer has never run them. The window uses OpenGL on every system (mpv draws video through it). Windows media controls (taskbar, SMTC) and the macOS Now Playing panel are not written yet. MPRIS and portal shortcuts are Linux only.
 
 ## When YouTube changes things
 
@@ -205,3 +234,7 @@ packaging          desktop file
 ## Credits
 
 The API paths and parsing follow what ytmusicapi (MIT) found out. Stream client details and the challenge solver come from yt-dlp (solver: yt-dlp/ejs, Unlicense, bundling meriyah ISC and astring MIT). JavaScript engine: QuickJS-ng (MIT). Font: Inter (SIL Open Font License). Japanese romanization: MeCab (Taku Kudo, used under its BSD license option of GPL/LGPL/BSD) with IPADIC (its own permissive license, installed as `share/licenses/quince/IPADIC-COPYING`). Chinese romanization and character conversion: ICU (Unicode license). Lyrics: LRCLIB, Megalobiz and Genius. Skip segments: SponsorBlock.
+
+## License
+
+Quince is licensed under GPL-3.0-or-later (see LICENSE). The bundled parts keep their own licenses, as listed under Credits. The Windows and macOS downloads contain GPL builds of mpv and FFmpeg.
