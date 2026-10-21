@@ -21,7 +21,7 @@ On the author's machine it uses about 270 MiB of memory while playing, against a
 ### Playback and queue
 
 - The queue comes from YouTube Music (album, playlist or radio, automix after an album). The next track is prepared while the current one plays. Track changes are gapless, or a crossfade of 1 to 12 s.
-- Queue panel and right-click menus (play next, add to queue, radio, add to playlist, download). The last queue comes back paused on start.
+- Queue panel and right-click menus (play next, add to queue, radio, add to playlist, download, copy link). The last queue comes back paused on start (can be switched off). Copy link puts the music.youtube.com link of a track, album or playlist on the clipboard.
 
 ### Account
 
@@ -33,36 +33,39 @@ On the author's machine it uses about 270 MiB of memory while playing, against a
 - Now Playing view (click the cover or title in the player bar, or Ctrl+P): large cover, with lyrics or the queue beside it.
 - Video mode: music videos with their picture, and songs with their official music video when YouTube has one. Quality from 360p to 2160p, captions, and the video's light behind it. A visualizer (spectrum, bars, wave, stereo scope) shows when no video plays.
 - Mini player: a small window with cover or video and the controls (button in the player bar, or Ctrl+Shift+M).
-- Lyrics: time-synced from LRCLIB, then YouTube Music's own, then Genius. Click a line to jump there.
+- Lyrics: time-synced from LRCLIB, then Megalobiz (its free public API, api.megalobiz.com), then YouTube Music's own, then Genius. Each source can be switched off, and one can be asked first ("Ask first" setting). "Show lyrics even if the match is inexact" allows a looser search. The source name under the lyrics links to the page at the source. Click a line to jump there. Musixmatch is not supported, because it gives anonymous apps decoy lyrics.
+- Lyrics look: Pear's four line effects for the sung line. Fancy (large, with a glow that fades and a small wobble), Scale (the line grows), Offset (moves to the right) and Focus (only it is bright). Time codes next to the lines are optional. Empty lines of synced lyrics show a mark (the eighth note character by default, can be changed).
+- Romanization: Japanese, Korean and Chinese lyrics get a line in Latin letters under each line. Japanese uses MeCab with the IPADIC dictionary (readings of words, written in Hepburn, particles as spoken: wa, e, o). Korean uses Revised Romanization with its sound changes. Chinese uses pinyin with tone marks from ICU. Chinese lyrics can also be shown in Traditional or Simplified characters. The dictionary (about 50 MB) is loaded on the first Japanese song and unloaded after a minute without one.
 
 ### Sound
 
-- Equalizer (10 bands, presets), compressor, playback speed with the pitch kept, skip silences, loudness evened out the way YouTube does it, output device choice, and an exponential volume slider with an on-screen volume display.
-- SponsorBlock: skips the parts of music videos without music (also sponsor spots, self promotion and subscribe reminders). The lookup sends only a 4 character hash prefix of the video id.
+- Equalizer (10 bands, presets), compressor, playback speed with the pitch kept, skip silences (or only the silence at the start of a track), loudness evened out the way YouTube does it, output device choice, and an exponential volume slider with an on-screen volume display. The crossfade has a separate fade-in length (shorter than the crossfade lets the next track come up sooner).
+- SponsorBlock: skips the parts of music videos without music (also sponsor spots, self promotion, subscribe reminders, intros and outros). The categories can be chosen; intros and outros are off by default. The lookup sends only a 4 character hash prefix of the video id.
 
 ### Downloads
 
-- Tracks, albums and playlists as Opus or M4A (copied as YouTube sends them) or MP3 (320 kbit/s), with title, artist, album, year, track number and cover, into `~/Music/Quince/<artist>/<album>/`. A Downloads page shows the progress.
+- Tracks, albums and playlists as Opus or M4A (copied as YouTube sends them) or MP3 (128, 192, 256 or 320 kbit/s), with title, artist, album, year, track number and cover, into `~/Music/Quince/<artist>/<album>/`. Tracks that are already in the folder are skipped (on by default), and a playlist can be limited to at most N tracks (0 for all). A Downloads page shows the progress.
 
 ### Look and integrations
 
-- Dark, with soft light in the album's color, frosted glass on menus, dialogs and the Now Playing view, and animated page changes. Options for a compact sidebar, a clock, a see-through window (for the desktop's blur, after a restart) and starting paused.
-- Discord Rich Presence (Pear Desktop's Discord application by default, your own id in Settings), tray icon, notifications.
+- Dark, with soft light in the album's color, frosted glass on menus, dialogs and the Now Playing view, and animated page changes. Options for a compact sidebar, a clock (with seconds, 24 or 12 hours, or as the system), a see-through window (for the desktop's blur, after a restart, with the opacity of the background) and starting paused. The strength of the album color glow can be set, and whether the progress bar takes the album color. The ambient light of videos has a strength and a reach. The window size and the mini player's width are remembered. The start page can be Home, Explore, Library or Liked songs (shown at start and after signing in or out).
+- Discord Rich Presence (Pear Desktop's Discord application by default, your own id in Settings). The member list can show the app name, the artist or the title. The time left can be hidden, the "Listen on YouTube Music" button can be switched off, and the status is cleared after a pause of N minutes (default 10, 0 never).
+- Tray icon (a click can play or pause instead of showing the window) and notifications (also when playback goes on after a pause; urgency low, normal or critical on Linux).
 - Linux: MPRIS and system-wide shortcuts through the desktop portal.
-- German translation, chosen by the system language.
+- Language: Settings has a choice of as the system, English or Deutsch. It applies at once, also to YouTube's own texts on pages loaded after the change.
 
 ## Requirements
 
 Package names for Arch / EndeavourOS.
 
-Build: cmake, ninja, gcc or clang, qt6-base, qt6-declarative, qt6-svg, qt6-tools (translations), mpv (libmpv), ffmpeg (libavformat, libavcodec, libswresample; mpv needs it anyway), and on Linux openssl (for the Chromium cookie import). The first CMake run downloads QuickJS-ng v0.17.0 (pinned by hash), so it needs internet once.
+Build: cmake, ninja, gcc or clang, qt6-base, qt6-declarative, qt6-svg, qt6-tools (translations), icu (icu-uc and icu-i18n through pkg-config; Qt already depends on it), mpv (libmpv), ffmpeg (libavformat, libavcodec, libswresample; mpv needs it anyway), and on Linux openssl (for the Chromium cookie import). The first CMake run downloads QuickJS-ng v0.17.0 (pinned by hash), so it needs internet once. The build also downloads MeCab 0.996.13 and mecab-ipadic-2.7.0-20070801 from the shogo82148/mecab GitHub releases (pinned by SHA256, like QuickJS-ng) and compiles the dictionary at build time. The dictionary is installed to `share/quince/mecab/ipadic`; in the build tree it sits next to the binary at `build/mecab/ipadic`. The environment variable `QUINCE_MECAB_DIC` can point to another compiled dictionary.
 
 Optional for building: qt6-webengine, which gives the sign-in window quince-login. Without it, sign in by importing cookies. ccache and mold are used when present.
 
 Runtime: nothing beyond these libraries. There is no yt-dlp and no deno.
 
 ```
-sudo pacman -S --needed cmake ninja qt6-base qt6-declarative qt6-svg qt6-tools qt6-webengine mpv ffmpeg
+sudo pacman -S --needed cmake ninja qt6-base qt6-declarative qt6-svg qt6-tools qt6-webengine icu mpv ffmpeg
 ```
 
 ## Build and run
@@ -166,10 +169,19 @@ Streams depend on YouTube's player puzzles. The solver is the same code yt-dlp s
 
 Page layout changes are handled in `src/ytm/Parser.cpp`.
 
-There is a development tool, `build/quince-parsedump`, that prints what the parser makes of a saved InnerTube answer:
+There are two development tools. `build/quince-parsedump` prints what the parser makes of a saved InnerTube answer:
 
 ```
 quince-parsedump browse|search|continuation|suggest|next|nextmore <answer.json> [browseId]
+```
+
+`build/quince-romanize` prints the romanization of the lines given as arguments:
+
+```
+$ build/quince-romanize "夜に駆ける"
+language: ja
+夜に駆ける
+  yoru ni kakeru
 ```
 
 ## Layout
@@ -178,11 +190,13 @@ quince-parsedump browse|search|continuation|suggest|next|nextmore <answer.json> 
 src/ytm            InnerTube client, parser, pages, account, cookies, browser import
 src/player         libmpv player (two instances for crossfades), video item, stream resolver, JS solver, effects, queue, playback
 src/download       downloader and audio file writer
-src/lyrics         lyrics
+src/lyrics         lyrics, romanization
 src/integrations   Discord, tray and notifications, MPRIS, global shortcuts, SponsorBlock
-src/app            controller, settings, colors
+src/app            controller, settings, language, colors
 qml                the interface
+cmake              Mecab.cmake (builds MeCab and the dictionary)
 login              quince-login
+tools              quince-parsedump, quince-romanize
 third_party/ejs    yt-dlp's challenge solver
 i18n               translations
 packaging          desktop file
@@ -190,4 +204,4 @@ packaging          desktop file
 
 ## Credits
 
-The API paths and parsing follow what ytmusicapi (MIT) found out. Stream client details and the challenge solver come from yt-dlp (solver: yt-dlp/ejs, Unlicense, bundling meriyah ISC and astring MIT). JavaScript engine: QuickJS-ng (MIT). Font: Inter (SIL Open Font License). Lyrics: LRCLIB and Genius. Skip segments: SponsorBlock.
+The API paths and parsing follow what ytmusicapi (MIT) found out. Stream client details and the challenge solver come from yt-dlp (solver: yt-dlp/ejs, Unlicense, bundling meriyah ISC and astring MIT). JavaScript engine: QuickJS-ng (MIT). Font: Inter (SIL Open Font License). Japanese romanization: MeCab (Taku Kudo, used under its BSD license option of GPL/LGPL/BSD) with IPADIC (its own permissive license, installed as `share/licenses/quince/IPADIC-COPYING`). Chinese romanization and character conversion: ICU (Unicode license). Lyrics: LRCLIB, Megalobiz and Genius. Skip segments: SponsorBlock.
