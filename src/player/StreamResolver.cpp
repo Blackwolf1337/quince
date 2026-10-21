@@ -42,6 +42,7 @@ ForeignClient visionClient()
         },
         QByteArrayLiteral("101"),
         kVisionUserAgent,
+        QJsonObject(),
     };
 }
 
@@ -71,6 +72,36 @@ QJsonObject visionBody(const QString &videoId)
         {QStringLiteral("contentCheckOk"), true},
         {QStringLiteral("racyCheckOk"), true},
     };
+}
+
+// the embedded web player, which plays some age-gated videos without an
+// age check (yt-dlp's web_embedded); it says it is embedded on another site
+ForeignClient embeddedClient()
+{
+    return ForeignClient{
+        QJsonObject{
+            {QStringLiteral("clientName"), QStringLiteral("WEB_EMBEDDED_PLAYER")},
+            {QStringLiteral("clientVersion"), QStringLiteral("2.20260708.00.00")},
+        },
+        QByteArrayLiteral("56"),
+        InnerTube::userAgent(),
+        QJsonObject{{QStringLiteral("embedUrl"), QStringLiteral("https://www.reddit.com/")}},
+    };
+}
+
+// as yt-dlp's _is_agegated
+bool ageGated(const QJsonObject &answer)
+{
+    const QJsonValue status = ytm::at(answer, {"playabilityStatus"});
+    if (!ytm::at(status, {"desktopLegacyAgeGateReason"}).isUndefined())
+        return true;
+    const QString text = (ytm::at(status, {"status"}).toString() + u' ' + ytm::at(status, {"reason"}).toString()).toLower();
+    for (const char *mark : {"confirm your age", "age-restricted", "inappropriate", "age_verification_required",
+                             "age_check_required"}) {
+        if (text.contains(QLatin1StringView(mark)))
+            return true;
+    }
+    return false;
 }
 
 bool playable(const QJsonObject &answer)
@@ -361,10 +392,22 @@ void StreamResolver::onAnswer(const QString &key)
     // bot check) go through WEB_REMIX too.
     const bool web = pending.webAllowed && !pending.playerId.isEmpty() && playable(pending.web)
         && (hasFormat(pending.web, kPremiumFormat) || !playable(pending.vision) || forcedClient() == u"web");
-    if (web && finishWeb(key, pending))
+    if (web && finishWeb(key, pending, pending.web, QStringLiteral("WEB_REMIX")))
         return;
     if (finishVision(key, pending))
         return;
+    // age-bypass: both refused for the age; the embedded player may play it
+    if (!pending.playerId.isEmpty() && (ageGated(pending.web) || ageGated(pending.vision))) {
+        if (!pending.embedSent) {
+            requestEmbedded(key);
+            return;
+        }
+        if (!pending.embedDone)
+            return;
+        if (playable(pending.embed)
+            && finishWeb(key, pending, pending.embed, QStringLiteral("WEB_EMBEDDED_PLAYER")))
+            return;
+    }
     if (pending.webAllowed && playable(pending.web) && pending.playerId.isEmpty() && m_solver->preparing()) {
         m_waiting.insert(key);
         return;
@@ -395,11 +438,29 @@ bool StreamResolver::pickFormats(const QJsonObject &answer, const Pending &pendi
     return true;
 }
 
-bool StreamResolver::finishWeb(const QString &key, const Pending &pending)
+void StreamResolver::requestEmbedded(const QString &key)
+{
+    Pending &pending = m_pending[key];
+    pending.embedSent = true;
+    qCDebug(lcResolve) << pending.videoId << "is age-gated, asking the embedded player";
+    m_innerTube->postAs(embeddedClient(), QStringLiteral("player"),
+                        playerBody(pending.videoId, m_solver->signatureTimestamp()), this,
+                        [this, key](const QJsonObject &answer, const QString &) {
+        auto it = m_pending.find(key);
+        if (it == m_pending.end())
+            return;
+        it->embedDone = true;
+        it->embed = answer;
+        onAnswer(key);
+    });
+}
+
+bool StreamResolver::finishWeb(const QString &key, const Pending &pending, const QJsonObject &answer,
+                               const QString &client)
 {
     QJsonObject audio;
     QJsonObject picture;
-    if (!pickFormats(pending.web, pending, &audio, &picture))
+    if (!pickFormats(answer, pending, &audio, &picture))
         return false;
 
     struct Part
@@ -425,7 +486,7 @@ bool StreamResolver::finishWeb(const QString &key, const Pending &pending)
     if (!picture.isEmpty())
         parts.append(partOf(picture));
 
-    Stream stream = streamOf(pending.videoId, QStringLiteral("WEB_REMIX"), audio, picture);
+    Stream stream = streamOf(pending.videoId, client, audio, picture);
     stream.videoAsked = pending.video;
     stream.aacAsked = pending.aac;
     stream.headers = {

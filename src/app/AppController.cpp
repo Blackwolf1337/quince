@@ -3,6 +3,7 @@
 #include "app/Settings.h"
 #include "integrations/Desktop.h"
 #include "integrations/Discord.h"
+#include "integrations/SponsorBlock.h"
 #include "lyrics/Lyrics.h"
 #ifdef QUINCE_DBUS
 #include "integrations/GlobalShortcuts.h"
@@ -80,6 +81,7 @@ AppController::AppController(const AppOptions &options, QObject *parent)
     m_lyrics = new Lyrics(m_playback, m_player, m_innerTube, m_settings, this);
     m_effects = new AudioEffects(m_player, m_playback, m_settings, this);
     m_downloads = new Downloader(m_resolver, m_innerTube, m_settings, this);
+    m_sponsorBlock = new SponsorBlock(m_playback, m_player, m_settings, this);
     m_desktop = new Desktop(m_playback, m_player, m_settings, this);
     m_discord = new Discord(m_playback, m_player, m_settings, this);
     connect(m_theme, &ColorTheme::coverReady, m_desktop, &Desktop::setCover);

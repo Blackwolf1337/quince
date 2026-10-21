@@ -52,7 +52,8 @@ private:
     void updateCurrentLine();
     void fetchLrclib(const QVariantMap &track, int generation);
     void searchLrclib(const QVariantMap &track, int generation);
-    void fetchYouTube(const QString &videoId, int generation);
+    void fetchYouTube(const QVariantMap &track, int generation);
+    void fetchGenius(const QVariantMap &track, int generation);
     void setResult(const QVariantList &lines, bool synced, const QString &source);
     void setLoading(bool loading);
 

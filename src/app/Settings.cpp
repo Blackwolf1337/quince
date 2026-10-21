@@ -20,6 +20,8 @@ const QString kCaptionLanguage = QStringLiteral("video/captions");
 const QString kVisualizer = QStringLiteral("look/visualizer");
 const QString kDownloadFormat = QStringLiteral("downloads/format");
 const QString kDownloadFolder = QStringLiteral("downloads/folder");
+const QString kLyricsGenius = QStringLiteral("lyrics/genius");
+const QString kSponsorBlock = QStringLiteral("player/sponsorBlock");
 const QString kCompactSidebar = QStringLiteral("look/compactSidebar");
 const QString kClock = QStringLiteral("look/clock");
 const QString kTransparentWindow = QStringLiteral("look/transparentWindow");
@@ -102,6 +104,10 @@ QString Settings::downloadFolder() const
 }
 void Settings::setDownloadFormat(const QString &format) { set(kDownloadFormat, format); }
 void Settings::setDownloadFolder(const QString &folder) { set(kDownloadFolder, folder); }
+bool Settings::lyricsGenius() const { return m_store.value(kLyricsGenius, true).toBool(); }
+bool Settings::sponsorBlock() const { return m_store.value(kSponsorBlock, true).toBool(); }
+void Settings::setLyricsGenius(bool on) { set(kLyricsGenius, on); }
+void Settings::setSponsorBlock(bool on) { set(kSponsorBlock, on); }
 bool Settings::compactSidebar() const { return m_store.value(kCompactSidebar, false).toBool(); }
 bool Settings::clock() const { return m_store.value(kClock, false).toBool(); }
 bool Settings::transparentWindow() const { return m_store.value(kTransparentWindow, false).toBool(); }

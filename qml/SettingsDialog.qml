@@ -72,6 +72,11 @@ Dialog {
                 onToggled: dialog.settings.normalizeLoudness = checked
             }
             Toggle {
+                text: qsTr("Skip the parts of music videos without music (SponsorBlock)")
+                checked: dialog.settings.sponsorBlock
+                onToggled: dialog.settings.sponsorBlock = checked
+            }
+            Toggle {
                 text: qsTr("Skip songs I disliked")
                 checked: dialog.settings.skipDisliked
                 onToggled: dialog.settings.skipDisliked = checked
@@ -224,6 +229,11 @@ Dialog {
                 text: qsTr("Time-synced lyrics from LRCLIB")
                 checked: dialog.settings.lyricsLrclib
                 onToggled: dialog.settings.lyricsLrclib = checked
+            }
+            Toggle {
+                text: qsTr("Lyrics from Genius when there are none else")
+                checked: dialog.settings.lyricsGenius
+                onToggled: dialog.settings.lyricsGenius = checked
             }
 
             Section {

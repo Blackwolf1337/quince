@@ -39,6 +39,9 @@ class Settings : public QObject
     // downloads: opus, m4a or mp3; the folder they go into
     Q_PROPERTY(QString downloadFormat READ downloadFormat WRITE setDownloadFormat NOTIFY changed)
     Q_PROPERTY(QString downloadFolder READ downloadFolder WRITE setDownloadFolder NOTIFY changed)
+    Q_PROPERTY(bool lyricsGenius READ lyricsGenius WRITE setLyricsGenius NOTIFY changed)
+    // sponsorblock: skip non-music parts of music videos
+    Q_PROPERTY(bool sponsorBlock READ sponsorBlock WRITE setSponsorBlock NOTIFY changed)
     Q_PROPERTY(bool compactSidebar READ compactSidebar WRITE setCompactSidebar NOTIFY changed)
     Q_PROPERTY(bool clock READ clock WRITE setClock NOTIFY changed)
     // a see-through window background (the compositor may blur behind it); needs a restart
@@ -68,6 +71,8 @@ public:
     QString visualizer() const;
     QString downloadFormat() const;
     QString downloadFolder() const;
+    bool lyricsGenius() const;
+    bool sponsorBlock() const;
     bool compactSidebar() const;
     bool clock() const;
     bool transparentWindow() const;
@@ -93,6 +98,8 @@ public:
     void setVisualizer(const QString &style);
     void setDownloadFormat(const QString &format);
     void setDownloadFolder(const QString &folder);
+    void setLyricsGenius(bool on);
+    void setSponsorBlock(bool on);
     void setCompactSidebar(bool on);
     void setClock(bool on);
     void setTransparentWindow(bool on);

@@ -134,6 +134,8 @@ qt_add_qml_module(quince
         src/integrations/Desktop.cpp
         src/integrations/Discord.h
         src/integrations/Discord.cpp
+        src/integrations/SponsorBlock.h
+        src/integrations/SponsorBlock.cpp
         src/lyrics/Lyrics.h
         src/lyrics/Lyrics.cpp
         src/app/ArtNetwork.cpp
@@ -184,7 +186,7 @@ qt_add_resources(quince ejs
 )
 
 # qmltyperegistrar includes QML-exposed headers by file name only
-target_include_directories(quince PRIVATE src src/app src/player src/ytm src/lyrics src/download)
+target_include_directories(quince PRIVATE src src/app src/player src/ytm src/lyrics src/download src/integrations)
 target_compile_definitions(quince PRIVATE PROJECT_VERSION="${PROJECT_VERSION}")
 
 if(NOT MSVC)

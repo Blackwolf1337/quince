@@ -655,6 +655,7 @@ void Playback::onResolved(const Stream &stream)
         m_videoPlaying = stream.video;
         setStreamInfo(streamInfoOf(stream));
         applyCaptions(stream);
+        emit streamStarted(stream.videoId);
         prefetchUpcoming();
         return;
     }
@@ -784,6 +785,7 @@ void Playback::onTrackStarted(const QString &tag)
         m_loadedStream = m_upcoming->videoId;
         m_videoPlaying = m_upcoming->video;
         applyCaptions(*m_upcoming);
+        emit streamStarted(m_loadedStream);
     }
     m_upcoming.reset();
     setStreamInfo(m_queuedInfo);

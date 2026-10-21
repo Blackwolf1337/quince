@@ -22,6 +22,9 @@ Q_LOGGING_CATEGORY(lcLyrics, "quince.lyrics")
 namespace {
 
 const QString kLrclib = QStringLiteral("https://lrclib.net/api/");
+// Genius serves its pages to browsers
+const QByteArray kBrowserAgent =
+    QByteArrayLiteral("Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0");
 // LRCLIB asks clients to name themselves
 const QByteArray kUserAgent = QByteArrayLiteral("Quince/" PROJECT_VERSION " (native YouTube Music player)");
 // a search hit may differ this much in length and still be the same recording
@@ -109,6 +112,8 @@ void Lyrics::setLoading(bool loading)
 
 void Lyrics::setResult(const QVariantList &lines, bool synced, const QString &source)
 {
+    if (!source.isEmpty())
+        qCDebug(lcLyrics) << lines.size() << "lines from" << source << (synced ? "synced" : "");
     m_lines = lines;
     m_synced = synced;
     m_source = source;
@@ -150,8 +155,11 @@ void Lyrics::onTrackChanged()
         return;
 
     setLoading(true);
-    if (!m_settings->lyricsLrclib())
-        fetchYouTube(videoId, generation);
+    // QUINCE_LYRICS=genius asks Genius first (test runs of that source)
+    if (qEnvironmentVariable("QUINCE_LYRICS") == u"genius")
+        fetchGenius(track, generation);
+    else if (!m_settings->lyricsLrclib())
+        fetchYouTube(track, generation);
     else if (track.value(QStringLiteral("durationSeconds")).toInt() > 0)
         fetchLrclib(track, generation);
     else
@@ -201,8 +209,7 @@ void Lyrics::searchLrclib(const QVariantMap &track, int generation)
     request.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
     QNetworkReply *reply = m_network->get(request);
     const double duration = track.value(QStringLiteral("durationSeconds")).toDouble();
-    const QString videoId = track.value(QStringLiteral("videoId")).toString();
-    connect(reply, &QNetworkReply::finished, this, [this, reply, duration, videoId, generation] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, duration, track, generation] {
         reply->deleteLater();
         if (generation != m_generation)
             return;
@@ -222,24 +229,25 @@ void Lyrics::searchLrclib(const QVariantMap &track, int generation)
             setResult(parseLrc(best), true, QStringLiteral("LRCLIB"));
             return;
         }
-        fetchYouTube(videoId, generation);
+        fetchYouTube(track, generation);
     });
 }
 
 // The lyrics tab of the site: its browse id comes with the next answer.
-void Lyrics::fetchYouTube(const QString &videoId, int generation)
+void Lyrics::fetchYouTube(const QVariantMap &track, int generation)
 {
+    const QString videoId = track.value(QStringLiteral("videoId")).toString();
     m_innerTube->post(QStringLiteral("next"), {{QStringLiteral("videoId"), videoId}}, this,
-                      [this, generation](const QJsonObject &response, const QString &error) {
+                      [this, track, generation](const QJsonObject &response, const QString &error) {
         if (generation != m_generation)
             return;
         const QString browseId = ytm::parseWatchNext(response).lyricsBrowseId;
         if (!error.isEmpty() || browseId.isEmpty()) {
-            setResult({}, false, {});
+            fetchGenius(track, generation);
             return;
         }
         m_innerTube->post(QStringLiteral("browse"), {{QStringLiteral("browseId"), browseId}}, this,
-                          [this, generation](const QJsonObject &page, const QString &error) {
+                          [this, track, generation](const QJsonObject &page, const QString &error) {
             if (generation != m_generation)
                 return;
             // the lyrics page is a bare section list with one text shelf
@@ -249,13 +257,144 @@ void Lyrics::fetchYouTube(const QString &videoId, int generation)
             // "Source: LyricFind" and the like, below the text
             const QString source = ytm::textOf(ytm::at(shelf, {"footer"}));
             if (!error.isEmpty() || text.isEmpty()) {
-                setResult({}, false, {});
+                fetchGenius(track, generation);
                 return;
             }
             QVariantList lines;
             for (const QString &line : text.split(u'\n'))
                 lines.append(QVariantMap{{QStringLiteral("time"), -1}, {QStringLiteral("text"), line.trimmed()}});
             setResult(lines, false, source.isEmpty() ? QStringLiteral("YouTube Music") : source);
+        });
+    });
+}
+
+namespace {
+
+// the end of the element that starts at from (an opening <div ...>), by
+// counting the divs inside it; -1 when it does not close
+qsizetype elementEnd(const QString &html, qsizetype from)
+{
+    static const QRegularExpression div(QStringLiteral("<(/?)div\\b[^>]*>"));
+    int depth = 0;
+    QRegularExpressionMatchIterator it = div.globalMatch(html, from);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch m = it.next();
+        depth += m.captured(1).isEmpty() ? 1 : -1;
+        if (depth == 0)
+            return m.capturedEnd();
+    }
+    return -1;
+}
+
+QString unescape(QString text)
+{
+    static const QRegularExpression numeric(QStringLiteral("&#(x?)([0-9a-fA-F]+);"));
+    QString out;
+    qsizetype last = 0;
+    QRegularExpressionMatchIterator it = numeric.globalMatch(text);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch m = it.next();
+        out += QStringView(text).mid(last, m.capturedStart() - last);
+        out += QChar(char16_t(m.captured(2).toUInt(nullptr, m.captured(1).isEmpty() ? 10 : 16)));
+        last = m.capturedEnd();
+    }
+    out += QStringView(text).mid(last);
+    out.replace(QStringLiteral("&quot;"), QStringLiteral("\""));
+    out.replace(QStringLiteral("&apos;"), QStringLiteral("'"));
+    out.replace(QStringLiteral("&lt;"), QStringLiteral("<"));
+    out.replace(QStringLiteral("&gt;"), QStringLiteral(">"));
+    out.replace(QStringLiteral("&nbsp;"), QStringLiteral(" "));
+    out.replace(QStringLiteral("&amp;"), QStringLiteral("&"));
+    return out;
+}
+
+// the text of a Genius song page: its data-lyrics-container parts, without
+// the parts marked data-exclude-from-selection (the header inside them)
+QString geniusLyrics(const QString &html)
+{
+    static const QRegularExpression container(QStringLiteral("<div[^>]*data-lyrics-container=\"true\"[^>]*>"));
+    static const QRegularExpression excluded(QStringLiteral("<div[^>]*data-exclude-from-selection=\"true\"[^>]*>"));
+    static const QRegularExpression br(QStringLiteral("<br\\s*/?>"));
+    static const QRegularExpression tag(QStringLiteral("<[^>]+>"));
+    QString text;
+    QRegularExpressionMatchIterator it = container.globalMatch(html);
+    while (it.hasNext()) {
+        const QRegularExpressionMatch m = it.next();
+        const qsizetype end = elementEnd(html, m.capturedStart());
+        if (end < 0)
+            continue;
+        QString part = html.mid(m.capturedEnd(), end - m.capturedEnd() - 6);
+        for (QRegularExpressionMatch x = excluded.match(part); x.hasMatch(); x = excluded.match(part)) {
+            const qsizetype xEnd = elementEnd(part, x.capturedStart());
+            part.remove(x.capturedStart(), (xEnd < 0 ? part.size() : xEnd) - x.capturedStart());
+        }
+        part.replace(br, QStringLiteral("\n"));
+        part.remove(tag);
+        if (!text.isEmpty())
+            text += u'\n';
+        text += unescape(part);
+    }
+    return text.trimmed();
+}
+
+} // namespace
+
+// Genius, when LRCLIB and YouTube have nothing: its search, then the song
+// page (unsynced text)
+void Lyrics::fetchGenius(const QVariantMap &track, int generation)
+{
+    if (!m_settings->lyricsGenius()) {
+        setResult({}, false, {});
+        return;
+    }
+    const QString artist = firstArtist(track);
+    QUrl url(QStringLiteral("https://genius.com/api/search/multi"));
+    url.setQuery(QUrlQuery{{QStringLiteral("q"), artist + u' ' + cleanTitle(track.value(QStringLiteral("title")).toString())}});
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, kBrowserAgent);
+    QNetworkReply *reply = m_network->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, artist, generation] {
+        reply->deleteLater();
+        if (generation != m_generation)
+            return;
+        QString page;
+        const QJsonArray sections = ytm::at(QJsonDocument::fromJson(reply->readAll()).object(),
+                                            {"response", "sections"}).toArray();
+        for (const QJsonValue &section : sections) {
+            if (section[u"type"].toString() != u"song")
+                continue;
+            for (const QJsonValue &hit : section[u"hits"].toArray()) {
+                const QJsonValue result = hit[u"result"];
+                const QString by = ytm::at(result, {"primary_artist", "name"}).toString();
+                // the right artist, not a cover or a translation page
+                if (!artist.isEmpty() && !by.contains(artist, Qt::CaseInsensitive)
+                    && !artist.contains(by, Qt::CaseInsensitive))
+                    continue;
+                page = result[u"url"].toString();
+                break;
+            }
+            break;
+        }
+        if (page.isEmpty()) {
+            setResult({}, false, {});
+            return;
+        }
+        QNetworkRequest pageRequest{QUrl(page)};
+        pageRequest.setHeader(QNetworkRequest::UserAgentHeader, kBrowserAgent);
+        QNetworkReply *pageReply = m_network->get(pageRequest);
+        connect(pageReply, &QNetworkReply::finished, this, [this, pageReply, generation] {
+            pageReply->deleteLater();
+            if (generation != m_generation)
+                return;
+            const QString text = geniusLyrics(QString::fromUtf8(pageReply->readAll()));
+            if (text.isEmpty()) {
+                setResult({}, false, {});
+                return;
+            }
+            QVariantList lines;
+            for (const QString &line : text.split(u'\n'))
+                lines.append(QVariantMap{{QStringLiteral("time"), -1}, {QStringLiteral("text"), line.trimmed()}});
+            setResult(lines, false, QStringLiteral("Genius"));
         });
     });
 }

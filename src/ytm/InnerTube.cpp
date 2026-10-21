@@ -129,8 +129,11 @@ void InnerTube::postAs(const ForeignClient &client, const QString &endpoint, con
         clientObject.insert(QStringLiteral("visitorData"), QString::fromLatin1(m_visitorData));
         request.setRawHeader("X-Goog-Visitor-Id", m_visitorData);
     }
+    QJsonObject innerTubeContext{{QStringLiteral("client"), clientObject}};
+    if (!client.thirdParty.isEmpty())
+        innerTubeContext.insert(QStringLiteral("thirdParty"), client.thirdParty);
     QJsonObject fullBody(body);
-    fullBody.insert(QStringLiteral("context"), QJsonObject{{QStringLiteral("client"), clientObject}});
+    fullBody.insert(QStringLiteral("context"), innerTubeContext);
 
     QNetworkReply *reply = m_plain->post(request, QJsonDocument(fullBody).toJson(QJsonDocument::Compact));
     finish(reply, context, std::move(callback), endpoint, false);

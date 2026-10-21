@@ -104,6 +104,10 @@ private:
         QString playerId; // the solved player whose signatureTimestamp the request carried
         QJsonObject web;
         QJsonObject vision;
+        // age-bypass: the embedded player's answer for age-gated tracks
+        bool embedSent = false;
+        bool embedDone = false;
+        QJsonObject embed;
         QString webError;
         QString visionError;
     };
@@ -113,7 +117,9 @@ private:
     void requestVision(const QString &key);
     void onAnswer(const QString &key);
     bool pickFormats(const QJsonObject &answer, const Pending &pending, QJsonObject *audio, QJsonObject *picture) const;
-    bool finishWeb(const QString &key, const Pending &pending);
+    void requestEmbedded(const QString &key);
+    // URLs of a web client's answer, with the JS puzzles solved
+    bool finishWeb(const QString &key, const Pending &pending, const QJsonObject &answer, const QString &client);
     bool finishVision(const QString &key, const Pending &pending);
     static Stream streamOf(const QString &videoId, const QString &client, const QJsonObject &audio,
                            const QJsonObject &picture);

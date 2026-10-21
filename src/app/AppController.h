@@ -8,6 +8,7 @@
 class Account;
 class AudioEffects;
 class Downloader;
+class SponsorBlock;
 class AccountCookies;
 class ColorTheme;
 class Desktop;
@@ -37,6 +38,7 @@ class AppController : public QObject
     Q_OBJECT
     Q_MOC_INCLUDE("player/AudioEffects.h")
     Q_MOC_INCLUDE("download/Downloader.h")
+    Q_MOC_INCLUDE("integrations/SponsorBlock.h")
     Q_MOC_INCLUDE("player/MpvPlayer.h")
     Q_MOC_INCLUDE("player/Playback.h")
     Q_MOC_INCLUDE("ytm/Account.h")
@@ -54,6 +56,7 @@ class AppController : public QObject
     Q_PROPERTY(Lyrics *lyrics READ lyrics CONSTANT)
     Q_PROPERTY(AudioEffects *effects READ effects CONSTANT)
     Q_PROPERTY(Downloader *downloads READ downloads CONSTANT)
+    Q_PROPERTY(SponsorBlock *sponsorBlock READ sponsorBlock CONSTANT)
 
 public:
     explicit AppController(const AppOptions &options, QObject *parent = nullptr);
@@ -70,6 +73,7 @@ public:
     Lyrics *lyrics() const { return m_lyrics; }
     AudioEffects *effects() const { return m_effects; }
     Downloader *downloads() const { return m_downloads; }
+    SponsorBlock *sponsorBlock() const { return m_sponsorBlock; }
 
     // the main window, for the tray icon
     void setWindow(QWindow *window);
@@ -111,6 +115,7 @@ private:
     Lyrics *m_lyrics = nullptr;
     AudioEffects *m_effects = nullptr;
     Downloader *m_downloads = nullptr;
+    SponsorBlock *m_sponsorBlock = nullptr;
     Desktop *m_desktop = nullptr;
     Discord *m_discord = nullptr;
     Mpris *m_mpris = nullptr; // Linux only

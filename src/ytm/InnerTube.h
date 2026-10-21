@@ -19,6 +19,7 @@ struct ForeignClient
     QJsonObject client; // context.client
     QByteArray nameId; // X-YouTube-Client-Name
     QByteArray userAgent;
+    QJsonObject thirdParty; // context.thirdParty (embedded players)
 };
 
 // Client for YouTube Music's internal API (youtubei/v1, client WEB_REMIX).

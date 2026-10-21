@@ -126,6 +126,12 @@ ApplicationWindow {
         }
     }
     Connections {
+        target: App.sponsorBlock
+        function onSkipped(text) {
+            window.showToast(text, false)
+        }
+    }
+    Connections {
         target: App.playback
         function onErrorChanged() {
             if (App.playback.error)

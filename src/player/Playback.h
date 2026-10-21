@@ -109,6 +109,8 @@ signals:
     void errorChanged();
     void queueStateChanged();
     void captionsChanged();
+    // a stream began (its video id; in video mode a song's may be its video's)
+    void streamStarted(const QString &videoId);
 
 private:
     enum class QueueMode {
