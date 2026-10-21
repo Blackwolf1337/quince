@@ -94,6 +94,7 @@ qt_add_qml_module(quince
         qml/icons/home.svg
         qml/icons/library.svg
         qml/icons/like.svg
+        qml/icons/more.svg
         qml/icons/next.svg
         qml/icons/pause.svg
         qml/icons/play.svg

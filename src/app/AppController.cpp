@@ -158,6 +158,8 @@ void AppController::applySettings()
     if (m_player->audioDevice() != m_settings->audioDevice())
         m_player->setAudioDevice(m_settings->audioDevice());
     m_playback->setNormalizeLoudness(m_settings->normalizeLoudness());
+    m_playback->setSkipDisliked(m_settings->skipDisliked());
+    m_playback->setStartPaused(m_settings->startPaused());
 }
 
 void AppController::setVolumeSlider(double slider)

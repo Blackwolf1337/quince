@@ -70,6 +70,16 @@ Dialog {
                 checked: dialog.settings.normalizeLoudness
                 onToggled: dialog.settings.normalizeLoudness = checked
             }
+            Toggle {
+                text: qsTr("Skip songs I disliked")
+                checked: dialog.settings.skipDisliked
+                onToggled: dialog.settings.skipDisliked = checked
+            }
+            Toggle {
+                text: qsTr("Songs I pick start paused")
+                checked: dialog.settings.startPaused
+                onToggled: dialog.settings.startPaused = checked
+            }
             RowLayout {
                 Layout.fillWidth: true
                 Label {

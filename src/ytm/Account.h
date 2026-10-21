@@ -6,6 +6,8 @@
 #include <QVariantList>
 #include <QtQml/qqmlregistration.h>
 
+#include <functional>
+
 class AccountCookies;
 class InnerTube;
 class QProcess;
@@ -49,6 +51,8 @@ public:
 
     // status: LIKE, DISLIKE or INDIFFERENT
     Q_INVOKABLE void rate(const QString &videoId, const QString &status);
+    // the same for many tracks (album-actions), one request after the other
+    Q_INVOKABLE void rateAll(const QStringList &videoIds, const QString &status);
     Q_INVOKABLE void addToPlaylist(const QString &playlistId, const QString &videoId, const QString &title);
     Q_INVOKABLE void createPlaylist(const QString &title, const QString &videoId);
     Q_INVOKABLE void reloadPlaylists();
@@ -68,6 +72,7 @@ signals:
 
 private:
     void setBusy(bool busy);
+    void postRating(const QString &videoId, const QString &status, std::function<void(const QString &error)> done);
     void onSignedInChanged();
     void loadInfo();
     static QString helperProgram();

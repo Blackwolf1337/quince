@@ -67,6 +67,10 @@ public:
 
     // turns loud tracks down to YouTube's reference level, like the site
     void setNormalizeLoudness(bool on);
+    // skip-disliked-songs: going on (by itself or Next) passes over disliked tracks
+    void setSkipDisliked(bool on) { m_skipDisliked = on; }
+    // disable-autoplay: a track or list the user picks starts paused
+    void setStartPaused(bool on) { m_startPaused = on; }
     // where a play of videoId is reported to the account's history; empty
     // until the player answer for it arrived
     QString trackingUrl(const QString &videoId) const { return m_tracking.value(videoId); }
@@ -97,6 +101,11 @@ private:
     void applyQueue(const QVariantList &items, int selected, QueueMode mode);
     void loadMoreQueue();
     void startCurrent(double start = 0, bool paused = false);
+    void goTo(int index);
+    // the queue entry that plays after the current one; count() when none
+    int nextIndex() const;
+    // the one before it; -1 when none
+    int previousIndex() const;
     void prefetchUpcoming();
     void onResolved(const Stream &stream);
     void onFailed(const QString &videoId, const QString &error);
@@ -145,6 +154,8 @@ private:
 
     // from the player endpoint, per video
     bool m_normalize = true;
+    bool m_skipDisliked = false;
+    bool m_startPaused = false;
     QHash<QString, double> m_loudness;
     QHash<QString, QString> m_tracking;
 };

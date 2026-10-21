@@ -28,6 +28,8 @@ class Settings : public QObject
     Q_PROPERTY(bool lyricsLrclib READ lyricsLrclib WRITE setLyricsLrclib NOTIFY changed)
     // Linux: shortcuts through the desktop portal, read at start
     Q_PROPERTY(bool globalShortcuts READ globalShortcuts WRITE setGlobalShortcuts NOTIFY changed)
+    Q_PROPERTY(bool skipDisliked READ skipDisliked WRITE setSkipDisliked NOTIFY changed)
+    Q_PROPERTY(bool startPaused READ startPaused WRITE setStartPaused NOTIFY changed)
     Q_PROPERTY(bool compactSidebar READ compactSidebar WRITE setCompactSidebar NOTIFY changed)
     Q_PROPERTY(bool clock READ clock WRITE setClock NOTIFY changed)
     // a see-through window background (the compositor may blur behind it); needs a restart
@@ -49,6 +51,8 @@ public:
     QString discordAppId() const;
     bool lyricsLrclib() const;
     bool globalShortcuts() const;
+    bool skipDisliked() const;
+    bool startPaused() const;
     bool compactSidebar() const;
     bool clock() const;
     bool transparentWindow() const;
@@ -66,6 +70,8 @@ public:
     void setDiscordAppId(const QString &id);
     void setLyricsLrclib(bool on);
     void setGlobalShortcuts(bool on);
+    void setSkipDisliked(bool on);
+    void setStartPaused(bool on);
     void setCompactSidebar(bool on);
     void setClock(bool on);
     void setTransparentWindow(bool on);

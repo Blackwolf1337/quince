@@ -308,6 +308,19 @@ QVariantList BrowsePage::shelfItems(int shelf) const
     return m_shelves.at(shelf).toMap().value(QStringLiteral("items")).toList();
 }
 
+QStringList BrowsePage::trackIds() const
+{
+    QStringList ids;
+    for (const Row &row : m_rows) {
+        if (row.type != u"item")
+            continue;
+        const QString id = row.data.value(QStringLiteral("item")).toMap().value(QStringLiteral("videoId")).toString();
+        if (!id.isEmpty())
+            ids.append(id);
+    }
+    return ids;
+}
+
 void BrowsePage::loadCachedHome()
 {
     QFile file(homeCachePath());

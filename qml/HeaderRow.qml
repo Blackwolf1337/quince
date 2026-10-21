@@ -13,6 +13,8 @@ Item {
     readonly property bool titleOnly: row.style === "title"
 
     signal playRequested()
+    // album-actions: rate every track of the page (LIKE, DISLIKE, INDIFFERENT)
+    signal rateAllRequested(string status)
 
     implicitHeight: artist ? artistLayout.implicitHeight : titleOnly ? titleLayout.implicitHeight + 24
                                                                      : detailLayout.implicitHeight + 32
@@ -95,10 +97,41 @@ Item {
                 maximumLineCount: 3
                 elide: Text.ElideRight
             }
-            PlayButtons {
+            RowLayout {
                 Layout.topMargin: 12
-                target: header.row
-                onPlayRequested: header.playRequested()
+                spacing: 10
+
+                PlayButtons {
+                    target: header.row
+                    onPlayRequested: header.playRequested()
+                }
+                RoundButton {
+                    icon.source: "icons/more.svg"
+                    flat: true
+                    visible: App.account.signedIn
+                    enabled: !App.account.busy
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("More")
+                    onClicked: rateMenu.popup(this, 0, height)
+
+                    StyledMenu {
+                        id: rateMenu
+                        MenuItem {
+                            text: qsTr("Like all songs")
+                            icon.source: "icons/like.svg"
+                            onTriggered: header.rateAllRequested("LIKE")
+                        }
+                        MenuItem {
+                            text: qsTr("Dislike all songs")
+                            icon.source: "icons/dislike.svg"
+                            onTriggered: header.rateAllRequested("DISLIKE")
+                        }
+                        MenuItem {
+                            text: qsTr("Remove all ratings")
+                            onTriggered: header.rateAllRequested("INDIFFERENT")
+                        }
+                    }
+                }
             }
         }
     }

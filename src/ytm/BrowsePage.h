@@ -63,6 +63,8 @@ public:
     Q_INVOKABLE void loadMore();
     // all items of a shelf, e.g. to queue an album from the track that was clicked
     Q_INVOKABLE QVariantList shelfItems(int shelf) const;
+    // video ids of the page's track rows loaded so far (album, playlist)
+    Q_INVOKABLE QStringList trackIds() const;
 
 signals:
     void requestChanged();

@@ -222,10 +222,9 @@ void Account::reloadPlaylists()
     });
 }
 
-void Account::rate(const QString &videoId, const QString &status)
+void Account::postRating(const QString &videoId, const QString &status,
+                         std::function<void(const QString &error)> done)
 {
-    if (!signedIn() || videoId.isEmpty())
-        return;
     QString endpoint = QStringLiteral("like/removelike");
     if (status == u"LIKE")
         endpoint = QStringLiteral("like/like");
@@ -233,13 +232,49 @@ void Account::rate(const QString &videoId, const QString &status)
         endpoint = QStringLiteral("like/dislike");
 
     m_innerTube->post(endpoint, {{QStringLiteral("target"), QJsonObject{{QStringLiteral("videoId"), videoId}}}}, this,
-                      [this, videoId, status](const QJsonObject &, const QString &error) {
-        if (!error.isEmpty()) {
+                      [this, videoId, status, done](const QJsonObject &, const QString &error) {
+        if (error.isEmpty())
+            emit rated(videoId, status);
+        done(error);
+    });
+}
+
+void Account::rate(const QString &videoId, const QString &status)
+{
+    if (!signedIn() || videoId.isEmpty())
+        return;
+    postRating(videoId, status, [this](const QString &error) {
+        if (!error.isEmpty())
             emit message(tr("Rating failed: %1").arg(error));
+    });
+}
+
+void Account::rateAll(const QStringList &videoIds, const QString &status)
+{
+    if (!signedIn() || videoIds.isEmpty() || m_busy)
+        return;
+    setBusy(true);
+    // one at a time, like clicking through the list; stops at the first error.
+    // The step holds itself only weakly; the pending request keeps it alive.
+    auto step = std::make_shared<std::function<void(int)>>();
+    *step = [this, videoIds, status, weak = std::weak_ptr(step)](int index) {
+        if (index >= videoIds.size()) {
+            setBusy(false);
+            emit message(status == u"LIKE" ? tr("Liked %n song(s).", "", int(videoIds.size()))
+                       : status == u"DISLIKE" ? tr("Disliked %n song(s).", "", int(videoIds.size()))
+                                              : tr("Removed the rating of %n song(s).", "", int(videoIds.size())));
             return;
         }
-        emit rated(videoId, status);
-    });
+        postRating(videoIds.at(index), status, [this, step = weak.lock(), index](const QString &error) {
+            if (!error.isEmpty()) {
+                setBusy(false);
+                emit message(tr("Rating failed: %1").arg(error));
+                return;
+            }
+            (*step)(index + 1);
+        });
+    };
+    (*step)(0);
 }
 
 void Account::addToPlaylist(const QString &playlistId, const QString &videoId, const QString &title)

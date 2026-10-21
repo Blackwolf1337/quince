@@ -123,9 +123,13 @@ void TestDriver::run(const QString &line)
         QObject *target = parts.value(1) == u"." ? static_cast<QObject *>(m_app)
                                                   : m_app->property(parts.value(1).toLatin1()).value<QObject *>();
         const QByteArray method = parts.value(2).toLatin1();
+        const QString argument = parts.mid(3).join(u' ');
+        bool number = false;
+        const int value = argument.toInt(&number);
         const bool ok = !target ? false
-            : parts.size() > 3 ? QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, parts.mid(3).join(u' ')))
-                               : QMetaObject::invokeMethod(target, method.constData());
+            : parts.size() <= 3 ? QMetaObject::invokeMethod(target, method.constData())
+            : (number && QMetaObject::invokeMethod(target, method.constData(), Q_ARG(int, value)))
+                || QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, argument));
         qInfo() << "test: call" << parts.mid(1) << (ok ? "ok" : "failed");
     } else if (command == u"size") {
         qInfo() << "window" << m_window->size() << "dpr" << m_window->devicePixelRatio()

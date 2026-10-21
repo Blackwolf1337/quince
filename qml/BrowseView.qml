@@ -56,6 +56,7 @@ Item {
                 HeaderRow {
                     width: ListView.view.width
                     onPlayRequested: App.playback.play(row)
+                    onRateAllRequested: status => App.account.rateAll(page.trackIds(), status)
                 }
             }
             DelegateChoice {

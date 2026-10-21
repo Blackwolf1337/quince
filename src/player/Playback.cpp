@@ -118,12 +118,33 @@ QString Playback::videoId() const
 
 bool Playback::hasNext() const
 {
-    return m_queue->current() + 1 < m_queue->count();
+    return nextIndex() < m_queue->count();
+}
+
+int Playback::nextIndex() const
+{
+    int index = m_queue->current() + 1;
+    if (m_skipDisliked) {
+        while (index < m_queue->count()
+               && m_queue->at(index).value(QStringLiteral("likeStatus")).toString() == u"DISLIKE")
+            ++index;
+    }
+    return index;
 }
 
 bool Playback::hasPrevious() const
 {
-    return m_queue->current() > 0;
+    return previousIndex() >= 0;
+}
+
+int Playback::previousIndex() const
+{
+    int index = m_queue->current() - 1;
+    if (m_skipDisliked) {
+        while (index >= 0 && m_queue->at(index).value(QStringLiteral("likeStatus")).toString() == u"DISLIKE")
+            --index;
+    }
+    return index;
 }
 
 void Playback::setTrack(const QVariantMap &item)
@@ -179,7 +200,7 @@ void Playback::play(const QVariantMap &item)
             };
         }
         m_queue->setItems({item}, 0);
-        startCurrent();
+        startCurrent(0, m_startPaused);
 
         QJsonObject body = queueBody();
         body.insert(QStringLiteral("videoId"), videoId);
@@ -397,7 +418,7 @@ void Playback::applyQueue(const QVariantList &items, int selected, QueueMode mod
             return;
         }
         m_queue->setItems(withAlbum(items, m_albumContext), qMax(selected, 0));
-        startCurrent();
+        startCurrent(0, m_startPaused);
         break;
     case QueueMode::Append: {
         QSet<QString> known;
@@ -487,7 +508,7 @@ void Playback::prefetchUpcoming()
     if (m_loadedId.isEmpty() || m_loadedId != m_queue->videoIdAt(current))
         return;
 
-    const QString upcoming = m_queue->videoIdAt(current + 1);
+    const QString upcoming = m_queue->videoIdAt(nextIndex());
     if (upcoming == m_queuedId)
         return;
     if (!m_queuedId.isEmpty()) {
@@ -517,7 +538,7 @@ void Playback::onResolved(const Stream &stream)
     }
 
     const int current = m_queue->current();
-    if (stream.videoId == m_queue->videoIdAt(current + 1) && m_loadedId == m_queue->videoIdAt(current)
+    if (stream.videoId == m_queue->videoIdAt(nextIndex()) && m_loadedId == m_queue->videoIdAt(current)
         && m_queuedId != stream.videoId) {
         m_player->queueNext(stream, stream.videoId, gainFor(stream.videoId));
         m_queuedId = stream.videoId;
@@ -545,7 +566,7 @@ void Playback::onTrackStarted(const QString &tag)
     m_playingFor.start();
     m_queuedId.clear();
     setStreamInfo(m_queuedInfo);
-    const int next = m_queue->current() + 1;
+    const int next = nextIndex();
     if (m_queue->videoIdAt(next) == tag)
         m_queue->setCurrent(next);
     setTrack(m_queue->currentItem());
@@ -586,13 +607,21 @@ void Playback::playIndex(int index)
     if (index < 0 || index >= m_queue->count())
         return;
     m_queue->setCurrent(index);
+    startCurrent(0, m_startPaused);
+}
+
+void Playback::goTo(int index)
+{
+    if (index < 0 || index >= m_queue->count())
+        return;
+    m_queue->setCurrent(index);
     startCurrent();
 }
 
 void Playback::next()
 {
     if (hasNext())
-        playIndex(m_queue->current() + 1);
+        goTo(nextIndex());
 }
 
 void Playback::previous()
@@ -601,7 +630,7 @@ void Playback::previous()
         m_player->seek(0);
         return;
     }
-    playIndex(m_queue->current() - 1);
+    goTo(previousIndex());
 }
 
 void Playback::scheduleSave()

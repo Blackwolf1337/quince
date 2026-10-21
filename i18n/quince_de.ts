@@ -34,27 +34,52 @@
         <translation>Die gespeicherte YouTube-Sitzung ist nicht mehr gültig. Bitte melde dich erneut an.</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="238"/>
+        <location filename="../src/ytm/Account.cpp" line="248"/>
+        <location filename="../src/ytm/Account.cpp" line="271"/>
         <source>Rating failed: %1</source>
         <translation>Bewerten fehlgeschlagen: %1</translation>
     </message>
+    <message numerus="yes">
+        <location filename="../src/ytm/Account.cpp" line="263"/>
+        <source>Liked %n song(s).</source>
+        <translation>
+            <numerusform>%n Song gemocht.</numerusform>
+            <numerusform>%n Songs gemocht.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ytm/Account.cpp" line="264"/>
+        <source>Disliked %n song(s).</source>
+        <translation>
+            <numerusform>%n Song nicht gemocht.</numerusform>
+            <numerusform>%n Songs nicht gemocht.</numerusform>
+        </translation>
+    </message>
+    <message numerus="yes">
+        <location filename="../src/ytm/Account.cpp" line="265"/>
+        <source>Removed the rating of %n song(s).</source>
+        <translation>
+            <numerusform>Bewertung von %n Song entfernt.</numerusform>
+            <numerusform>Bewertung von %n Songs entfernt.</numerusform>
+        </translation>
+    </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="258"/>
+        <location filename="../src/ytm/Account.cpp" line="293"/>
         <source>Could not add to &quot;%1&quot;. %2</source>
         <translation>Konnte nicht zu „%1“ hinzugefügt werden. %2</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="261"/>
+        <location filename="../src/ytm/Account.cpp" line="296"/>
         <source>Added to &quot;%1&quot;</source>
         <translation>Zu „%1“ hinzugefügt</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="277"/>
+        <location filename="../src/ytm/Account.cpp" line="312"/>
         <source>Could not create &quot;%1&quot;. %2</source>
         <translation>„%1“ konnte nicht erstellt werden. %2</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="280"/>
+        <location filename="../src/ytm/Account.cpp" line="315"/>
         <source>Created &quot;%1&quot;</source>
         <translation>„%1“ erstellt</translation>
     </message>
@@ -108,7 +133,7 @@
 <context>
     <name>BrowseView</name>
     <message>
-        <location filename="../qml/BrowseView.qml" line="133"/>
+        <location filename="../qml/BrowseView.qml" line="134"/>
         <source>Try again</source>
         <translation>Erneut versuchen</translation>
     </message>
@@ -181,6 +206,29 @@
         <location filename="../src/integrations/Desktop.cpp" line="121"/>
         <source>Pause</source>
         <translation>Pause</translation>
+    </message>
+</context>
+<context>
+    <name>HeaderRow</name>
+    <message>
+        <location filename="../qml/HeaderRow.qml" line="114"/>
+        <source>More</source>
+        <translation>Mehr</translation>
+    </message>
+    <message>
+        <location filename="../qml/HeaderRow.qml" line="120"/>
+        <source>Like all songs</source>
+        <translation>Alle Songs mögen</translation>
+    </message>
+    <message>
+        <location filename="../qml/HeaderRow.qml" line="125"/>
+        <source>Dislike all songs</source>
+        <translation>Alle Songs nicht mögen</translation>
+    </message>
+    <message>
+        <location filename="../qml/HeaderRow.qml" line="130"/>
+        <source>Remove all ratings</source>
+        <translation>Alle Bewertungen entfernen</translation>
     </message>
 </context>
 <context>
@@ -302,22 +350,22 @@
 <context>
     <name>Playback</name>
     <message>
-        <location filename="../src/player/Playback.cpp" line="240"/>
+        <location filename="../src/player/Playback.cpp" line="261"/>
         <source>That is not a YouTube link or video id.</source>
         <translation>Das ist kein YouTube-Link und keine Video-ID.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="396"/>
+        <location filename="../src/player/Playback.cpp" line="417"/>
         <source>YouTube Music has nothing to play there.</source>
         <translation>YouTube Music hat dort nichts zum Abspielen.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="534"/>
+        <location filename="../src/player/Playback.cpp" line="555"/>
         <source>Could not play &quot;%1&quot;: %2</source>
         <translation>„%1“ konnte nicht abgespielt werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="571"/>
+        <location filename="../src/player/Playback.cpp" line="592"/>
         <source>Playback stopped: %1</source>
         <translation>Wiedergabe abgebrochen: %1</translation>
     </message>
@@ -438,92 +486,102 @@
         <translation>Lautheit zwischen Titeln angleichen, wie YouTube</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="77"/>
+        <location filename="../qml/SettingsDialog.qml" line="74"/>
+        <source>Skip songs I disliked</source>
+        <translation>Songs überspringen, die ich nicht mag</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="79"/>
+        <source>Songs I pick start paused</source>
+        <translation>Ausgewählte Songs starten pausiert</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="87"/>
         <source>Volume step of wheel and keys (%)</source>
         <translation>Lautstärkeschritt für Mausrad und Tasten (%)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="89"/>
+        <location filename="../qml/SettingsDialog.qml" line="99"/>
         <source>Output</source>
         <translation>Ausgabe</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="103"/>
+        <location filename="../qml/SettingsDialog.qml" line="113"/>
         <source>Lyrics</source>
         <translation>Songtext</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="106"/>
+        <location filename="../qml/SettingsDialog.qml" line="116"/>
         <source>Time-synced lyrics from LRCLIB</source>
         <translation>Zeitgenaue Songtexte von LRCLIB</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="112"/>
+        <location filename="../qml/SettingsDialog.qml" line="122"/>
         <source>Look</source>
         <translation>Aussehen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="115"/>
+        <location filename="../qml/SettingsDialog.qml" line="125"/>
         <source>Colors from the album cover</source>
         <translation>Farben aus dem Albumcover</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="120"/>
+        <location filename="../qml/SettingsDialog.qml" line="130"/>
         <source>Compact sidebar (icons only)</source>
         <translation>Schmale Seitenleiste (nur Symbole)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="125"/>
+        <location filename="../qml/SettingsDialog.qml" line="135"/>
         <source>Clock in the top bar</source>
         <translation>Uhr in der oberen Leiste</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="130"/>
+        <location filename="../qml/SettingsDialog.qml" line="140"/>
         <source>See-through window, for the desktop&apos;s blur (after a restart)</source>
         <translation>Durchsichtiges Fenster, für die Unschärfe des Desktops (nach einem Neustart)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="136"/>
+        <location filename="../qml/SettingsDialog.qml" line="146"/>
         <source>Desktop</source>
         <translation>Desktop</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="139"/>
+        <location filename="../qml/SettingsDialog.qml" line="149"/>
         <source>Icon in the system tray</source>
         <translation>Symbol im Infobereich</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="144"/>
+        <location filename="../qml/SettingsDialog.qml" line="154"/>
         <source>Closing the window keeps playing in the tray</source>
         <translation>Schließen des Fensters spielt im Infobereich weiter</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="150"/>
+        <location filename="../qml/SettingsDialog.qml" line="160"/>
         <source>System-wide shortcuts (desktop portal, after a restart)</source>
         <translation>Systemweite Tastenkürzel (Desktop-Portal, nach einem Neustart)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="156"/>
+        <location filename="../qml/SettingsDialog.qml" line="166"/>
         <source>Notification when the track changes</source>
         <translation>Benachrichtigung beim Titelwechsel</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="162"/>
+        <location filename="../qml/SettingsDialog.qml" line="172"/>
         <source>Discord</source>
         <translation>Discord</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="165"/>
+        <location filename="../qml/SettingsDialog.qml" line="175"/>
         <source>Show what I listen to in Discord</source>
         <translation>In Discord zeigen, was ich höre</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="172"/>
+        <location filename="../qml/SettingsDialog.qml" line="182"/>
         <source>Application ID</source>
         <translation>Application ID</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="181"/>
+        <location filename="../qml/SettingsDialog.qml" line="191"/>
         <source>Uses Pear Desktop&apos;s Discord application. For your own, create one at discord.com/developers/applications and paste its Application ID; leave empty for Pear&apos;s.</source>
         <translation>Nutzt die Discord-Anwendung von Pear Desktop. Für eine eigene erstelle eine unter discord.com/developers/applications und füge ihre Application ID ein; leer lassen für die von Pear.</translation>
     </message>

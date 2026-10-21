@@ -12,6 +12,8 @@ const QString kVolumeStep = QStringLiteral("player/volumeStep");
 const QString kAudioDevice = QStringLiteral("player/audioDevice");
 const QString kNormalize = QStringLiteral("player/normalizeLoudness");
 const QString kAlbumColors = QStringLiteral("look/albumColors");
+const QString kSkipDisliked = QStringLiteral("player/skipDisliked");
+const QString kStartPaused = QStringLiteral("player/startPaused");
 const QString kCompactSidebar = QStringLiteral("look/compactSidebar");
 const QString kClock = QStringLiteral("look/clock");
 const QString kTransparentWindow = QStringLiteral("look/transparentWindow");
@@ -73,6 +75,10 @@ void Settings::setDiscord(bool on) { set(kDiscord, on); }
 void Settings::setDiscordAppId(const QString &id) { set(kDiscordAppId, id.trimmed()); }
 void Settings::setLyricsLrclib(bool on) { set(kLyricsLrclib, on); }
 void Settings::setGlobalShortcuts(bool on) { set(kGlobalShortcuts, on); }
+bool Settings::skipDisliked() const { return m_store.value(kSkipDisliked, false).toBool(); }
+bool Settings::startPaused() const { return m_store.value(kStartPaused, false).toBool(); }
+void Settings::setSkipDisliked(bool on) { set(kSkipDisliked, on); }
+void Settings::setStartPaused(bool on) { set(kStartPaused, on); }
 bool Settings::compactSidebar() const { return m_store.value(kCompactSidebar, false).toBool(); }
 bool Settings::clock() const { return m_store.value(kClock, false).toBool(); }
 bool Settings::transparentWindow() const { return m_store.value(kTransparentWindow, false).toBool(); }
