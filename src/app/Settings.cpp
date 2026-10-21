@@ -12,6 +12,9 @@ const QString kVolumeStep = QStringLiteral("player/volumeStep");
 const QString kAudioDevice = QStringLiteral("player/audioDevice");
 const QString kNormalize = QStringLiteral("player/normalizeLoudness");
 const QString kAlbumColors = QStringLiteral("look/albumColors");
+const QString kCompactSidebar = QStringLiteral("look/compactSidebar");
+const QString kClock = QStringLiteral("look/clock");
+const QString kTransparentWindow = QStringLiteral("look/transparentWindow");
 const QString kNotifications = QStringLiteral("desktop/notifications");
 const QString kTray = QStringLiteral("desktop/tray");
 const QString kCloseToTray = QStringLiteral("desktop/closeToTray");
@@ -70,6 +73,12 @@ void Settings::setDiscord(bool on) { set(kDiscord, on); }
 void Settings::setDiscordAppId(const QString &id) { set(kDiscordAppId, id.trimmed()); }
 void Settings::setLyricsLrclib(bool on) { set(kLyricsLrclib, on); }
 void Settings::setGlobalShortcuts(bool on) { set(kGlobalShortcuts, on); }
+bool Settings::compactSidebar() const { return m_store.value(kCompactSidebar, false).toBool(); }
+bool Settings::clock() const { return m_store.value(kClock, false).toBool(); }
+bool Settings::transparentWindow() const { return m_store.value(kTransparentWindow, false).toBool(); }
+void Settings::setCompactSidebar(bool on) { set(kCompactSidebar, on); }
+void Settings::setClock(bool on) { set(kClock, on); }
+void Settings::setTransparentWindow(bool on) { set(kTransparentWindow, on); }
 
 // Loudness is heard roughly logarithmically; a cubic curve makes the lower
 // half of the slider usable instead of jumping from silent to loud.

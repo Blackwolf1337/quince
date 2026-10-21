@@ -27,14 +27,25 @@ Dialog {
     height: Math.min(680, Overlay.overlay ? Overlay.overlay.height - 48 : 680)
     standardButtons: Dialog.Close
     onClosed: destroy()
+    Component.onCompleted: App.player.watchAudioDevices()
 
-    background: Rectangle {
-        color: Style.surfaceHigh
-        radius: 12
-        border.color: "#22ffffff"
+    // title and button bar lie on the glass too
+    Material.background: "transparent"
+    background: Glass {
+        radius: Style.radiusLarge
     }
-    Overlay.modal: Rectangle {
-        color: "#99000000"
+    Overlay.modal: GlassScrim {}
+    enter: Transition {
+        ParallelAnimation {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.normal }
+            NumberAnimation { property: "scale"; from: 0.95; to: 1; duration: Style.slow; easing.type: Easing.OutCubic }
+        }
+    }
+    exit: Transition {
+        ParallelAnimation {
+            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Style.fast }
+            NumberAnimation { property: "scale"; from: 1; to: 0.97; duration: Style.fast }
+        }
     }
 
     ScrollView {
@@ -104,6 +115,21 @@ Dialog {
                 text: qsTr("Colors from the album cover")
                 checked: dialog.settings.albumColors
                 onToggled: dialog.settings.albumColors = checked
+            }
+            Toggle {
+                text: qsTr("Compact sidebar (icons only)")
+                checked: dialog.settings.compactSidebar
+                onToggled: dialog.settings.compactSidebar = checked
+            }
+            Toggle {
+                text: qsTr("Clock in the top bar")
+                checked: dialog.settings.clock
+                onToggled: dialog.settings.clock = checked
+            }
+            Toggle {
+                text: qsTr("See-through window, for the desktop's blur (after a restart)")
+                checked: dialog.settings.transparentWindow
+                onToggled: dialog.settings.transparentWindow = checked
             }
 
             Section {

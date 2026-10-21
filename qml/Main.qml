@@ -9,10 +9,18 @@ ApplicationWindow {
 
     property string section: "home"
     property bool queueOpen: false
+    // pages left by going back, for going forward again
+    property var forwardPages: []
 
     function goSection(name, browseId) {
         section = name
+        forwardPages = []
         stack.replace(null, browseComponent, {browseId: browseId || ""})
+    }
+
+    function openPage(properties) {
+        forwardPages = []
+        stack.push(browseComponent, properties)
     }
 
     function showToast(text, isError) {
@@ -22,12 +30,27 @@ ApplicationWindow {
     }
 
     function search(query) {
-        stack.push(browseComponent, {query: query})
+        openPage({query: query})
     }
 
     function back() {
-        if (stack.depth > 1)
-            stack.pop()
+        if (nowPlaying.open) {
+            nowPlaying.hide()
+            return
+        }
+        if (stack.depth <= 1)
+            return
+        const page = stack.currentItem
+        forwardPages = forwardPages.concat([{browseId: page.browseId, params: page.params, query: page.query}])
+        stack.pop()
+    }
+
+    function forward() {
+        if (forwardPages.length === 0)
+            return
+        const page = forwardPages[forwardPages.length - 1]
+        forwardPages = forwardPages.slice(0, -1)
+        stack.push(browseComponent, page)
     }
 
     width: 1280
@@ -35,7 +58,8 @@ ApplicationWindow {
     minimumWidth: 820
     minimumHeight: 520
     visible: true
-    color: Style.background
+    color: App.settings.transparentWindow ? "transparent" : Style.background
+    font.family: Style.font
     title: App.playback.track.title ? App.playback.track.title + " - Quince" : "Quince"
 
     // with the tray on and closeToTray set, closing only hides the window
@@ -49,12 +73,18 @@ ApplicationWindow {
     Material.theme: Material.Dark
     Material.accent: Style.accent
     Material.primary: Style.surface
-    Material.background: Style.background
+    Material.background: Style.surface
+
+    Component.onCompleted: {
+        Style.backdrop = scene
+        Style.effects = GraphicsInfo.api !== GraphicsInfo.Software
+    }
 
     Connections {
         target: App
         function onNavigateRequested(target) {
-            stack.push(browseComponent, {browseId: target.browseId, params: target.params || ""})
+            nowPlaying.hide()
+            window.openPage({browseId: target.browseId, params: target.params || ""})
         }
         function onDialogRequested(name, data) {
             if (name === "signin")
@@ -82,14 +112,35 @@ ApplicationWindow {
                 window.showToast(App.playback.error, true)
         }
     }
+    Connections {
+        target: App.settings
+        function onChanged() {
+            if (Math.abs(App.settings.volume - volumeHud.value) > 0.01) {
+                volumeHud.value = App.settings.volume
+                volumeHud.show()
+            }
+        }
+    }
 
     Shortcut {
         sequences: [StandardKey.Back, "Alt+Left"]
         onActivated: window.back()
     }
     Shortcut {
+        sequences: [StandardKey.Forward, "Alt+Right"]
+        onActivated: window.forward()
+    }
+    Shortcut {
+        sequence: "Escape"
+        enabled: nowPlaying.open
+        onActivated: nowPlaying.hide()
+    }
+    Shortcut {
         sequences: [StandardKey.Find, "/"]
-        onActivated: searchField.forceActiveFocus()
+        onActivated: {
+            nowPlaying.hide()
+            searchField.forceActiveFocus()
+        }
     }
     Shortcut {
         sequence: "Space"
@@ -134,92 +185,191 @@ ApplicationWindow {
             sidePanel.tab = 1
         }
     }
-
-    header: ToolBar {
-        implicitHeight: 60
-
-        RowLayout {
-            anchors.fill: parent
-            anchors.leftMargin: 12
-            anchors.rightMargin: 12
-
-            ToolButton {
-                icon.source: "icons/back.svg"
-                enabled: stack.depth > 1
-                onClicked: window.back()
-            }
-            Item {
-                Layout.fillWidth: true
-            }
-            SearchField {
-                id: searchField
-                Layout.preferredWidth: 560
-                Layout.maximumWidth: 560
-                Layout.fillWidth: true
-                onSearchRequested: query => window.search(query)
-            }
-            Item {
-                Layout.fillWidth: true
-            }
-        }
+    Shortcut {
+        sequence: "Ctrl+P"
+        onActivated: nowPlaying.open ? nowPlaying.hide() : nowPlaying.show(playerBar.artItem)
     }
 
-    RowLayout {
+    // Everything but popups and the Now Playing view; glass blurs this.
+    Item {
+        id: scene
         anchors.fill: parent
-        spacing: 0
 
-        Sidebar {
-            Layout.preferredWidth: 220
-            Layout.fillWidth: false
-            Layout.fillHeight: true
-            section: window.section
-            onSectionRequested: (name, browseId) => window.goSection(name, browseId)
+        Backdrop {
+            anchors.fill: parent
+            translucent: App.settings.transparentWindow
         }
 
-        StackView {
-            id: stack
-            Layout.fillWidth: true
-            Layout.fillHeight: true
-            clip: true
-            initialItem: browseComponent
+        ColumnLayout {
+            anchors.fill: parent
+            spacing: 0
 
-            pushEnter: Transition {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 120 }
-            }
-            pushExit: Transition {
-                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 120 }
-            }
-            popEnter: Transition {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 120 }
-            }
-            popExit: Transition {
-                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 120 }
-            }
-            replaceEnter: Transition {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 120 }
-            }
-            replaceExit: Transition {
-                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: 120 }
+            // back and forward, search, clock
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 64
+                Layout.leftMargin: 12
+                Layout.rightMargin: 16
+                spacing: 2
+
+                ToolButton {
+                    icon.source: "icons/back.svg"
+                    enabled: stack.depth > 1 || nowPlaying.open
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Back")
+                    onClicked: window.back()
+                }
+                ToolButton {
+                    icon.source: "icons/back.svg"
+                    rotation: 180
+                    enabled: window.forwardPages.length > 0
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Forward")
+                    onClicked: window.forward()
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                SearchField {
+                    id: searchField
+                    Layout.preferredWidth: 560
+                    Layout.maximumWidth: 560
+                    Layout.fillWidth: true
+                    onSearchRequested: query => {
+                        nowPlaying.hide()
+                        window.search(query)
+                    }
+                }
+                Item {
+                    Layout.fillWidth: true
+                }
+                Label {
+                    id: clock
+                    visible: App.settings.clock
+                    color: Style.textDim
+                    font.pixelSize: 14
+                    font.features: { "tnum": 1 }
+                    text: Qt.formatTime(new Date(), Qt.locale().timeFormat(Locale.ShortFormat))
+
+                    Timer {
+                        interval: 1000
+                        repeat: true
+                        running: clock.visible
+                        onTriggered: clock.text = Qt.formatTime(new Date(), Qt.locale().timeFormat(Locale.ShortFormat))
+                    }
+                }
+                // keeps the search centered against the two buttons on the left
+                Item {
+                    Layout.preferredWidth: clock.visible ? 0 : 80
+                }
             }
 
-            // mouse back button
-            TapHandler {
-                acceptedButtons: Qt.BackButton
-                onTapped: window.back()
-            }
-        }
+            RowLayout {
+                Layout.fillWidth: true
+                Layout.fillHeight: true
+                spacing: 0
 
-        QueuePanel {
-            id: sidePanel
-            Layout.preferredWidth: 380
-            Layout.fillHeight: true
-            visible: window.queueOpen
+                Sidebar {
+                    Layout.preferredWidth: App.settings.compactSidebar ? 72 : 232
+                    Layout.fillWidth: false
+                    Layout.fillHeight: true
+                    compact: App.settings.compactSidebar
+                    section: window.section
+                    onSectionRequested: (name, browseId) => {
+                        nowPlaying.hide()
+                        window.goSection(name, browseId)
+                    }
+
+                    Behavior on Layout.preferredWidth {
+                        NumberAnimation { duration: Style.normal; easing.type: Easing.OutCubic }
+                    }
+                }
+
+                // the pages lie on a slightly lighter, rounded sheet
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+                    Layout.rightMargin: window.queueOpen ? 0 : 12
+                    radius: Style.radiusLarge
+                    color: Qt.alpha(Style.surface, 0.42)
+                    border.color: Style.line
+                    clip: true
+
+                    StackView {
+                        id: stack
+                        anchors.fill: parent
+                        initialItem: browseComponent
+
+                        // forward: the new page slides in from the right
+                        pushEnter: Transition {
+                            ParallelAnimation {
+                                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.normal; easing.type: Easing.OutCubic }
+                                NumberAnimation { property: "x"; from: 48; to: 0; duration: Style.slow; easing.type: Easing.OutCubic }
+                            }
+                        }
+                        pushExit: Transition {
+                            ParallelAnimation {
+                                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Style.fast }
+                                NumberAnimation { property: "x"; from: 0; to: -24; duration: Style.normal; easing.type: Easing.OutCubic }
+                            }
+                        }
+                        popEnter: Transition {
+                            ParallelAnimation {
+                                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.normal; easing.type: Easing.OutCubic }
+                                NumberAnimation { property: "x"; from: -48; to: 0; duration: Style.slow; easing.type: Easing.OutCubic }
+                            }
+                        }
+                        popExit: Transition {
+                            ParallelAnimation {
+                                NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Style.fast }
+                                NumberAnimation { property: "x"; from: 0; to: 24; duration: Style.normal; easing.type: Easing.OutCubic }
+                            }
+                        }
+                        // another section: a short rise
+                        replaceEnter: Transition {
+                            ParallelAnimation {
+                                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.normal; easing.type: Easing.OutCubic }
+                                NumberAnimation { property: "y"; from: 16; to: 0; duration: Style.slow; easing.type: Easing.OutCubic }
+                            }
+                        }
+                        replaceExit: Transition {
+                            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Style.fast }
+                        }
+
+                        // mouse back and forward buttons
+                        TapHandler {
+                            acceptedButtons: Qt.BackButton | Qt.ForwardButton
+                            onTapped: (point, button) => button === Qt.ForwardButton ? window.forward() : window.back()
+                        }
+                    }
+                }
+
+                QueuePanel {
+                    id: sidePanel
+                    Layout.preferredWidth: window.queueOpen ? 380 : 0
+                    Layout.fillHeight: true
+                    visible: Layout.preferredWidth > 1
+                    clip: true
+
+                    Behavior on Layout.preferredWidth {
+                        NumberAnimation { duration: Style.normal; easing.type: Easing.OutCubic }
+                    }
+                }
+            }
+
+            PlayerBar {
+                id: playerBar
+                Layout.fillWidth: true
+                queueOpen: window.queueOpen
+                onQueueToggled: window.queueOpen = !window.queueOpen
+                onNowPlayingRequested: nowPlaying.open ? nowPlaying.hide() : nowPlaying.show(playerBar.artItem)
+            }
         }
     }
 
-    footer: PlayerBar {
-        queueOpen: window.queueOpen
-        onQueueToggled: window.queueOpen = !window.queueOpen
+    NowPlaying {
+        id: nowPlaying
+        anchors.fill: parent
     }
 
     Component {
@@ -241,8 +391,76 @@ ApplicationWindow {
         SettingsDialog {}
     }
 
+    // the volume, for a moment after it changed by wheel or keys
+    Item {
+        id: volumeHud
+
+        property real value: App.settings.volume
+
+        function show() {
+            opacity = 1
+            hudTimer.restart()
+        }
+
+        anchors.horizontalCenter: parent.horizontalCenter
+        y: parent.height * 0.18
+        width: 220
+        height: 64
+        opacity: 0
+        visible: opacity > 0
+
+        Behavior on opacity {
+            NumberAnimation { duration: Style.normal }
+        }
+
+        Glass {
+            anchors.fill: parent
+            radius: height / 2
+        }
+        RowLayout {
+            anchors.fill: parent
+            anchors.leftMargin: 20
+            anchors.rightMargin: 22
+            spacing: 12
+
+            Image {
+                source: App.player.muted || volumeHud.value <= 0 ? "icons/volume-off.svg" : "icons/volume.svg"
+                sourceSize: Qt.size(24, 24)
+            }
+            Rectangle {
+                Layout.fillWidth: true
+                height: 6
+                radius: 3
+                color: "#33ffffff"
+                Rectangle {
+                    width: parent.width * volumeHud.value / 100
+                    height: parent.height
+                    radius: 3
+                    color: Style.accent
+                    Behavior on width {
+                        NumberAnimation { duration: Style.fast }
+                    }
+                }
+            }
+            Label {
+                text: Math.round(volumeHud.value)
+                color: Style.text
+                font.pixelSize: 15
+                font.weight: Font.DemiBold
+                font.features: { "tnum": 1 }
+                Layout.preferredWidth: 30
+                horizontalAlignment: Text.AlignRight
+            }
+        }
+        Timer {
+            id: hudTimer
+            interval: 1200
+            onTriggered: volumeHud.opacity = 0
+        }
+    }
+
     // errors and short messages, shown for a while above the player bar
-    Rectangle {
+    Item {
         id: toast
 
         property string message
@@ -250,23 +468,35 @@ ApplicationWindow {
 
         anchors.horizontalCenter: parent.horizontalCenter
         anchors.bottom: parent.bottom
-        anchors.bottomMargin: 16
-        width: Math.min(toastText.implicitWidth + 32, parent.width - 64)
-        height: toastText.implicitHeight + 20
-        radius: 8
-        color: error ? "#3a2326" : Style.surfaceHigh
-        visible: false
+        anchors.bottomMargin: playerBar.height + 16
+        width: Math.min(toastText.implicitWidth + 40, parent.width - 64)
+        height: toastText.implicitHeight + 24
+        opacity: 0
+        visible: opacity > 0
+        transform: Translate {
+            y: toast.opacity < 1 ? 12 * (1 - toast.opacity) : 0
+        }
+
+        Behavior on opacity {
+            NumberAnimation { duration: Style.normal; easing.type: Easing.OutCubic }
+        }
 
         onMessageChanged: {
-            visible = message.length > 0
-            if (visible)
+            opacity = message.length > 0 ? 1 : 0
+            if (message.length > 0)
                 toastTimer.restart()
+        }
+
+        Glass {
+            anchors.fill: parent
+            radius: height / 2
+            tint: toast.error ? Qt.alpha("#5a2028", Style.effects ? 0.75 : 0.97) : Qt.alpha(Style.surfaceHigh, Style.effects ? 0.7 : 0.97)
         }
 
         Label {
             id: toastText
             anchors.centerIn: parent
-            width: Math.min(implicitWidth, toast.parent.width - 96)
+            width: Math.min(implicitWidth, toast.parent.width - 104)
             text: toast.message
             color: toast.error ? "#ffd9dc" : Style.text
             wrapMode: Text.Wrap
@@ -275,7 +505,7 @@ ApplicationWindow {
         Timer {
             id: toastTimer
             interval: 6000
-            onTriggered: toast.visible = false
+            onTriggered: toast.opacity = 0
         }
     }
 }

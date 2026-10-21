@@ -1,5 +1,6 @@
 #include "app/AppController.h"
 #include "app/ArtNetwork.h"
+#include "app/Settings.h"
 #include "app/TestDriver.h"
 #include "player/MpvPlayer.h"
 
@@ -10,10 +11,12 @@
 #include <QElapsedTimer>
 #include <QLoggingCategory>
 #include <QFile>
+#include <QFontDatabase>
 #include <QApplication>
 #include <QQmlApplicationEngine>
 #include <QQuickStyle>
 #include <QQuickWindow>
+#include <QSurfaceFormat>
 #include <QTimer>
 
 #include <clocale>
@@ -86,8 +89,25 @@ int main(int argc, char *argv[])
     options.restoreSession = !parser.isSet(noSessionOption);
 
     QQuickStyle::setStyle(QStringLiteral("Material"));
+    // Inter (OFL) everywhere, so the look does not depend on the system's fonts
+    QFontDatabase::addApplicationFont(QStringLiteral(":/qt/qml/Quince/qml/fonts/InterVariable.ttf"));
+    QFont font(QStringLiteral("Inter Variable"));
+    font.setPixelSize(14);
+    QGuiApplication::setFont(font);
 
     AppController controller(options);
+    // 8 bits per channel: some EGL setups hand out 16-bit (RGB565) surfaces,
+    // which turns the soft glows into visible bands
+    QSurfaceFormat format = QSurfaceFormat::defaultFormat();
+    format.setRedBufferSize(8);
+    format.setGreenBufferSize(8);
+    format.setBlueBufferSize(8);
+    // a see-through window needs an alpha channel before it is created
+    if (controller.settings()->transparentWindow()) {
+        format.setAlphaBufferSize(8);
+        QQuickWindow::setDefaultAlphaBuffer(true);
+    }
+    QSurfaceFormat::setDefaultFormat(format);
 
     ArtNetworkFactory artNetwork;
     QQmlApplicationEngine engine;

@@ -4,14 +4,14 @@ import QtQuick.Controls.Material
 import QtQuick.Layouts
 import Quince
 
-// Beside the pages: the play queue and the lyrics.
-Rectangle {
+// Beside the pages (and in the Now Playing view): the play queue and the lyrics.
+Item {
     id: panel
 
     readonly property Queue queue: App.playback.queue
     property alias tab: tabs.currentIndex
-
-    color: Style.surface
+    property alias lyricsSize: lyricsView.lineSize
+    property alias plainLyricsSize: lyricsView.plainSize
 
     ColumnLayout {
         anchors.fill: parent
@@ -73,6 +73,27 @@ Rectangle {
                     boundsBehavior: Flickable.StopAtBounds
                     ScrollBar.vertical: ScrollBar {}
 
+                    SmoothScroll {}
+
+                    add: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.normal }
+                            NumberAnimation { property: "x"; from: 40; to: 6; duration: Style.normal; easing.type: Easing.OutCubic }
+                        }
+                    }
+                    remove: Transition {
+                        ParallelAnimation {
+                            NumberAnimation { property: "opacity"; to: 0; duration: Style.fast }
+                            NumberAnimation { property: "x"; to: -40; duration: Style.normal; easing.type: Easing.InCubic }
+                        }
+                    }
+                    displaced: Transition {
+                        NumberAnimation { properties: "x,y"; duration: Style.normal; easing.type: Easing.OutCubic }
+                    }
+                    move: Transition {
+                        NumberAnimation { properties: "x,y"; duration: Style.normal; easing.type: Easing.OutCubic }
+                    }
+
                     // ItemRow's required "item" is filled from the model role of that name
                     delegate: ItemRow {
                         required property int index
@@ -104,7 +125,9 @@ Rectangle {
                 }
             }
 
-            LyricsView {}
+            LyricsView {
+                id: lyricsView
+            }
         }
     }
 }

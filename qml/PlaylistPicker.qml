@@ -13,13 +13,23 @@ Dialog {
     title: qsTr("Add to playlist")
     modal: true
 
-    background: Rectangle {
-        color: Style.surfaceHigh
-        radius: 12
-        border.color: "#22ffffff"
+    // title and button bar lie on the glass too
+    Material.background: "transparent"
+    background: Glass {
+        radius: Style.radiusLarge
     }
-    Overlay.modal: Rectangle {
-        color: "#99000000"
+    Overlay.modal: GlassScrim {}
+    enter: Transition {
+        ParallelAnimation {
+            NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.normal }
+            NumberAnimation { property: "scale"; from: 0.95; to: 1; duration: Style.slow; easing.type: Easing.OutCubic }
+        }
+    }
+    exit: Transition {
+        ParallelAnimation {
+            NumberAnimation { property: "opacity"; from: 1; to: 0; duration: Style.fast }
+            NumberAnimation { property: "scale"; from: 1; to: 0.97; duration: Style.fast }
+        }
     }
     anchors.centerIn: Overlay.overlay
     width: 420

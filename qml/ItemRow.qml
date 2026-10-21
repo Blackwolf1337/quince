@@ -21,8 +21,11 @@ Item {
 
     Rectangle {
         anchors.fill: parent
-        color: hover.hovered ? Style.hover : "transparent"
-        radius: 6
+        color: rowItem.current ? Qt.alpha(Style.accent, 0.1) : hover.hovered ? Style.hover : "transparent"
+        radius: Style.radius
+        Behavior on color {
+            ColorAnimation { duration: Style.fast }
+        }
     }
 
     RowLayout {

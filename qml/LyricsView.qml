@@ -9,6 +9,10 @@ Item {
     id: view
 
     readonly property Lyrics lyrics: App.lyrics
+    // size of synced lines; the Now Playing view shows them large
+    property int lineSize: 20
+    // size of lyrics without times
+    property int plainSize: 15
 
     ListView {
         id: list
@@ -27,7 +31,9 @@ Item {
         preferredHighlightBegin: height * 0.35
         preferredHighlightEnd: height * 0.35 + 40
         highlightRangeMode: view.lyrics.synced && !list.moving ? ListView.ApplyRange : ListView.NoHighlightRange
-        highlightMoveDuration: 300
+        highlightMoveDuration: Style.slow
+
+        SmoothScroll {}
 
         delegate: Label {
             required property var modelData
@@ -39,12 +45,21 @@ Item {
             wrapMode: Text.Wrap
             color: sung ? Style.text : view.lyrics.synced && index < view.lyrics.currentLine ? Style.textDim
                                                                                                 : Qt.lighter(Style.textDim, 1.15)
-            font.pixelSize: view.lyrics.synced ? 20 : 15
-            font.weight: sung ? Font.Bold : Font.Normal
-            opacity: view.lyrics.synced && !sung ? 0.7 : 1
+            font.pixelSize: view.lyrics.synced ? view.lineSize : view.plainSize
+            font.weight: view.lyrics.synced ? Font.Bold : Font.Normal
+            opacity: view.lyrics.synced && !sung ? 0.55 : 1
+            // the sung line grows a little instead of turning bold, so nothing reflows
+            scale: view.lyrics.synced && !sung ? 0.94 : 1
+            transformOrigin: Item.Left
 
             Behavior on color {
-                ColorAnimation { duration: 200 }
+                ColorAnimation { duration: Style.normal }
+            }
+            Behavior on opacity {
+                NumberAnimation { duration: Style.normal }
+            }
+            Behavior on scale {
+                NumberAnimation { duration: Style.slow; easing.type: Easing.OutCubic }
             }
 
             TapHandler {

@@ -25,22 +25,48 @@ Item {
             height: card.wide ? width * 9 / 16 : width
             source: card.item.thumbnail || ""
             round: card.item.kind === "artist"
+            radius: Style.radius
+            zoom: hover.hovered ? 1.06 : 1.0
+            // lifts a little under the pointer, sinks when pressed
+            transform: Translate {
+                y: tap.pressed ? 1 : hover.hovered ? -3 : 0
+                Behavior on y {
+                    NumberAnimation { duration: Style.fast; easing.type: Easing.OutCubic }
+                }
+            }
 
+            Behavior on zoom {
+                NumberAnimation { duration: Style.slow; easing.type: Easing.OutCubic }
+            }
             Rectangle {
                 anchors.fill: parent
-                color: "#66000000"
-                radius: cover.round ? width / 2 : 4
-                visible: hover.hovered
+                radius: cover.corner
+                gradient: Gradient {
+                    GradientStop { position: 0.4; color: "#00000000" }
+                    GradientStop { position: 1.0; color: "#99000000" }
+                }
+                opacity: hover.hovered ? 1 : 0
+                Behavior on opacity {
+                    NumberAnimation { duration: Style.normal }
+                }
             }
 
             RoundButton {
                 anchors.right: parent.right
                 anchors.bottom: parent.bottom
-                anchors.margins: 6
-                visible: hover.hovered && card.playable
+                anchors.margins: 8
+                visible: card.playable
+                opacity: hover.hovered ? 1 : 0
+                scale: hover.hovered ? 1 : 0.8
                 icon.source: "icons/play.svg"
-                Material.background: "#aa000000"
-                Material.foreground: "white"
+                Material.background: Style.accent
+                Material.foreground: "#111114"
+                Behavior on opacity {
+                    NumberAnimation { duration: Style.normal; easing.type: Easing.OutCubic }
+                }
+                Behavior on scale {
+                    NumberAnimation { duration: Style.normal; easing.type: Easing.OutBack }
+                }
                 onClicked: App.playback.play(card.item)
             }
         }
@@ -76,6 +102,7 @@ Item {
     }
 
     TapHandler {
+        id: tap
         onTapped: App.open(card.item)
     }
 

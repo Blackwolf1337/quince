@@ -48,7 +48,8 @@ ColorTheme::ColorTheme(Playback *playback, Settings *settings, QObject *parent)
 
 ColorTheme::Palette ColorTheme::defaults()
 {
-    return {QColor(0xff, 0xc1, 0x07), QColor(0x14, 0x14, 0x17), QColor(0x1d, 0x1d, 0x21), QColor(0x26, 0x26, 0x2b)};
+    return {QColor(0xff, 0xc1, 0x07), QColor(0x0e, 0x0e, 0x11), QColor(0x18, 0x18, 0x1c), QColor(0x22, 0x22, 0x27),
+            QColor(0x7a, 0x5c, 0x1e)};
 }
 
 // Accent bright enough for text on the dark background, backgrounds a very
@@ -59,19 +60,21 @@ ColorTheme::Palette ColorTheme::fromColor(const QColor &base)
     const float saturation = base.hslSaturationF();
     const float accentSat = qBound(0.45f, saturation, 0.95f);
     const float accentLight = qBound(0.58f, base.lightnessF(), 0.75f);
-    const float tint = qMin(saturation, 0.45f);
+    // dark and nearly neutral surfaces; the color lives in the glow
+    const float tint = qMin(saturation, 0.45f) * 0.5f;
     return {
         QColor::fromHslF(hue, accentSat, accentLight),
-        QColor::fromHslF(hue, tint, 0.075f),
-        QColor::fromHslF(hue, tint, 0.105f),
-        QColor::fromHslF(hue, tint * 0.9f, 0.145f),
+        QColor::fromHslF(hue, tint, 0.055f),
+        QColor::fromHslF(hue, tint, 0.09f),
+        QColor::fromHslF(hue, tint, 0.13f),
+        QColor::fromHslF(hue, qBound(0.5f, saturation, 0.9f), 0.42f),
     };
 }
 
 ColorTheme::Palette ColorTheme::mix(const Palette &a, const Palette &b, double t)
 {
     return {lerp(a.accent, b.accent, t), lerp(a.background, b.background, t), lerp(a.surface, b.surface, t),
-            lerp(a.surfaceHigh, b.surfaceHigh, t)};
+            lerp(a.surfaceHigh, b.surfaceHigh, t), lerp(a.glow, b.glow, t)};
 }
 
 QColor ColorTheme::dominantColor(const QImage &image)

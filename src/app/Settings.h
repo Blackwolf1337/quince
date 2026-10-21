@@ -28,6 +28,10 @@ class Settings : public QObject
     Q_PROPERTY(bool lyricsLrclib READ lyricsLrclib WRITE setLyricsLrclib NOTIFY changed)
     // Linux: shortcuts through the desktop portal, read at start
     Q_PROPERTY(bool globalShortcuts READ globalShortcuts WRITE setGlobalShortcuts NOTIFY changed)
+    Q_PROPERTY(bool compactSidebar READ compactSidebar WRITE setCompactSidebar NOTIFY changed)
+    Q_PROPERTY(bool clock READ clock WRITE setClock NOTIFY changed)
+    // a see-through window background (the compositor may blur behind it); needs a restart
+    Q_PROPERTY(bool transparentWindow READ transparentWindow WRITE setTransparentWindow NOTIFY changed)
 
 public:
     explicit Settings(QObject *parent = nullptr);
@@ -45,6 +49,9 @@ public:
     QString discordAppId() const;
     bool lyricsLrclib() const;
     bool globalShortcuts() const;
+    bool compactSidebar() const;
+    bool clock() const;
+    bool transparentWindow() const;
 
     void setVolume(double volume);
     void setExponentialVolume(bool on);
@@ -59,6 +66,9 @@ public:
     void setDiscordAppId(const QString &id);
     void setLyricsLrclib(bool on);
     void setGlobalShortcuts(bool on);
+    void setCompactSidebar(bool on);
+    void setClock(bool on);
+    void setTransparentWindow(bool on);
 
     // mpv volume (0..100) for a slider position and back
     Q_INVOKABLE double toPlayerVolume(double slider) const;

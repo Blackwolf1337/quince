@@ -76,7 +76,9 @@ MpvPlayer::MpvPlayer(const QString &audioOutput, QObject *parent)
         return;
     }
 
-    mpv_request_log_messages(m_mpv, "warn");
+    // QUINCE_MPV_LOG=v (or debug, info) shows more of mpv's log (diagnosis)
+    const QByteArray logLevel = qEnvironmentVariableIsSet("QUINCE_MPV_LOG") ? qgetenv("QUINCE_MPV_LOG") : QByteArray("warn");
+    mpv_request_log_messages(m_mpv, logLevel.constData());
     mpv_observe_property(m_mpv, PropTimePos, "time-pos", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, PropDuration, "duration", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, PropPause, "pause", MPV_FORMAT_FLAG);
@@ -84,7 +86,6 @@ MpvPlayer::MpvPlayer(const QString &audioOutput, QObject *parent)
     mpv_observe_property(m_mpv, PropBuffering, "paused-for-cache", MPV_FORMAT_FLAG);
     mpv_observe_property(m_mpv, PropVolume, "volume", MPV_FORMAT_DOUBLE);
     mpv_observe_property(m_mpv, PropMute, "mute", MPV_FORMAT_FLAG);
-    mpv_observe_property(m_mpv, PropAudioDevices, "audio-device-list", MPV_FORMAT_NODE);
     mpv_observe_property(m_mpv, PropAudioDevice, "audio-device", MPV_FORMAT_STRING);
     mpv_observe_property(m_mpv, PropCurrentAo, "current-ao", MPV_FORMAT_STRING);
 
@@ -182,7 +183,7 @@ void MpvPlayer::handleEvent(const mpv_event &event)
         const auto *start = static_cast<const mpv_event_start_file *>(event.data);
         const auto it = m_entryTags.constFind(start->playlist_entry_id);
         if (it != m_entryTags.cend())
-            emit trackStarted(*it);
+            onStarted(*it);
         else
             m_unmatchedStart = start->playlist_entry_id;
         break;
@@ -190,6 +191,10 @@ void MpvPlayer::handleEvent(const mpv_event &event)
     case MPV_EVENT_END_FILE: {
         const auto *end = static_cast<const mpv_event_end_file *>(event.data);
         const QString tag = m_entryTags.take(end->playlist_entry_id);
+        if (!tag.isEmpty() && tag == m_startingTag) {
+            m_startingTag.clear();
+            m_waitingNext.reset();
+        }
         QString error;
         if (end->reason == MPV_END_FILE_REASON_ERROR) {
             error = QString::fromUtf8(mpv_error_string(end->error));
@@ -220,7 +225,7 @@ void MpvPlayer::handleEvent(const mpv_event &event)
         // the file may have started before this reply arrived
         if (entry == m_unmatchedStart) {
             m_unmatchedStart = -1;
-            emit trackStarted(tag);
+            onStarted(tag);
         }
         break;
     }
@@ -288,13 +293,31 @@ void MpvPlayer::load(const Stream &stream, const QString &tag, double start, boo
     m_position = m_reportedPosition = start;
     emit positionChanged();
     setPaused(paused);
+    m_waitingNext.reset();
+    m_startingTag = tag;
     loadFile(stream, tag, "replace", start, gainDb);
 }
 
 void MpvPlayer::queueNext(const Stream &stream, const QString &tag, double gainDb)
 {
+    if (!m_startingTag.isEmpty()) {
+        m_waitingNext = Next{stream, tag, gainDb};
+        return;
+    }
     clearQueued();
     loadFile(stream, tag, "append", 0, gainDb);
+}
+
+void MpvPlayer::onStarted(const QString &tag)
+{
+    if (tag == m_startingTag) {
+        m_startingTag.clear();
+        if (m_waitingNext) {
+            const Next next = *std::exchange(m_waitingNext, std::nullopt);
+            queueNext(next.stream, next.tag, next.gainDb);
+        }
+    }
+    emit trackStarted(tag);
 }
 
 // mpv lists every backend (ALSA plugins, JACK, OSS ...); the outputs of the
@@ -340,8 +363,20 @@ void MpvPlayer::setAudioDevice(const QString &device)
     setMpvProperty("audio-device", device.isEmpty() ? QStringLiteral("auto") : device);
 }
 
+void MpvPlayer::watchAudioDevices()
+{
+    if (!m_mpv || m_watchingDevices)
+        return;
+    m_watchingDevices = true;
+    mpv_observe_property(m_mpv, PropAudioDevices, "audio-device-list", MPV_FORMAT_NODE);
+}
+
 void MpvPlayer::clearQueued()
 {
+    m_waitingNext.reset();
+    // a file still starting would go too (see m_startingTag); nothing is queued then
+    if (!m_startingTag.isEmpty())
+        return;
     // removes every entry except the one playing
     command(QVariantList{QStringLiteral("playlist-clear")});
 }

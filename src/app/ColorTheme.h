@@ -22,6 +22,8 @@ class ColorTheme : public QObject
     Q_PROPERTY(QColor background READ background NOTIFY colorsChanged)
     Q_PROPERTY(QColor surface READ surface NOTIFY colorsChanged)
     Q_PROPERTY(QColor surfaceHigh READ surfaceHigh NOTIFY colorsChanged)
+    // the soft light behind header and player bar
+    Q_PROPERTY(QColor glow READ glow NOTIFY colorsChanged)
 
 public:
     ColorTheme(Playback *playback, Settings *settings, QObject *parent = nullptr);
@@ -30,6 +32,7 @@ public:
     QColor background() const { return m_current.background; }
     QColor surface() const { return m_current.surface; }
     QColor surfaceHigh() const { return m_current.surfaceHigh; }
+    QColor glow() const { return m_current.glow; }
 
     // most prominent colorful tone of a picture; invalid when it has none
     static QColor dominantColor(const QImage &image);
@@ -46,6 +49,7 @@ private:
         QColor background;
         QColor surface;
         QColor surfaceHigh;
+        QColor glow;
     };
 
     static Palette defaults();

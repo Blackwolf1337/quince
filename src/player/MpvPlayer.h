@@ -1,16 +1,19 @@
 #pragma once
 
+#include "player/StreamResolver.h"
+
 #include <QHash>
 #include <QObject>
 #include <QString>
 #include <QVariant>
 #include <QtQml/qqmlregistration.h>
 
+#include <optional>
+
 #include <atomic>
 
 struct mpv_handle;
 struct mpv_event;
-struct Stream;
 
 // Audio playback through libmpv. All calls into mpv are asynchronous; mpv's
 // wakeup callback queues processEvents() onto the Qt event loop, so nothing
@@ -57,6 +60,10 @@ public:
     double volume() const { return m_volume; }
     bool muted() const { return m_muted; }
     QVariantList audioDevices() const { return m_audioDevices; }
+    // Starts listing the outputs (audioDevices). Not done at start: mpv asks
+    // every audio backend, which blocks its core, and so playback, until all
+    // have answered.
+    Q_INVOKABLE void watchAudioDevices();
     QString audioDevice() const { return m_audioDevice; }
 
     void setPaused(bool paused);
@@ -92,6 +99,7 @@ private:
     void handleEvent(const mpv_event &event);
     void command(const QVariant &args, quint64 reply = 0);
     void loadFile(const Stream &stream, const QString &tag, const char *flags, double start, double gainDb);
+    void onStarted(const QString &tag);
     void filterAudioDevices();
     void setMpvProperty(const char *name, const QVariant &value);
 
@@ -108,6 +116,7 @@ private:
     bool m_muted = false;
     QVariantList m_allAudioDevices;
     QVariantList m_audioDevices; // of the audio backend in use
+    bool m_watchingDevices = false;
     QString m_audioDevice;
     QString m_currentAo;
 
@@ -117,4 +126,15 @@ private:
     QHash<quint64, QString> m_replyTags;
     QHash<qint64, QString> m_entryTags;
     qint64 m_unmatchedStart = -1;
+    // Tag of a file loaded with "replace" that has not started yet. Until it
+    // has, mpv does not count it as playing, and playlist-clear would remove
+    // it; the next track waits in m_waitingNext instead.
+    QString m_startingTag;
+    struct Next
+    {
+        Stream stream;
+        QString tag;
+        double gainDb = 0;
+    };
+    std::optional<Next> m_waitingNext;
 };

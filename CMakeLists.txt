@@ -52,6 +52,13 @@ qt_add_qml_module(quince
         qml/Main.qml
         qml/Style.qml
         qml/Art.qml
+        qml/Backdrop.qml
+        qml/Glass.qml
+        qml/GlassScrim.qml
+        qml/Glow.qml
+        qml/NowPlaying.qml
+        qml/Skeleton.qml
+        qml/SmoothScroll.qml
         qml/BrowseView.qml
         qml/Card.qml
         qml/CardRow.qml
@@ -75,6 +82,7 @@ qt_add_qml_module(quince
         qml/TextRow.qml
         qml/TitleRow.qml
     RESOURCES
+        qml/fonts/InterVariable.ttf
         qml/icons/account.svg
         qml/icons/back.svg
         qml/icons/chevron-left.svg

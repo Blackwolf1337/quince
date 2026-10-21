@@ -15,8 +15,26 @@ TextField {
             field.searchRequested(query.trim())
     }
 
-    leftPadding: 40
+    leftPadding: 44
+    rightPadding: 16
+    topPadding: 10
+    bottomPadding: 10
     selectByMouse: true
+    font.pixelSize: 14
+
+    background: Rectangle {
+        implicitHeight: 42
+        radius: height / 2
+        color: field.activeFocus ? Style.surfaceHigh : Qt.alpha(Style.surfaceHigh, 0.7)
+        border.width: 1
+        border.color: field.activeFocus ? Qt.alpha(Style.accent, 0.6) : field.hovered ? "#26ffffff" : Style.line
+        Behavior on color {
+            ColorAnimation { duration: Style.fast }
+        }
+        Behavior on border.color {
+            ColorAnimation { duration: Style.fast }
+        }
+    }
     onAccepted: submit(text)
     onTextEdited: {
         if (text.trim().length > 0)
@@ -28,7 +46,7 @@ TextField {
 
     Image {
         anchors.verticalCenter: parent.verticalCenter
-        x: 12
+        x: 16
         source: "icons/search.svg"
         sourceSize: Qt.size(20, 20)
         opacity: 0.6
@@ -58,9 +76,8 @@ TextField {
         closePolicy: Popup.CloseOnEscape | Popup.CloseOnPressOutsideParent
         visible: false
 
-        background: Rectangle {
-            color: Style.surfaceHigh
-            radius: 8
+        background: Glass {
+            radius: 14
         }
 
         Flickable {

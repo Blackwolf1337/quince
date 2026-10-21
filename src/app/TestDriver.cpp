@@ -118,8 +118,10 @@ void TestDriver::run(const QString &line)
     } else if (command == u"open") {
         m_app->openBrowse(parts.value(1));
     } else if (command == u"call") {
-        // call <App property> <method> [string argument], e.g. call account signOut
-        auto *target = m_app->property(parts.value(1).toLatin1()).value<QObject *>();
+        // call <App property> <method> [string argument], e.g. call account signOut;
+        // "." for App itself
+        QObject *target = parts.value(1) == u"." ? static_cast<QObject *>(m_app)
+                                                  : m_app->property(parts.value(1).toLatin1()).value<QObject *>();
         const QByteArray method = parts.value(2).toLatin1();
         const bool ok = !target ? false
             : parts.size() > 3 ? QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, parts.mid(3).join(u' ')))

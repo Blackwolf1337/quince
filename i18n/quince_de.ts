@@ -108,7 +108,7 @@
 <context>
     <name>BrowseView</name>
     <message>
-        <location filename="../qml/BrowseView.qml" line="131"/>
+        <location filename="../qml/BrowseView.qml" line="133"/>
         <source>Try again</source>
         <translation>Erneut versuchen</translation>
     </message>
@@ -237,27 +237,48 @@
 <context>
     <name>LyricsView</name>
     <message>
-        <location filename="../qml/LyricsView.qml" line="63"/>
+        <location filename="../qml/LyricsView.qml" line="78"/>
         <source>Lyrics: %1</source>
         <translation>Songtext: %1</translation>
     </message>
     <message>
-        <location filename="../qml/LyricsView.qml" line="81"/>
+        <location filename="../qml/LyricsView.qml" line="96"/>
         <source>No lyrics found for this track.</source>
         <translation>Für diesen Titel wurde kein Songtext gefunden.</translation>
     </message>
     <message>
-        <location filename="../qml/LyricsView.qml" line="81"/>
+        <location filename="../qml/LyricsView.qml" line="96"/>
         <source>Play something to see its lyrics.</source>
         <translation>Spiel etwas ab, um den Songtext zu sehen.</translation>
     </message>
 </context>
 <context>
+    <name>Main</name>
+    <message>
+        <location filename="../qml/Main.qml" line="219"/>
+        <source>Back</source>
+        <translation>Zurück</translation>
+    </message>
+    <message>
+        <location filename="../qml/Main.qml" line="227"/>
+        <source>Forward</source>
+        <translation>Vorwärts</translation>
+    </message>
+</context>
+<context>
     <name>MpvPlayer</name>
     <message>
-        <location filename="../src/player/MpvPlayer.cpp" line="321"/>
+        <location filename="../src/player/MpvPlayer.cpp" line="344"/>
         <source>System default</source>
         <translation>Systemstandard</translation>
+    </message>
+</context>
+<context>
+    <name>NowPlaying</name>
+    <message>
+        <location filename="../qml/NowPlaying.qml" line="135"/>
+        <source>Close</source>
+        <translation>Schließen</translation>
     </message>
 </context>
 <context>
@@ -304,14 +325,24 @@
 <context>
     <name>PlayerBar</name>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="152"/>
+        <location filename="../qml/PlayerBar.qml" line="229"/>
         <source>Dislike</source>
         <translation>Mag ich nicht</translation>
     </message>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="161"/>
+        <location filename="../qml/PlayerBar.qml" line="238"/>
         <source>Like</source>
         <translation>Mag ich</translation>
+    </message>
+    <message>
+        <location filename="../qml/PlayerBar.qml" line="301"/>
+        <source>Up next</source>
+        <translation>Als Nächstes</translation>
+    </message>
+    <message>
+        <location filename="../qml/PlayerBar.qml" line="309"/>
+        <source>Now playing</source>
+        <translation>Läuft gerade</translation>
     </message>
 </context>
 <context>
@@ -322,12 +353,12 @@
         <translation>Zu Playlist hinzufügen</translation>
     </message>
     <message>
-        <location filename="../qml/PlaylistPicker.qml" line="40"/>
+        <location filename="../qml/PlaylistPicker.qml" line="50"/>
         <source>New playlist</source>
         <translation>Neue Playlist</translation>
     </message>
     <message>
-        <location filename="../qml/PlaylistPicker.qml" line="45"/>
+        <location filename="../qml/PlaylistPicker.qml" line="55"/>
         <source>Create</source>
         <translation>Erstellen</translation>
     </message>
@@ -371,7 +402,7 @@
         <translation>Leeren</translation>
     </message>
     <message>
-        <location filename="../qml/QueuePanel.qml" line="101"/>
+        <location filename="../qml/QueuePanel.qml" line="122"/>
         <source>Nothing queued. Play a song, album or playlist.</source>
         <translation>Nichts in der Wiedergabeliste. Spiel einen Song, ein Album oder eine Playlist ab.</translation>
     </message>
@@ -379,7 +410,7 @@
 <context>
     <name>SearchField</name>
     <message>
-        <location filename="../qml/SearchField.qml" line="41"/>
+        <location filename="../qml/SearchField.qml" line="59"/>
         <source>Search songs, albums, artists</source>
         <translation>Songs, Alben, Künstler suchen</translation>
     </message>
@@ -392,92 +423,107 @@
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="50"/>
+        <location filename="../qml/SettingsDialog.qml" line="61"/>
         <source>Playback</source>
         <translation>Wiedergabe</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="53"/>
+        <location filename="../qml/SettingsDialog.qml" line="64"/>
         <source>Volume slider follows your hearing (exponential)</source>
         <translation>Lautstärkeregler folgt dem Gehör (exponentiell)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="58"/>
+        <location filename="../qml/SettingsDialog.qml" line="69"/>
         <source>Even out loudness between tracks, like YouTube</source>
         <translation>Lautheit zwischen Titeln angleichen, wie YouTube</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="66"/>
+        <location filename="../qml/SettingsDialog.qml" line="77"/>
         <source>Volume step of wheel and keys (%)</source>
         <translation>Lautstärkeschritt für Mausrad und Tasten (%)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="78"/>
+        <location filename="../qml/SettingsDialog.qml" line="89"/>
         <source>Output</source>
         <translation>Ausgabe</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="92"/>
+        <location filename="../qml/SettingsDialog.qml" line="103"/>
         <source>Lyrics</source>
         <translation>Songtext</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="95"/>
+        <location filename="../qml/SettingsDialog.qml" line="106"/>
         <source>Time-synced lyrics from LRCLIB</source>
         <translation>Zeitgenaue Songtexte von LRCLIB</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="101"/>
+        <location filename="../qml/SettingsDialog.qml" line="112"/>
         <source>Look</source>
         <translation>Aussehen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="104"/>
+        <location filename="../qml/SettingsDialog.qml" line="115"/>
         <source>Colors from the album cover</source>
         <translation>Farben aus dem Albumcover</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="110"/>
+        <location filename="../qml/SettingsDialog.qml" line="120"/>
+        <source>Compact sidebar (icons only)</source>
+        <translation>Schmale Seitenleiste (nur Symbole)</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="125"/>
+        <source>Clock in the top bar</source>
+        <translation>Uhr in der oberen Leiste</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="130"/>
+        <source>See-through window, for the desktop&apos;s blur (after a restart)</source>
+        <translation>Durchsichtiges Fenster, für die Unschärfe des Desktops (nach einem Neustart)</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="136"/>
         <source>Desktop</source>
         <translation>Desktop</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="113"/>
+        <location filename="../qml/SettingsDialog.qml" line="139"/>
         <source>Icon in the system tray</source>
         <translation>Symbol im Infobereich</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="118"/>
+        <location filename="../qml/SettingsDialog.qml" line="144"/>
         <source>Closing the window keeps playing in the tray</source>
         <translation>Schließen des Fensters spielt im Infobereich weiter</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="124"/>
+        <location filename="../qml/SettingsDialog.qml" line="150"/>
         <source>System-wide shortcuts (desktop portal, after a restart)</source>
         <translation>Systemweite Tastenkürzel (Desktop-Portal, nach einem Neustart)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="130"/>
+        <location filename="../qml/SettingsDialog.qml" line="156"/>
         <source>Notification when the track changes</source>
         <translation>Benachrichtigung beim Titelwechsel</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="136"/>
+        <location filename="../qml/SettingsDialog.qml" line="162"/>
         <source>Discord</source>
         <translation>Discord</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="139"/>
+        <location filename="../qml/SettingsDialog.qml" line="165"/>
         <source>Show what I listen to in Discord</source>
         <translation>In Discord zeigen, was ich höre</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="146"/>
+        <location filename="../qml/SettingsDialog.qml" line="172"/>
         <source>Application ID</source>
         <translation>Application ID</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="155"/>
+        <location filename="../qml/SettingsDialog.qml" line="181"/>
         <source>Uses Pear Desktop&apos;s Discord application. For your own, create one at discord.com/developers/applications and paste its Application ID; leave empty for Pear&apos;s.</source>
         <translation>Nutzt die Discord-Anwendung von Pear Desktop. Für eine eigene erstelle eine unter discord.com/developers/applications und füge ihre Application ID ein; leer lassen für die von Pear.</translation>
     </message>
@@ -485,47 +531,47 @@
 <context>
     <name>Sidebar</name>
     <message>
-        <location filename="../qml/Sidebar.qml" line="31"/>
+        <location filename="../qml/Sidebar.qml" line="67"/>
         <source>Home</source>
         <translation>Startseite</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="37"/>
+        <location filename="../qml/Sidebar.qml" line="73"/>
         <source>Explore</source>
         <translation>Erkunden</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="43"/>
+        <location filename="../qml/Sidebar.qml" line="79"/>
         <source>Library</source>
         <translation>Bibliothek</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="50"/>
+        <location filename="../qml/Sidebar.qml" line="86"/>
         <source>Liked songs</source>
         <translation>Mag ich</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="57"/>
+        <location filename="../qml/Sidebar.qml" line="93"/>
         <source>History</source>
         <translation>Verlauf</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="93"/>
+        <location filename="../qml/Sidebar.qml" line="141"/>
         <source>Settings</source>
         <translation>Einstellungen</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="102"/>
+        <location filename="../qml/Sidebar.qml" line="151"/>
         <source>Signed in</source>
         <translation>Angemeldet</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="102"/>
+        <location filename="../qml/Sidebar.qml" line="151"/>
         <source>Sign in</source>
         <translation>Anmelden</translation>
     </message>
     <message>
-        <location filename="../qml/Sidebar.qml" line="125"/>
+        <location filename="../qml/Sidebar.qml" line="177"/>
         <source>Sign out</source>
         <translation>Abmelden</translation>
     </message>
@@ -538,37 +584,37 @@
         <translation>Bei YouTube Music anmelden</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="44"/>
+        <location filename="../qml/SignInDialog.qml" line="54"/>
         <source>Signing in brings your library, likes, playlists and Premium quality. Quince keeps only the session cookies, readable by your user alone.</source>
         <translation>Mit der Anmeldung kommen deine Bibliothek, deine Likes, Playlists und die Premium-Qualität. Quince speichert nur die Sitzungscookies, lesbar nur für deinen Benutzer.</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="50"/>
+        <location filename="../qml/SignInDialog.qml" line="60"/>
         <source>Sign in with Google</source>
         <translation>Mit Google anmelden</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="60"/>
+        <location filename="../qml/SignInDialog.qml" line="70"/>
         <source>Or take the session of a browser where you are signed in:</source>
         <translation>Oder übernimm die Sitzung eines Browsers, in dem du angemeldet bist:</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="83"/>
+        <location filename="../qml/SignInDialog.qml" line="93"/>
         <source>Import a cookies.txt file</source>
         <translation>Eine cookies.txt importieren</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="98"/>
+        <location filename="../qml/SignInDialog.qml" line="108"/>
         <source>cookies.txt with a YouTube session</source>
         <translation>cookies.txt mit einer YouTube-Sitzung</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="99"/>
+        <location filename="../qml/SignInDialog.qml" line="109"/>
         <source>Cookie files (*.txt)</source>
         <translation>Cookie-Dateien (*.txt)</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="99"/>
+        <location filename="../qml/SignInDialog.qml" line="109"/>
         <source>All files (*)</source>
         <translation>Alle Dateien (*)</translation>
     </message>

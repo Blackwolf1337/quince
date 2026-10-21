@@ -46,6 +46,8 @@ Item {
         onContentYChanged: loadMoreIfNeeded()
         onContentHeightChanged: loadMoreIfNeeded()
 
+        SmoothScroll {}
+
         delegate: DelegateChooser {
             role: "rowType"
 
@@ -113,7 +115,7 @@ Item {
 
             BusyIndicator {
                 anchors.centerIn: parent
-                running: page.loading
+                running: page.loading && list.count > 0
                 visible: running
             }
             Column {
@@ -133,6 +135,16 @@ Item {
                     onClicked: page.canLoadMore ? page.loadMore() : page.reload()
                 }
             }
+        }
+    }
+
+    // the shape of a page while the first part of it loads
+    Skeleton {
+        anchors.fill: parent
+        opacity: page.loading && list.count === 0 ? 1 : 0
+        visible: opacity > 0
+        Behavior on opacity {
+            NumberAnimation { duration: Style.normal }
         }
     }
 }
