@@ -271,6 +271,12 @@ ApplicationWindow {
         ColumnLayout {
             anchors.fill: parent
             spacing: 0
+            // Under the open Now Playing nothing may react: a press goes to the
+            // pointer handlers of every item under it once one of them took a
+            // passive grab, so a tap on a queue row also tapped the card behind
+            // (it opened that page and closed Now Playing). Only once fully
+            // covered, so the controls do not turn grey while it slides in.
+            enabled: nowPlaying.progress < 1
 
             // back and forward, search, clock
             RowLayout {
