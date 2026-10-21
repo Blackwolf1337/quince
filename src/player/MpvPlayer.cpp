@@ -18,11 +18,11 @@ enum Property : quint64 {
     PropPause,
     PropIdle,
     PropBuffering,
-    PropVolume,
     PropMute,
     PropAudioDevices,
     PropAudioDevice,
     PropCurrentAo,
+    PropSilence,
 };
 
 // position updates closer than this are not sent to the UI
@@ -50,54 +50,80 @@ bool flagOf(const mpv_event_property *prop)
 
 MpvPlayer::MpvPlayer(const QString &audioOutput, QObject *parent)
     : QObject(parent)
+    , m_audioOutput(audioOutput)
 {
-    m_mpv = mpv_create();
-    if (!m_mpv) {
-        qCCritical(lcPlayer) << "mpv_create failed";
-        return;
-    }
-
-    mpv_set_option_string(m_mpv, "video", "no");
-    mpv_set_option_string(m_mpv, "audio-display", "no");
-    mpv_set_option_string(m_mpv, "ytdl", "no");
-    mpv_set_option_string(m_mpv, "terminal", "no");
-    mpv_set_option_string(m_mpv, "input-default-bindings", "no");
-    mpv_set_option_string(m_mpv, "idle", "yes");
-    mpv_set_option_string(m_mpv, "gapless-audio", "yes");
-    mpv_set_option_string(m_mpv, "prefetch-playlist", "yes");
-    mpv_set_option_string(m_mpv, "audio-client-name", "Quince");
-    if (!audioOutput.isEmpty())
-        mpv_set_option_string(m_mpv, "ao", audioOutput.toUtf8().constData());
-
-    if (mpv_initialize(m_mpv) < 0) {
-        qCCritical(lcPlayer) << "mpv_initialize failed";
-        mpv_destroy(m_mpv);
-        m_mpv = nullptr;
-        return;
-    }
-
-    // QUINCE_MPV_LOG=v (or debug, info) shows more of mpv's log (diagnosis)
-    const QByteArray logLevel = qEnvironmentVariableIsSet("QUINCE_MPV_LOG") ? qgetenv("QUINCE_MPV_LOG") : QByteArray("warn");
-    mpv_request_log_messages(m_mpv, logLevel.constData());
-    mpv_observe_property(m_mpv, PropTimePos, "time-pos", MPV_FORMAT_DOUBLE);
-    mpv_observe_property(m_mpv, PropDuration, "duration", MPV_FORMAT_DOUBLE);
-    mpv_observe_property(m_mpv, PropPause, "pause", MPV_FORMAT_FLAG);
-    mpv_observe_property(m_mpv, PropIdle, "idle-active", MPV_FORMAT_FLAG);
-    mpv_observe_property(m_mpv, PropBuffering, "paused-for-cache", MPV_FORMAT_FLAG);
-    mpv_observe_property(m_mpv, PropVolume, "volume", MPV_FORMAT_DOUBLE);
-    mpv_observe_property(m_mpv, PropMute, "mute", MPV_FORMAT_FLAG);
-    mpv_observe_property(m_mpv, PropAudioDevice, "audio-device", MPV_FORMAT_STRING);
-    mpv_observe_property(m_mpv, PropCurrentAo, "current-ao", MPV_FORMAT_STRING);
-
-    mpv_set_wakeup_callback(m_mpv, &MpvPlayer::wakeup, this);
+    m_fadeTimer.setInterval(30);
+    connect(&m_fadeTimer, &QTimer::timeout, this, &MpvPlayer::stepFade);
+    // the second deck is made at the first crossfade
+    createDeck(0);
 }
 
 MpvPlayer::~MpvPlayer()
 {
-    if (!m_mpv)
-        return;
-    mpv_set_wakeup_callback(m_mpv, nullptr, nullptr);
-    mpv_terminate_destroy(m_mpv);
+    for (Deck &deck : m_decks) {
+        if (!deck.mpv)
+            continue;
+        mpv_set_wakeup_callback(deck.mpv, nullptr, nullptr);
+        mpv_terminate_destroy(deck.mpv);
+        deck.mpv = nullptr;
+    }
+}
+
+bool MpvPlayer::createDeck(int index)
+{
+    mpv_handle *mpv = mpv_create();
+    if (!mpv) {
+        qCCritical(lcPlayer) << "mpv_create failed";
+        return false;
+    }
+
+    mpv_set_option_string(mpv, "video", "no");
+    mpv_set_option_string(mpv, "audio-display", "no");
+    mpv_set_option_string(mpv, "ytdl", "no");
+    mpv_set_option_string(mpv, "terminal", "no");
+    mpv_set_option_string(mpv, "input-default-bindings", "no");
+    mpv_set_option_string(mpv, "idle", "yes");
+    mpv_set_option_string(mpv, "gapless-audio", "yes");
+    mpv_set_option_string(mpv, "prefetch-playlist", "yes");
+    mpv_set_option_string(mpv, "audio-client-name", "Quince");
+    if (!m_audioOutput.isEmpty())
+        mpv_set_option_string(mpv, "ao", m_audioOutput.toUtf8().constData());
+
+    if (mpv_initialize(mpv) < 0) {
+        qCCritical(lcPlayer) << "mpv_initialize failed";
+        mpv_destroy(mpv);
+        return false;
+    }
+
+    // QUINCE_MPV_LOG=v (or debug, info) shows more of mpv's log (diagnosis)
+    const QByteArray logLevel = qEnvironmentVariableIsSet("QUINCE_MPV_LOG") ? qgetenv("QUINCE_MPV_LOG") : QByteArray("warn");
+    mpv_request_log_messages(mpv, logLevel.constData());
+    mpv_observe_property(mpv, PropTimePos, "time-pos", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(mpv, PropDuration, "duration", MPV_FORMAT_DOUBLE);
+    mpv_observe_property(mpv, PropPause, "pause", MPV_FORMAT_FLAG);
+    mpv_observe_property(mpv, PropIdle, "idle-active", MPV_FORMAT_FLAG);
+    mpv_observe_property(mpv, PropBuffering, "paused-for-cache", MPV_FORMAT_FLAG);
+    mpv_observe_property(mpv, PropMute, "mute", MPV_FORMAT_FLAG);
+    mpv_observe_property(mpv, PropAudioDevice, "audio-device", MPV_FORMAT_STRING);
+    mpv_observe_property(mpv, PropCurrentAo, "current-ao", MPV_FORMAT_STRING);
+    mpv_observe_property(mpv, PropSilence, "af-metadata/silence", MPV_FORMAT_NODE);
+
+    m_decks[index].mpv = mpv;
+    // what the other deck already has
+    if (index != 0) {
+        setDeckProperty(index, "volume", 0.0);
+        setDeckProperty(index, "pause", m_paused);
+        setDeckProperty(index, "mute", m_muted);
+        if (!m_audioDeviceWanted.isEmpty())
+            setDeckProperty(index, "audio-device", m_audioDeviceWanted);
+    }
+    if (!m_filters.isEmpty())
+        setDeckProperty(index, "af", m_filters);
+    if (m_speed * m_speedBoost != 1.0)
+        setDeckProperty(index, "speed", m_speed * m_speedBoost);
+
+    mpv_set_wakeup_callback(mpv, &MpvPlayer::wakeup, this);
+    return true;
 }
 
 // Called on an mpv thread.
@@ -112,18 +138,26 @@ void MpvPlayer::wakeup(void *ctx)
 void MpvPlayer::processEvents()
 {
     m_wakePending = false;
-    while (m_mpv) {
-        const mpv_event *event = mpv_wait_event(m_mpv, 0);
-        if (event->event_id == MPV_EVENT_NONE)
-            break;
-        handleEvent(*event);
+    for (int deck = 0; deck < 2; ++deck) {
+        while (m_decks[deck].mpv) {
+            const mpv_event *event = mpv_wait_event(m_decks[deck].mpv, 0);
+            if (event->event_id == MPV_EVENT_NONE)
+                break;
+            handleEvent(deck, *event);
+        }
     }
 }
 
-void MpvPlayer::handleEvent(const mpv_event &event)
+void MpvPlayer::handleEvent(int deckIndex, const mpv_event &event)
 {
+    Deck &deck = m_decks[deckIndex];
+    const bool active = deckIndex == m_active;
+
     switch (event.event_id) {
     case MPV_EVENT_PROPERTY_CHANGE: {
+        // the idle deck and the one fading out do not speak for the player
+        if (!active)
+            break;
         const auto *prop = static_cast<const mpv_event_property *>(event.data);
         switch (event.reply_userdata) {
         case PropTimePos:
@@ -149,10 +183,6 @@ void MpvPlayer::handleEvent(const mpv_event &event)
             m_buffering = flagOf(prop);
             emit bufferingChanged();
             break;
-        case PropVolume:
-            m_volume = doubleOf(prop);
-            emit volumeChanged();
-            break;
         case PropMute:
             m_muted = flagOf(prop);
             emit mutedChanged();
@@ -176,24 +206,38 @@ void MpvPlayer::handleEvent(const mpv_event &event)
                                 : QString();
             emit audioDeviceChanged();
             break;
+        case PropSilence:
+            if (prop->format == MPV_FORMAT_NODE)
+                emit silenceMetadata(MpvNode::toVariant(static_cast<const mpv_node *>(prop->data)).toMap());
+            break;
         }
         break;
     }
     case MPV_EVENT_START_FILE: {
         const auto *start = static_cast<const mpv_event_start_file *>(event.data);
-        const auto it = m_entryTags.constFind(start->playlist_entry_id);
-        if (it != m_entryTags.cend())
-            onStarted(*it);
+        const auto it = deck.entryTags.constFind(start->playlist_entry_id);
+        if (it != deck.entryTags.cend())
+            onStarted(deckIndex, *it);
         else
-            m_unmatchedStart = start->playlist_entry_id;
+            deck.unmatchedStart = start->playlist_entry_id;
         break;
     }
     case MPV_EVENT_END_FILE: {
         const auto *end = static_cast<const mpv_event_end_file *>(event.data);
-        const QString tag = m_entryTags.take(end->playlist_entry_id);
-        if (!tag.isEmpty() && tag == m_startingTag) {
-            m_startingTag.clear();
-            m_waitingNext.reset();
+        const QString tag = deck.entryTags.take(end->playlist_entry_id);
+        if (!active) {
+            // the crossfade's track did not even start
+            if (!tag.isEmpty() && tag == m_crossfadeTag) {
+                qCWarning(lcPlayer) << "crossfade to" << tag << "failed:" << mpv_error_string(end->error);
+                m_crossfadeTag.clear();
+                emit crossfadeFailed(tag);
+            }
+            // the deck that faded out ends quietly
+            break;
+        }
+        if (!tag.isEmpty() && tag == deck.startingTag) {
+            deck.startingTag.clear();
+            deck.waitingNext.reset();
         }
         QString error;
         if (end->reason == MPV_END_FILE_REASON_ERROR) {
@@ -205,11 +249,12 @@ void MpvPlayer::handleEvent(const mpv_event &event)
     }
     case MPV_EVENT_LOG_MESSAGE: {
         const auto *msg = static_cast<const mpv_event_log_message *>(event.data);
-        qCWarning(lcPlayer).noquote() << msg->prefix << QString::fromUtf8(msg->text).trimmed();
+        qCWarning(lcPlayer).noquote() << (deckIndex ? "[deck 2]" : "") << msg->prefix
+                                      << QString::fromUtf8(msg->text).trimmed();
         break;
     }
     case MPV_EVENT_COMMAND_REPLY: {
-        const QString tag = m_replyTags.take(event.reply_userdata);
+        const QString tag = deck.replyTags.take(event.reply_userdata);
         if (event.error < 0) {
             qCWarning(lcPlayer) << "mpv command failed:" << mpv_error_string(event.error);
             break;
@@ -221,15 +266,20 @@ void MpvPlayer::handleEvent(const mpv_event &event)
                                  .value(QStringLiteral("playlist_entry_id"), -1).toLongLong();
         if (entry < 0)
             break;
-        m_entryTags.insert(entry, tag);
+        deck.entryTags.insert(entry, tag);
         // the file may have started before this reply arrived
-        if (entry == m_unmatchedStart) {
-            m_unmatchedStart = -1;
-            onStarted(tag);
+        if (entry == deck.unmatchedStart) {
+            deck.unmatchedStart = -1;
+            onStarted(deckIndex, tag);
         }
         break;
     }
     case MPV_EVENT_PLAYBACK_RESTART:
+        if (!active)
+            break;
+        // the faded-in track makes sound now: the curve starts
+        if (m_fadeFrom >= 0 && !m_fadeTimer.isActive())
+            beginFade();
         emit playbackRestarted();
         break;
     case MPV_EVENT_SET_PROPERTY_REPLY:
@@ -241,23 +291,30 @@ void MpvPlayer::handleEvent(const mpv_event &event)
     }
 }
 
-void MpvPlayer::command(const QVariant &args, quint64 reply)
+void MpvPlayer::command(int deck, const QVariant &args, quint64 reply)
 {
-    if (!m_mpv)
+    if (!m_decks[deck].mpv)
         return;
     MpvNode node(args);
-    mpv_command_node_async(m_mpv, reply, node.get());
+    mpv_command_node_async(m_decks[deck].mpv, reply, node.get());
+}
+
+void MpvPlayer::setDeckProperty(int deck, const char *name, const QVariant &value)
+{
+    if (!m_decks[deck].mpv)
+        return;
+    MpvNode node(value);
+    mpv_set_property_async(m_decks[deck].mpv, 0, name, MPV_FORMAT_NODE, node.get());
 }
 
 void MpvPlayer::setMpvProperty(const char *name, const QVariant &value)
 {
-    if (!m_mpv)
-        return;
-    MpvNode node(value);
-    mpv_set_property_async(m_mpv, 0, name, MPV_FORMAT_NODE, node.get());
+    for (int deck = 0; deck < 2; ++deck)
+        setDeckProperty(deck, name, value);
 }
 
-void MpvPlayer::loadFile(const Stream &stream, const QString &tag, const char *flags, double start, double gainDb)
+void MpvPlayer::loadFile(int deck, const Stream &stream, const QString &tag, const char *flags, double start,
+                         double gainDb)
 {
     QVariantMap options;
     QStringList fields;
@@ -278,8 +335,8 @@ void MpvPlayer::loadFile(const Stream &stream, const QString &tag, const char *f
     options.insert(QStringLiteral("volume-gain"), QString::number(gainDb, 'f', 2));
 
     const quint64 reply = m_nextReply++;
-    m_replyTags.insert(reply, tag);
-    command(QVariantMap{
+    m_decks[deck].replyTags.insert(reply, tag);
+    command(deck, QVariantMap{
         {QStringLiteral("name"), QStringLiteral("loadfile")},
         {QStringLiteral("url"), stream.url.toString(QUrl::FullyEncoded)},
         {QStringLiteral("flags"), QString::fromLatin1(flags)},
@@ -290,34 +347,136 @@ void MpvPlayer::loadFile(const Stream &stream, const QString &tag, const char *f
 
 void MpvPlayer::load(const Stream &stream, const QString &tag, double start, bool paused, double gainDb)
 {
+    abortCrossfade();
     m_position = m_reportedPosition = start;
     emit positionChanged();
     setPaused(paused);
-    m_waitingNext.reset();
-    m_startingTag = tag;
-    loadFile(stream, tag, "replace", start, gainDb);
+    Deck &deck = m_decks[m_active];
+    deck.waitingNext.reset();
+    deck.startingTag = tag;
+    loadFile(m_active, stream, tag, "replace", start, gainDb);
 }
 
 void MpvPlayer::queueNext(const Stream &stream, const QString &tag, double gainDb)
 {
-    if (!m_startingTag.isEmpty()) {
-        m_waitingNext = Next{stream, tag, gainDb};
+    Deck &deck = m_decks[m_active];
+    if (!deck.startingTag.isEmpty()) {
+        deck.waitingNext = Next{stream, tag, gainDb};
         return;
     }
     clearQueued();
-    loadFile(stream, tag, "append", 0, gainDb);
+    loadFile(m_active, stream, tag, "append", 0, gainDb);
 }
 
-void MpvPlayer::onStarted(const QString &tag)
+void MpvPlayer::onStarted(int deckIndex, const QString &tag)
 {
-    if (tag == m_startingTag) {
-        m_startingTag.clear();
-        if (m_waitingNext) {
-            const Next next = *std::exchange(m_waitingNext, std::nullopt);
+    Deck &deck = m_decks[deckIndex];
+    if (deckIndex != m_active) {
+        if (tag != m_crossfadeTag)
+            return;
+        // the next track runs on the other deck: it is the player now, the
+        // old deck fades out once the new one makes sound
+        m_crossfadeTag.clear();
+        m_fadeFrom = m_active;
+        m_active = deckIndex;
+        m_position = m_reportedPosition = 0;
+        m_duration = 0;
+        m_idle = false;
+        emit positionChanged();
+        emit durationChanged();
+        emit idleChanged();
+        emit trackStarted(tag);
+        return;
+    }
+    if (tag == deck.startingTag) {
+        deck.startingTag.clear();
+        if (deck.waitingNext) {
+            const Next next = *std::exchange(deck.waitingNext, std::nullopt);
             queueNext(next.stream, next.tag, next.gainDb);
         }
     }
     emit trackStarted(tag);
+}
+
+void MpvPlayer::crossfadeTo(const Stream &stream, const QString &tag, double gainDb, double seconds)
+{
+    abortCrossfade();
+    const int other = 1 - m_active;
+    if (!m_decks[other].mpv && !createDeck(other)) {
+        emit crossfadeFailed(tag);
+        return;
+    }
+    // nothing of the old deck may follow on it by itself
+    clearQueued();
+    m_crossfadeTag = tag;
+    m_fadeSeconds = qMax(0.5, seconds);
+    m_decks[other].startingTag.clear();
+    m_decks[other].waitingNext.reset();
+    setDeckProperty(other, "volume", 0.0);
+    setDeckProperty(other, "pause", m_paused);
+    loadFile(other, stream, tag, "replace", 0, gainDb);
+}
+
+void MpvPlayer::beginFade()
+{
+    qCDebug(lcPlayer) << "fade begins over" << m_fadeSeconds << "s, deck" << m_fadeFrom + 1 << "to" << m_active + 1;
+    m_fadeClock.start();
+    m_fadeTimer.start();
+    stepFade();
+}
+
+// equal-power curve: the sum of both stays as loud as one track
+void MpvPlayer::stepFade()
+{
+    if (m_fadeFrom < 0) {
+        m_fadeTimer.stop();
+        return;
+    }
+    // the curve stands still while paused
+    static constexpr double kTick = 0.03;
+    if (m_paused) {
+        m_fadeClock.restart();
+        return;
+    }
+    const double elapsed = qMin(m_fadeClock.elapsed() / 1000.0, kTick * 4);
+    m_fadeClock.restart();
+    m_fadeProgress = qMin(1.0, m_fadeProgress + elapsed / m_fadeSeconds);
+    const double angle = m_fadeProgress * M_PI / 2;
+    setDeckProperty(m_active, "volume", m_volume * std::sin(angle));
+    setDeckProperty(m_fadeFrom, "volume", m_volume * std::cos(angle));
+    if (m_fadeProgress >= 1.0)
+        endFade();
+}
+
+void MpvPlayer::endFade()
+{
+    if (m_fadeFrom >= 0)
+        qCDebug(lcPlayer) << "fade ends at" << m_fadeProgress;
+    m_fadeTimer.stop();
+    if (m_fadeFrom >= 0) {
+        command(m_fadeFrom, QVariantList{QStringLiteral("stop")});
+        setDeckProperty(m_fadeFrom, "volume", 0.0);
+    }
+    m_fadeFrom = -1;
+    m_fadeProgress = 0;
+    applyVolume();
+}
+
+// a load, seek or stop ends any crossfade at once
+void MpvPlayer::abortCrossfade()
+{
+    if (!m_crossfadeTag.isEmpty()) {
+        command(1 - m_active, QVariantList{QStringLiteral("stop")});
+        m_crossfadeTag.clear();
+    }
+    if (m_fadeFrom >= 0)
+        endFade();
+}
+
+void MpvPlayer::applyVolume()
+{
+    if (m_fadeFrom < 0)
+        setDeckProperty(m_active, "volume", m_volume);
 }
 
 // mpv lists every backend (ALSA plugins, JACK, OSS ...); the outputs of the
@@ -355,40 +514,68 @@ void MpvPlayer::filterAudioDevices()
 
 void MpvPlayer::setGain(double gainDb)
 {
-    setMpvProperty("volume-gain", gainDb);
+    setDeckProperty(m_active, "volume-gain", gainDb);
+}
+
+void MpvPlayer::setFilters(const QString &filters)
+{
+    if (filters == m_filters)
+        return;
+    m_filters = filters;
+    setMpvProperty("af", filters);
+}
+
+void MpvPlayer::setSpeed(double speed)
+{
+    m_speed = qBound(0.25, speed, 4.0);
+    setMpvProperty("speed", m_speed * m_speedBoost);
+}
+
+void MpvPlayer::setSpeedBoost(double factor)
+{
+    if (factor == m_speedBoost)
+        return;
+    m_speedBoost = factor;
+    setDeckProperty(m_active, "speed", m_speed * m_speedBoost);
 }
 
 void MpvPlayer::setAudioDevice(const QString &device)
 {
-    setMpvProperty("audio-device", device.isEmpty() ? QStringLiteral("auto") : device);
+    m_audioDeviceWanted = device.isEmpty() ? QStringLiteral("auto") : device;
+    setMpvProperty("audio-device", m_audioDeviceWanted);
 }
 
 void MpvPlayer::watchAudioDevices()
 {
-    if (!m_mpv || m_watchingDevices)
+    if (!m_decks[0].mpv || m_watchingDevices)
         return;
     m_watchingDevices = true;
-    mpv_observe_property(m_mpv, PropAudioDevices, "audio-device-list", MPV_FORMAT_NODE);
+    // the outputs are the same for both decks
+    mpv_observe_property(m_decks[0].mpv, PropAudioDevices, "audio-device-list", MPV_FORMAT_NODE);
 }
 
 void MpvPlayer::clearQueued()
 {
-    m_waitingNext.reset();
-    // a file still starting would go too (see m_startingTag); nothing is queued then
-    if (!m_startingTag.isEmpty())
+    Deck &deck = m_decks[m_active];
+    deck.waitingNext.reset();
+    // a file still starting would go too (see Deck::startingTag); nothing is queued then
+    if (!deck.startingTag.isEmpty())
         return;
     // removes every entry except the one playing
-    command(QVariantList{QStringLiteral("playlist-clear")});
+    command(m_active, QVariantList{QStringLiteral("playlist-clear")});
 }
 
 void MpvPlayer::setPaused(bool paused)
 {
+    // both decks: a crossfade pauses as a whole
     setMpvProperty("pause", paused);
 }
 
 void MpvPlayer::setVolume(double volume)
 {
-    setMpvProperty("volume", qBound(0.0, volume, 100.0));
+    m_volume = qBound(0.0, volume, 100.0);
+    emit volumeChanged();
+    applyVolume();
 }
 
 void MpvPlayer::setMuted(bool muted)
@@ -398,15 +585,17 @@ void MpvPlayer::setMuted(bool muted)
 
 void MpvPlayer::togglePause()
 {
-    command(QVariantList{QStringLiteral("cycle"), QStringLiteral("pause")});
+    setPaused(!m_paused);
 }
 
 void MpvPlayer::seek(double seconds)
 {
-    command(QVariantList{QStringLiteral("seek"), seconds, QStringLiteral("absolute")});
+    abortCrossfade();
+    command(m_active, QVariantList{QStringLiteral("seek"), seconds, QStringLiteral("absolute")});
 }
 
 void MpvPlayer::stop()
 {
-    command(QVariantList{QStringLiteral("stop")});
+    abortCrossfade();
+    command(m_active, QVariantList{QStringLiteral("stop")});
 }

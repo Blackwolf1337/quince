@@ -64,6 +64,7 @@ qt_add_qml_module(quince
         qml/CardRow.qml
         qml/CarouselRow.qml
         qml/ChipsRow.qml
+        qml/EqualizerDialog.qml
         qml/GridRow.qml
         qml/HeaderRow.qml
         qml/ItemMenu.qml
@@ -125,6 +126,8 @@ qt_add_qml_module(quince
         src/app/ArtNetwork.cpp
         src/app/TestDriver.h
         src/app/TestDriver.cpp
+        src/player/AudioEffects.h
+        src/player/AudioEffects.cpp
         src/player/JsSolver.h
         src/player/JsSolver.cpp
         src/player/MpvNode.h

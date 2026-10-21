@@ -247,6 +247,31 @@ Item {
             opacity: 0.7
         }
 
+        // playback speed; shown when it is not 1x, the menu sets it
+        ToolButton {
+            text: App.effects.speed.toFixed(2).replace(/\.?0+$/, "") + "×"
+            font.pixelSize: 13
+            font.features: { "tnum": 1 }
+            visible: App.effects.speed !== 1
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Speed")
+            onClicked: speedMenu.popup(this, 0, -speedMenu.implicitHeight)
+
+            StyledMenu {
+                id: speedMenu
+                Repeater {
+                    model: [0.75, 0.9, 1, 1.1, 1.25, 1.5]
+                    MenuItem {
+                        required property real modelData
+                        text: modelData + "×"
+                        checkable: true
+                        checked: Math.abs(App.effects.speed - modelData) < 0.01
+                        onTriggered: App.effects.speed = modelData
+                    }
+                }
+            }
+        }
+
         ToolButton {
             icon.source: bar.player.muted ? "icons/volume-off.svg" : "icons/volume.svg"
             onClicked: bar.player.muted = !bar.player.muted

@@ -8,6 +8,7 @@
 #include "integrations/GlobalShortcuts.h"
 #include "integrations/Mpris.h"
 #endif
+#include "player/AudioEffects.h"
 #include "player/JsSolver.h"
 #include "player/MpvPlayer.h"
 #include "player/Playback.h"
@@ -58,6 +59,7 @@ AppController::AppController(const AppOptions &options, QObject *parent)
 
     m_theme = new ColorTheme(m_playback, m_settings, this);
     m_lyrics = new Lyrics(m_playback, m_player, m_innerTube, m_settings, this);
+    m_effects = new AudioEffects(m_player, m_playback, m_settings, this);
     m_desktop = new Desktop(m_playback, m_player, m_settings, this);
     m_discord = new Discord(m_playback, m_player, m_settings, this);
     connect(m_theme, &ColorTheme::coverReady, m_desktop, &Desktop::setCover);

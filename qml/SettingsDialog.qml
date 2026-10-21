@@ -110,6 +110,73 @@ Dialog {
             }
 
             Section {
+                text: qsTr("Sound")
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Toggle {
+                    text: qsTr("Equalizer")
+                    checked: App.effects.equalizer
+                    onToggled: App.effects.equalizer = checked
+                }
+                Button {
+                    text: App.effects.presetName(App.effects.preset)
+                    flat: true
+                    onClicked: App.requestDialog("equalizer")
+                }
+            }
+            Toggle {
+                text: qsTr("Compressor: quiet parts louder, loud parts quieter")
+                checked: App.effects.compressor
+                onToggled: App.effects.compressor = checked
+            }
+            Toggle {
+                text: qsTr("Skip silences")
+                checked: App.effects.skipSilences
+                onToggled: App.effects.skipSilences = checked
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Label {
+                    text: qsTr("Crossfade")
+                }
+                Slider {
+                    id: crossfadeSlider
+                    Layout.fillWidth: true
+                    from: 0
+                    to: 12
+                    stepSize: 1
+                    value: App.effects.crossfade
+                    onMoved: App.effects.crossfade = value
+                }
+                Label {
+                    Layout.preferredWidth: 72
+                    text: crossfadeSlider.value > 0 ? qsTr("%1 s").arg(crossfadeSlider.value) : qsTr("Off (gapless)")
+                    color: Style.textDim
+                }
+            }
+            RowLayout {
+                Layout.fillWidth: true
+                Label {
+                    text: qsTr("Speed")
+                }
+                Slider {
+                    id: speedSlider
+                    Layout.fillWidth: true
+                    from: 0.5
+                    to: 2
+                    stepSize: 0.05
+                    value: App.effects.speed
+                    onMoved: App.effects.speed = value
+                }
+                Label {
+                    Layout.preferredWidth: 72
+                    text: speedSlider.value.toFixed(2) + "×"
+                    color: Style.textDim
+                }
+            }
+
+            Section {
                 text: qsTr("Lyrics")
             }
             Toggle {

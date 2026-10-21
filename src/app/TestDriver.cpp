@@ -129,6 +129,7 @@ void TestDriver::run(const QString &line)
         const bool ok = !target ? false
             : parts.size() <= 3 ? QMetaObject::invokeMethod(target, method.constData())
             : (number && QMetaObject::invokeMethod(target, method.constData(), Q_ARG(int, value)))
+                || (number && QMetaObject::invokeMethod(target, method.constData(), Q_ARG(double, value)))
                 || QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, argument));
         qInfo() << "test: call" << parts.mid(1) << (ok ? "ok" : "failed");
     } else if (command == u"size") {

@@ -95,39 +95,92 @@
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/app/AppController.cpp" line="68"/>
+        <location filename="../src/app/AppController.cpp" line="70"/>
         <source>Play or pause</source>
         <translation>Wiedergabe oder Pause</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="69"/>
+        <location filename="../src/app/AppController.cpp" line="71"/>
         <source>Next track</source>
         <translation>Nächster Titel</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="70"/>
+        <location filename="../src/app/AppController.cpp" line="72"/>
         <source>Previous track</source>
         <translation>Vorheriger Titel</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="71"/>
+        <location filename="../src/app/AppController.cpp" line="73"/>
         <source>Volume up</source>
         <translation>Lauter</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="74"/>
+        <location filename="../src/app/AppController.cpp" line="76"/>
         <source>Volume down</source>
         <translation>Leiser</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="77"/>
+        <location filename="../src/app/AppController.cpp" line="79"/>
         <source>Like or unlike the track</source>
         <translation>Titel mögen oder nicht mehr mögen</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="82"/>
+        <location filename="../src/app/AppController.cpp" line="84"/>
         <source>Show Quince</source>
         <translation>Quince anzeigen</translation>
+    </message>
+</context>
+<context>
+    <name>AudioEffects</name>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="95"/>
+        <source>Flat</source>
+        <translation>Neutral</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="96"/>
+        <source>Bass</source>
+        <translation>Bass</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="97"/>
+        <source>Treble</source>
+        <translation>Höhen</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="98"/>
+        <source>Vocal</source>
+        <translation>Stimme</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="99"/>
+        <source>Loudness</source>
+        <translation>Loudness</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="100"/>
+        <source>Rock</source>
+        <translation>Rock</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="101"/>
+        <source>Electronic</source>
+        <translation>Elektronisch</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="102"/>
+        <source>Acoustic</source>
+        <translation>Akustisch</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="103"/>
+        <source>Night (quiet ends)</source>
+        <translation>Nacht (leise Bässe und Höhen)</translation>
+    </message>
+    <message>
+        <location filename="../src/player/AudioEffects.cpp" line="104"/>
+        <source>Custom</source>
+        <translation>Eigene</translation>
     </message>
 </context>
 <context>
@@ -206,6 +259,24 @@
         <location filename="../src/integrations/Desktop.cpp" line="121"/>
         <source>Pause</source>
         <translation>Pause</translation>
+    </message>
+</context>
+<context>
+    <name>EqualizerDialog</name>
+    <message>
+        <location filename="../qml/EqualizerDialog.qml" line="17"/>
+        <source>Equalizer</source>
+        <translation>Equalizer</translation>
+    </message>
+    <message>
+        <location filename="../qml/EqualizerDialog.qml" line="47"/>
+        <source>On</source>
+        <translation>An</translation>
+    </message>
+    <message>
+        <location filename="../qml/EqualizerDialog.qml" line="118"/>
+        <source>Hz. Boosts are held below full scale by a limiter, so loud parts do not clip.</source>
+        <translation>Hz. Ein Limiter hält Anhebungen unter der Vollaussteuerung, damit laute Stellen nicht verzerren.</translation>
     </message>
 </context>
 <context>
@@ -303,12 +374,12 @@
 <context>
     <name>Main</name>
     <message>
-        <location filename="../qml/Main.qml" line="219"/>
+        <location filename="../qml/Main.qml" line="221"/>
         <source>Back</source>
         <translation>Zurück</translation>
     </message>
     <message>
-        <location filename="../qml/Main.qml" line="227"/>
+        <location filename="../qml/Main.qml" line="229"/>
         <source>Forward</source>
         <translation>Vorwärts</translation>
     </message>
@@ -316,7 +387,7 @@
 <context>
     <name>MpvPlayer</name>
     <message>
-        <location filename="../src/player/MpvPlayer.cpp" line="344"/>
+        <location filename="../src/player/MpvPlayer.cpp" line="503"/>
         <source>System default</source>
         <translation>Systemstandard</translation>
     </message>
@@ -350,22 +421,22 @@
 <context>
     <name>Playback</name>
     <message>
-        <location filename="../src/player/Playback.cpp" line="261"/>
+        <location filename="../src/player/Playback.cpp" line="270"/>
         <source>That is not a YouTube link or video id.</source>
         <translation>Das ist kein YouTube-Link und keine Video-ID.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="417"/>
+        <location filename="../src/player/Playback.cpp" line="426"/>
         <source>YouTube Music has nothing to play there.</source>
         <translation>YouTube Music hat dort nichts zum Abspielen.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="555"/>
+        <location filename="../src/player/Playback.cpp" line="600"/>
         <source>Could not play &quot;%1&quot;: %2</source>
         <translation>„%1“ konnte nicht abgespielt werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="592"/>
+        <location filename="../src/player/Playback.cpp" line="639"/>
         <source>Playback stopped: %1</source>
         <translation>Wiedergabe abgebrochen: %1</translation>
     </message>
@@ -383,12 +454,17 @@
         <translation>Mag ich</translation>
     </message>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="301"/>
+        <location filename="../qml/PlayerBar.qml" line="257"/>
+        <source>Speed</source>
+        <translation>Tempo</translation>
+    </message>
+    <message>
+        <location filename="../qml/PlayerBar.qml" line="326"/>
         <source>Up next</source>
         <translation>Als Nächstes</translation>
     </message>
     <message>
-        <location filename="../qml/PlayerBar.qml" line="309"/>
+        <location filename="../qml/PlayerBar.qml" line="334"/>
         <source>Now playing</source>
         <translation>Läuft gerade</translation>
     </message>
@@ -507,81 +583,121 @@
     </message>
     <message>
         <location filename="../qml/SettingsDialog.qml" line="113"/>
+        <source>Sound</source>
+        <translation>Klang</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="118"/>
+        <source>Equalizer</source>
+        <translation>Equalizer</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="129"/>
+        <source>Compressor: quiet parts louder, loud parts quieter</source>
+        <translation>Kompressor: leise Stellen lauter, laute leiser</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="134"/>
+        <source>Skip silences</source>
+        <translation>Stille überspringen</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="141"/>
+        <source>Crossfade</source>
+        <translation>Überblenden</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="154"/>
+        <source>%1 s</source>
+        <translation>%1 s</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="154"/>
+        <source>Off (gapless)</source>
+        <translation>Aus (lückenlos)</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="161"/>
+        <source>Speed</source>
+        <translation>Tempo</translation>
+    </message>
+    <message>
+        <location filename="../qml/SettingsDialog.qml" line="180"/>
         <source>Lyrics</source>
         <translation>Songtext</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="116"/>
+        <location filename="../qml/SettingsDialog.qml" line="183"/>
         <source>Time-synced lyrics from LRCLIB</source>
         <translation>Zeitgenaue Songtexte von LRCLIB</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="122"/>
+        <location filename="../qml/SettingsDialog.qml" line="189"/>
         <source>Look</source>
         <translation>Aussehen</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="125"/>
+        <location filename="../qml/SettingsDialog.qml" line="192"/>
         <source>Colors from the album cover</source>
         <translation>Farben aus dem Albumcover</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="130"/>
+        <location filename="../qml/SettingsDialog.qml" line="197"/>
         <source>Compact sidebar (icons only)</source>
         <translation>Schmale Seitenleiste (nur Symbole)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="135"/>
+        <location filename="../qml/SettingsDialog.qml" line="202"/>
         <source>Clock in the top bar</source>
         <translation>Uhr in der oberen Leiste</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="140"/>
+        <location filename="../qml/SettingsDialog.qml" line="207"/>
         <source>See-through window, for the desktop&apos;s blur (after a restart)</source>
         <translation>Durchsichtiges Fenster, für die Unschärfe des Desktops (nach einem Neustart)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="146"/>
+        <location filename="../qml/SettingsDialog.qml" line="213"/>
         <source>Desktop</source>
         <translation>Desktop</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="149"/>
+        <location filename="../qml/SettingsDialog.qml" line="216"/>
         <source>Icon in the system tray</source>
         <translation>Symbol im Infobereich</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="154"/>
+        <location filename="../qml/SettingsDialog.qml" line="221"/>
         <source>Closing the window keeps playing in the tray</source>
         <translation>Schließen des Fensters spielt im Infobereich weiter</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="160"/>
+        <location filename="../qml/SettingsDialog.qml" line="227"/>
         <source>System-wide shortcuts (desktop portal, after a restart)</source>
         <translation>Systemweite Tastenkürzel (Desktop-Portal, nach einem Neustart)</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="166"/>
+        <location filename="../qml/SettingsDialog.qml" line="233"/>
         <source>Notification when the track changes</source>
         <translation>Benachrichtigung beim Titelwechsel</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="172"/>
+        <location filename="../qml/SettingsDialog.qml" line="239"/>
         <source>Discord</source>
         <translation>Discord</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="175"/>
+        <location filename="../qml/SettingsDialog.qml" line="242"/>
         <source>Show what I listen to in Discord</source>
         <translation>In Discord zeigen, was ich höre</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="182"/>
+        <location filename="../qml/SettingsDialog.qml" line="249"/>
         <source>Application ID</source>
         <translation>Application ID</translation>
     </message>
     <message>
-        <location filename="../qml/SettingsDialog.qml" line="191"/>
+        <location filename="../qml/SettingsDialog.qml" line="258"/>
         <source>Uses Pear Desktop&apos;s Discord application. For your own, create one at discord.com/developers/applications and paste its Application ID; leave empty for Pear&apos;s.</source>
         <translation>Nutzt die Discord-Anwendung von Pear Desktop. Für eine eigene erstelle eine unter discord.com/developers/applications und füge ihre Application ID ein; leer lassen für die von Pear.</translation>
     </message>

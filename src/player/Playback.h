@@ -1,5 +1,7 @@
 #pragma once
 
+#include "player/StreamResolver.h"
+
 #include <QHash>
 #include <QElapsedTimer>
 #include <QJsonObject>
@@ -10,11 +12,12 @@
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
+#include <optional>
+
 class InnerTube;
 class MpvPlayer;
 class Queue;
 class StreamResolver;
-struct Stream;
 
 // What plays and what comes next. Queues come from the next endpoint the way
 // the site gets them: the playlist id of a clicked track decides whether the
@@ -71,6 +74,9 @@ public:
     void setSkipDisliked(bool on) { m_skipDisliked = on; }
     // disable-autoplay: a track or list the user picks starts paused
     void setStartPaused(bool on) { m_startPaused = on; }
+    // crossfade: seconds the next track fades in over the end of this one;
+    // 0 plays them gapless
+    void setCrossfade(double seconds);
     // where a play of videoId is reported to the account's history; empty
     // until the player answer for it arrived
     QString trackingUrl(const QString &videoId) const { return m_tracking.value(videoId); }
@@ -117,6 +123,7 @@ private:
     void setError(const QString &error);
     void scheduleSave();
     void rememberPlayerInfo(const Stream &stream);
+    void checkCrossfade();
     double gainFor(const QString &videoId) const;
 
     MpvPlayer *m_player = nullptr;
@@ -135,6 +142,9 @@ private:
     QString m_loadedId; // playing in mpv
     QString m_queuedId; // in mpv after it, for a gapless change
     QString m_queuedInfo;
+    // its stream, for a crossfade (gapless hands it to mpv at once)
+    std::optional<Stream> m_upcoming;
+    double m_crossfade = 0;
     int m_failures = 0;
     // a stream URL that fails is resolved again once before the track is skipped
     QSet<QString> m_retried;

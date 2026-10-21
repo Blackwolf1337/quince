@@ -93,6 +93,8 @@ ApplicationWindow {
                 playlistPickerComponent.createObject(window.contentItem, {item: data.item}).open()
             else if (name === "settings")
                 settingsComponent.createObject(window.contentItem).open()
+            else if (name === "equalizer")
+                equalizerComponent.createObject(window.contentItem).open()
         }
     }
     Connections {
@@ -389,6 +391,10 @@ ApplicationWindow {
     Component {
         id: settingsComponent
         SettingsDialog {}
+    }
+    Component {
+        id: equalizerComponent
+        EqualizerDialog {}
     }
 
     // the volume, for a moment after it changed by wheel or keys

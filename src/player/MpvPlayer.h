@@ -2,15 +2,16 @@
 
 #include "player/StreamResolver.h"
 
+#include <QElapsedTimer>
 #include <QHash>
 #include <QObject>
 #include <QString>
+#include <QTimer>
 #include <QVariant>
 #include <QtQml/qqmlregistration.h>
 
-#include <optional>
-
 #include <atomic>
+#include <optional>
 
 struct mpv_handle;
 struct mpv_event;
@@ -18,6 +19,10 @@ struct mpv_event;
 // Audio playback through libmpv. All calls into mpv are asynchronous; mpv's
 // wakeup callback queues processEvents() onto the Qt event loop, so nothing
 // here waits on mpv's threads.
+//
+// There are two mpv instances ("decks") for crossfades: the next track starts
+// on the idle deck and becomes the active one while the old one fades out.
+// Everything the UI sees comes from the active deck.
 class MpvPlayer : public QObject
 {
     Q_OBJECT
@@ -40,7 +45,7 @@ public:
     explicit MpvPlayer(const QString &audioOutput, QObject *parent = nullptr);
     ~MpvPlayer() override;
 
-    bool isValid() const { return m_mpv != nullptr; }
+    bool isValid() const { return m_decks[0].mpv != nullptr; }
 
     // Replaces what plays. tag names the entry in trackStarted and trackEnded;
     // gainDb applies to this file only (loudness normalization).
@@ -49,8 +54,18 @@ public:
     // stream queued before.
     void queueNext(const Stream &stream, const QString &tag, double gainDb = 0);
     void clearQueued();
+    // Starts stream on the other deck and fades over to it within seconds;
+    // trackStarted(tag) follows once it plays, crossfadeFailed(tag) if it cannot.
+    void crossfadeTo(const Stream &stream, const QString &tag, double gainDb, double seconds);
+    bool crossfading() const { return m_fadeFrom >= 0 || !m_crossfadeTag.isEmpty(); }
     // gain of the file playing now, for when its loudness arrived late
     void setGain(double gainDb);
+
+    // mpv's audio filter chain (af), set on both decks
+    void setFilters(const QString &filters);
+    // playback speed, pitch kept; factor on top of it while skipping a silence
+    void setSpeed(double speed);
+    void setSpeedBoost(double factor);
 
     double position() const { return m_position; }
     double duration() const { return m_duration; }
@@ -92,19 +107,62 @@ signals:
     void playbackError(const QString &message);
     // audio runs (after a load or a seek)
     void playbackRestarted();
+    void crossfadeFailed(const QString &tag);
+    // metadata of the "silence" filter (lavfi silencedetect) of the active deck
+    void silenceMetadata(const QVariantMap &values);
 
 private:
-    static void wakeup(void *ctx);
-    void processEvents();
-    void handleEvent(const mpv_event &event);
-    void command(const QVariant &args, quint64 reply = 0);
-    void loadFile(const Stream &stream, const QString &tag, const char *flags, double start, double gainDb);
-    void onStarted(const QString &tag);
-    void filterAudioDevices();
-    void setMpvProperty(const char *name, const QVariant &value);
+    struct Next
+    {
+        Stream stream;
+        QString tag;
+        double gainDb = 0;
+    };
+    struct Deck
+    {
+        mpv_handle *mpv = nullptr;
+        // loadfile replies carry the playlist entry id that START_FILE and
+        // END_FILE name later
+        QHash<quint64, QString> replyTags;
+        QHash<qint64, QString> entryTags;
+        qint64 unmatchedStart = -1;
+        // Tag of a file loaded with "replace" that has not started yet. Until
+        // it has, mpv does not count it as playing, and playlist-clear would
+        // remove it; the next track waits in waitingNext instead.
+        QString startingTag;
+        std::optional<Next> waitingNext;
+    };
 
-    mpv_handle *m_mpv = nullptr;
+    static void wakeup(void *ctx);
+    bool createDeck(int index);
+    void processEvents();
+    void handleEvent(int deck, const mpv_event &event);
+    void command(int deck, const QVariant &args, quint64 reply = 0);
+    void setDeckProperty(int deck, const char *name, const QVariant &value);
+    // on every deck that exists
+    void setMpvProperty(const char *name, const QVariant &value);
+    void loadFile(int deck, const Stream &stream, const QString &tag, const char *flags, double start, double gainDb);
+    void onStarted(int deck, const QString &tag);
+    void beginFade();
+    void stepFade();
+    void endFade();
+    void abortCrossfade();
+    void applyVolume();
+    void filterAudioDevices();
+
+    Deck m_decks[2];
+    int m_active = 0;
+    QString m_audioOutput;
     std::atomic_bool m_wakePending{false};
+
+    // crossfade: the deck fading out (-1: none), the tag starting on the
+    // other deck, the curve's clock
+    int m_fadeFrom = -1;
+    QString m_crossfadeTag;
+    double m_fadeSeconds = 0;
+    double m_fadeProgress = 0;
+    QElapsedTimer m_fadeClock;
+    QTimer m_fadeTimer;
 
     double m_position = 0;
     double m_reportedPosition = 0;
@@ -114,27 +172,15 @@ private:
     bool m_buffering = false;
     double m_volume = 100;
     bool m_muted = false;
+    double m_speed = 1.0;
+    double m_speedBoost = 1.0;
+    QString m_filters;
+    QString m_audioDeviceWanted;
     QVariantList m_allAudioDevices;
     QVariantList m_audioDevices; // of the audio backend in use
     bool m_watchingDevices = false;
     QString m_audioDevice;
     QString m_currentAo;
 
-    // loadfile replies carry the playlist entry id that START_FILE and
-    // END_FILE name later
     quint64 m_nextReply = 1;
-    QHash<quint64, QString> m_replyTags;
-    QHash<qint64, QString> m_entryTags;
-    qint64 m_unmatchedStart = -1;
-    // Tag of a file loaded with "replace" that has not started yet. Until it
-    // has, mpv does not count it as playing, and playlist-clear would remove
-    // it; the next track waits in m_waitingNext instead.
-    QString m_startingTag;
-    struct Next
-    {
-        Stream stream;
-        QString tag;
-        double gainDb = 0;
-    };
-    std::optional<Next> m_waitingNext;
 };

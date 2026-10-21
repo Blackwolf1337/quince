@@ -93,6 +93,15 @@ Playback::Playback(MpvPlayer *player, StreamResolver *resolver, InnerTube *inner
     connect(m_resolver, &StreamResolver::failed, this, &Playback::onFailed);
     connect(m_player, &MpvPlayer::trackStarted, this, &Playback::onTrackStarted);
     connect(m_player, &MpvPlayer::trackEnded, this, &Playback::onTrackEnded);
+    connect(m_player, &MpvPlayer::positionChanged, this, &Playback::checkCrossfade);
+    connect(m_player, &MpvPlayer::crossfadeFailed, this, [this](const QString &tag) {
+        if (tag != m_queuedId)
+            return;
+        // the track then follows the usual way when this one ends
+        m_queuedId.clear();
+        m_upcoming.reset();
+        m_resolver->forget(tag);
+    });
     connect(m_player, &MpvPlayer::playbackRestarted, this, [this] {
         if (m_startTimer.isValid()) {
             qCDebug(lcPlayback) << "sound after" << m_startTimer.elapsed() << "ms";
@@ -514,6 +523,7 @@ void Playback::prefetchUpcoming()
     if (!m_queuedId.isEmpty()) {
         m_player->clearQueued();
         m_queuedId.clear();
+        m_upcoming.reset();
     }
     if (!upcoming.isEmpty()) {
         m_resolver->resolve(upcoming);
@@ -532,6 +542,7 @@ void Playback::onResolved(const Stream &stream)
         m_loadedId = stream.videoId;
         m_playingFor.start();
         m_queuedId.clear();
+        m_upcoming.reset();
         setStreamInfo(streamInfoOf(stream));
         prefetchUpcoming();
         return;
@@ -540,10 +551,44 @@ void Playback::onResolved(const Stream &stream)
     const int current = m_queue->current();
     if (stream.videoId == m_queue->videoIdAt(nextIndex()) && m_loadedId == m_queue->videoIdAt(current)
         && m_queuedId != stream.videoId) {
-        m_player->queueNext(stream, stream.videoId, gainFor(stream.videoId));
+        // gapless: mpv appends it now; crossfade: checkCrossfade starts it
+        if (m_crossfade <= 0)
+            m_player->queueNext(stream, stream.videoId, gainFor(stream.videoId));
         m_queuedId = stream.videoId;
         m_queuedInfo = streamInfoOf(stream);
+        m_upcoming = stream;
     }
+}
+
+void Playback::setCrossfade(double seconds)
+{
+    const double old = m_crossfade;
+    m_crossfade = seconds;
+    if (!m_upcoming || m_player->crossfading())
+        return;
+    // the queued track moves between mpv's playlist and the crossfade
+    if (old <= 0 && seconds > 0)
+        m_player->clearQueued();
+    else if (old > 0 && seconds <= 0)
+        m_player->queueNext(*m_upcoming, m_upcoming->videoId, gainFor(m_upcoming->videoId));
+}
+
+// the next track starts on the other deck when this one is that close to its end
+void Playback::checkCrossfade()
+{
+    if (m_crossfade <= 0 || !m_upcoming || m_upcoming->videoId != m_queuedId || m_player->crossfading()
+        || m_player->paused())
+        return;
+    const double duration = m_player->duration();
+    const double position = m_player->position();
+    if (duration <= 0 || position <= 0)
+        return;
+    // short tracks fade over at most half of themselves
+    const double seconds = qMin(m_crossfade, duration / 2);
+    if (duration - position > seconds)
+        return;
+    qCDebug(lcPlayback) << "crossfade to" << m_queuedId << "over" << seconds << "s";
+    m_player->crossfadeTo(*m_upcoming, m_queuedId, gainFor(m_queuedId), seconds);
 }
 
 void Playback::onFailed(const QString &videoId, const QString &error)
@@ -565,6 +610,7 @@ void Playback::onTrackStarted(const QString &tag)
     m_loadedId = tag;
     m_playingFor.start();
     m_queuedId.clear();
+    m_upcoming.reset();
     setStreamInfo(m_queuedInfo);
     const int next = nextIndex();
     if (m_queue->videoIdAt(next) == tag)
@@ -580,6 +626,7 @@ void Playback::onTrackEnded(const QString &tag, bool eof, const QString &error)
         qCWarning(lcPlayback) << "stream of" << tag << "failed:" << error;
         m_loadedId.clear();
         m_queuedId.clear();
+        m_upcoming.reset();
         // googlevideo refuses some URLs (403); a fresh one, from the other client, usually works
         m_resolver->forget(tag);
         if (!m_retried.contains(tag) && m_queue->videoIdAt(m_queue->current()) == tag) {

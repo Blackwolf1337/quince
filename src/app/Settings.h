@@ -80,11 +80,14 @@ public:
     Q_INVOKABLE double toPlayerVolume(double slider) const;
     Q_INVOKABLE double toSlider(double playerVolume) const;
 
+    // for parts that keep their own keys (AudioEffects)
+    QVariant value(const QString &key, const QVariant &fallback = {}) const { return m_store.value(key, fallback); }
+    void set(const QString &key, const QVariant &value);
+
 signals:
     void changed();
 
 private:
-    void set(const QString &key, const QVariant &value);
 
     QSettings m_store;
 };
