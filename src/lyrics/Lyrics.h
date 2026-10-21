@@ -8,6 +8,8 @@
 #include <QVariantMap>
 #include <QtQml/qqmlregistration.h>
 
+#include <optional>
+
 class InnerTube;
 class MpvPlayer;
 class Playback;
@@ -63,6 +65,9 @@ private:
     void fetchGenius(const QVariantMap &track, int generation);
     void fetchMegalobiz(const QVariantMap &track, int generation);
     void setResult(const QVariantList &lines, bool synced, const QString &source, const QString &sourceUrl = {});
+    // a found result: a thin one waits while the other sources are asked
+    void offer(const QVariantMap &track, int generation, const QVariantList &lines, bool synced, const QString &source,
+               const QString &sourceUrl = {});
     void setLoading(bool loading);
     // Chinese conversion and romanization of m_raw, on the romanizer's thread
     void applyScripts();
@@ -92,6 +97,16 @@ private:
     // sources still to ask for the playing track, and how far it got
     QStringList m_order;
     qsizetype m_step = 0;
+    // A line or two (often a placeholder someone uploaded, like "probe" on
+    // LRCLIB's entry of a popular test song): shown only when no source has more.
+    struct Thin
+    {
+        QVariantList lines;
+        bool synced = false;
+        QString source;
+        QString sourceUrl;
+    };
+    std::optional<Thin> m_thin;
     bool m_loading = false;
     int m_currentLine = -1;
 };

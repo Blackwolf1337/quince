@@ -17,6 +17,7 @@
 #include <QUrlQuery>
 
 #include <algorithm>
+#include <utility>
 
 Q_LOGGING_CATEGORY(lcLyrics, "quince.lyrics")
 
@@ -34,6 +35,8 @@ const QByteArray kBrowserAgent =
 const QByteArray kUserAgent = QByteArrayLiteral("Quince/" PROJECT_VERSION " (native YouTube Music player)");
 // a search hit may differ this much in length and still be the same recording
 constexpr double kDurationTolerance = 3.0;
+// fewer lines with words than this make a thin result (see Lyrics::m_thin)
+constexpr int kFullLines = 3;
 // the same, for the looser search (Pear takes 15 s for Megalobiz)
 constexpr double kInexactTolerance = 15.0;
 // Megalobiz's own match score of title and artist, 0..1, for the exact and
@@ -86,6 +89,20 @@ QString Lyrics::cleanTitle(const QString &title)
     return clean.trimmed();
 }
 
+namespace {
+
+bool isThin(const QVariantList &lines)
+{
+    int words = 0;
+    for (const QVariant &line : lines) {
+        if (!line.toMap().value(QStringLiteral("text")).toString().trimmed().isEmpty() && ++words >= kFullLines)
+            return false;
+    }
+    return true;
+}
+
+} // namespace
+
 QVariantList Lyrics::parseLrc(const QString &lrc)
 {
     static const QRegularExpression stamp(QStringLiteral("\\[(\\d+):(\\d+(?:[.:]\\d+)?)\\]"));
@@ -122,6 +139,18 @@ QVariantList Lyrics::parseLrc(const QString &lrc)
     for (const auto &[time, text] : lines)
         out.append(QVariantMap{{QStringLiteral("time"), time}, {QStringLiteral("text"), text}});
     return out;
+}
+
+void Lyrics::offer(const QVariantMap &track, int generation, const QVariantList &lines, bool synced,
+                   const QString &source, const QString &sourceUrl)
+{
+    if (!isThin(lines)) {
+        setResult(lines, synced, source, sourceUrl);
+        return;
+    }
+    if (!m_thin)
+        m_thin = Thin{lines, synced, source, sourceUrl};
+    tryNext(track, generation);
 }
 
 void Lyrics::setLoading(bool loading)
@@ -224,6 +253,7 @@ void Lyrics::onTrackChanged()
     const QString first = qEnvironmentVariable("QUINCE_LYRICS", m_settings->lyricsPreferred());
     m_order.clear();
     m_step = 0;
+    m_thin.reset();
     for (const QString &source : kSources) {
         const bool on = source == u"lrclib" ? m_settings->lyricsLrclib()
                       : source == u"megalobiz" ? m_settings->lyricsMegalobiz()
@@ -246,7 +276,11 @@ void Lyrics::tryNext(const QVariantMap &track, int generation)
     if (generation != m_generation)
         return;
     if (m_step >= m_order.size()) {
-        setResult({}, false, {});
+        // nothing fuller anywhere: the thin result is better than none
+        if (const std::optional<Thin> thin = std::exchange(m_thin, std::nullopt))
+            setResult(thin->lines, thin->synced, thin->source, thin->sourceUrl);
+        else
+            setResult({}, false, {});
         return;
     }
     const QString source = m_order.at(m_step++);
@@ -289,7 +323,15 @@ void Lyrics::fetchLrclib(const QVariantMap &track, int generation)
         const QJsonObject result = QJsonDocument::fromJson(reply->readAll()).object();
         const QString synced = result.value(u"syncedLyrics").toString();
         if (reply->error() == QNetworkReply::NoError && !synced.isEmpty()) {
-            setResult(parseLrc(synced), true, QStringLiteral("LRCLIB"));
+            const QVariantList lines = parseLrc(synced);
+            if (!isThin(lines)) {
+                setResult(lines, true, QStringLiteral("LRCLIB"));
+                return;
+            }
+            // other uploads of the same song usually have the full text
+            if (!m_thin)
+                m_thin = Thin{lines, true, QStringLiteral("LRCLIB"), {}};
+            searchLrclib(track, generation);
             return;
         }
         // no exact match: the album or the length may differ a little
@@ -316,20 +358,23 @@ void Lyrics::searchLrclib(const QVariantMap &track, int generation)
         reply->deleteLater();
         if (generation != m_generation)
             return;
-        QString best;
+        QVariantList best;
         double bestDiff = kDurationTolerance + 1;
         for (const QJsonValue &v : QJsonDocument::fromJson(reply->readAll()).array()) {
             const QJsonObject hit = v.toObject();
             const QString synced = hit.value(u"syncedLyrics").toString();
             // without a known length the first synced hit is taken
             const double diff = duration > 0 ? std::abs(hit.value(u"duration").toDouble() - duration) : 0.0;
-            if (!synced.isEmpty() && diff <= kDurationTolerance && diff < bestDiff) {
-                best = synced;
-                bestDiff = diff;
-            }
+            if (synced.isEmpty() || diff > kDurationTolerance || diff >= bestDiff)
+                continue;
+            const QVariantList lines = parseLrc(synced);
+            if (isThin(lines))
+                continue;
+            best = lines;
+            bestDiff = diff;
         }
         if (!best.isEmpty()) {
-            setResult(parseLrc(best), true, QStringLiteral("LRCLIB"));
+            setResult(best, true, QStringLiteral("LRCLIB"));
             return;
         }
         tryNext(track, generation);
@@ -558,7 +603,7 @@ void Lyrics::fetchMegalobiz(const QVariantMap &track, int generation)
                 tryNext(track, generation);
                 return;
             }
-            setResult(lines, true, QStringLiteral("Megalobiz"), page);
+            offer(track, generation, lines, true, QStringLiteral("Megalobiz"), page);
         });
     });
 }
