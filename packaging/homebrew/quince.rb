@@ -1,12 +1,12 @@
-# Formula of the tap OWNER/homebrew-quince (copied there as Formula/quince.rb)
+# Formula of the tap Blackwolf1337/homebrew-quince (copied there as Formula/quince.rb)
 class Quince < Formula
   desc "Native YouTube Music player (Qt Quick, libmpv)"
-  homepage "https://github.com/OWNER/quince"
-  url "https://github.com/OWNER/quince/archive/refs/tags/v0.1.0.tar.gz"
+  homepage "https://github.com/Blackwolf1337/quince"
+  url "https://github.com/Blackwolf1337/quince/archive/refs/tags/v0.1.0.tar.gz"
   sha256 "TARBALL_SHA256"
   # Quince; MeCab (BSD option); QuickJS-ng; the IPADIC dictionary has its own terms
   license all_of: ["GPL-3.0-or-later", "BSD-3-Clause", "MIT"]
-  head "https://github.com/OWNER/quince.git", branch: "master"
+  head "https://github.com/Blackwolf1337/quince.git", branch: "master"
 
   depends_on "cmake" => :build
   depends_on "ninja" => :build

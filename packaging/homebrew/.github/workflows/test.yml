@@ -12,11 +12,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Tap
         run: |
-          mkdir -p "$(brew --repository)/Library/Taps/${GITHUB_REPOSITORY_OWNER,,}"
-          ln -s "$PWD" "$(brew --repository)/Library/Taps/${GITHUB_REPOSITORY_OWNER,,}/homebrew-quince"
+          mkdir -p "$(brew --repository)/Library/Taps/${GITHUB_REPOSITORY_Blackwolf1337,,}"
+          ln -s "$PWD" "$(brew --repository)/Library/Taps/${GITHUB_REPOSITORY_Blackwolf1337,,}/homebrew-quince"
       - name: Audit
-        run: brew audit --strict --formula "${GITHUB_REPOSITORY_OWNER,,}/quince/quince"
+        run: brew audit --strict --formula "${GITHUB_REPOSITORY_Blackwolf1337,,}/quince/quince"
       - name: Install
-        run: brew install --build-from-source --verbose "${GITHUB_REPOSITORY_OWNER,,}/quince/quince"
+        run: brew install --build-from-source --verbose "${GITHUB_REPOSITORY_Blackwolf1337,,}/quince/quince"
       - name: Test
-        run: brew test "${GITHUB_REPOSITORY_OWNER,,}/quince/quince"
+        run: brew test "${GITHUB_REPOSITORY_Blackwolf1337,,}/quince/quince"

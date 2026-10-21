@@ -263,7 +263,7 @@ if(WIN32)
     configure_file(packaging/windows/quince.rc.in ${CMAKE_CURRENT_BINARY_DIR}/quince.rc @ONLY)
     target_sources(quince PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/quince.rc)
 elseif(APPLE)
-    set(QUINCE_BUNDLE_ID "io.github.quince-player.quince" CACHE STRING "Bundle identifier of Quince.app")
+    set(QUINCE_BUNDLE_ID "io.github.blackwolf1337.quince" CACHE STRING "Bundle identifier of Quince.app")
     target_sources(quince PRIVATE packaging/macos/quince.icns)
     set_source_files_properties(packaging/macos/quince.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
     set_target_properties(quince PROPERTIES
