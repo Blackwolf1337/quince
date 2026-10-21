@@ -33,6 +33,17 @@ pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
 # romanized lyrics: pinyin and Simplified/Traditional Chinese (Qt uses the same ICU)
 pkg_check_modules(ICU REQUIRED IMPORTED_TARGET icu-uc icu-i18n)
+if(WIN32)
+    # MSYS2's .pc files name MSYS paths (/ucrt64/include) that a native CMake
+    # rejects as missing; it is the compiler's own include directory anyway
+    foreach(target PkgConfig::MPV PkgConfig::FFMPEG PkgConfig::ICU)
+        get_target_property(dirs ${target} INTERFACE_INCLUDE_DIRECTORIES)
+        if(dirs)
+            list(FILTER dirs EXCLUDE REGEX "^/")
+            set_target_properties(${target} PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${dirs}")
+        endif()
+    endforeach()
+endif()
 
 # QuickJS-ng (MIT) runs yt-dlp's solver for YouTube's player puzzles
 include(FetchContent)
