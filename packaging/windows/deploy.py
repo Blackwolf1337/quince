@@ -44,6 +44,9 @@ for root, _, files in os.walk(os.path.join(dist, "qml")):
         if f.endswith(".qmltypes"):
             os.remove(os.path.join(root, f))
 
+# where Qt finds all this (MSYS2's Qt would look below share\qt6\)
+shutil.copy2(os.path.join(os.path.dirname(os.path.abspath(__file__)), "qt.conf"), os.path.join(dist, "qt.conf"))
+
 for f in os.listdir(qt_translations):
     if f.startswith(("qtbase_", "qtdeclarative_")):
         copy(os.path.join(qt_translations, f), os.path.join(dist, "translations", f))

@@ -56,6 +56,8 @@ jobs:
           cmake --install build --prefix "$dist"
           deploy=$(command -v windeployqt6 || command -v windeployqt-qt6 || echo /ucrt64/share/qt6/bin/windeployqt.exe)
           "$deploy" --release --qmldir qml --no-compiler-runtime "$dist/quince.exe"
+          # MSYS2's Qt would look for plugins and QML below share\qt6\
+          cp packaging/windows/qt.conf "$dist/qt.conf"
           # every DLL of the MSYS2 prefix that the exe and the Qt plugins load
           find "$dist" -name '*.exe' -o -name '*.dll' | while read -r f; do ntldd -R "$f"; done \
             | sed -n 's/.*=> \(.*\.dll\) (0x.*/\1/p' | tr '\\' '/' | grep -i '/ucrt64/' | sort -u \

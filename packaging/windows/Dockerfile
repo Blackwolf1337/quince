@@ -9,4 +9,5 @@ RUN echo "Server = $MIRROR" > /etc/pacman.d/mirrorlist \
     && pacman -Syu --noconfirm --needed \
         mingw-w64-gcc cmake ninja pkgconf python libarchive curl zip git \
         qt6-base qt6-declarative qt6-tools qt6-shadertools wine \
+        xorg-server-xvfb xorg-xauth mesa \
     && pacman -Scc --noconfirm
