@@ -107,7 +107,7 @@ private:
     void setLoading(bool loading);
     void setError(const QString &error);
     void scheduleSave();
-    void requestPlayerInfo(const QString &videoId);
+    void rememberPlayerInfo(const Stream &stream);
     double gainFor(const QString &videoId) const;
 
     MpvPlayer *m_player = nullptr;
@@ -129,6 +129,7 @@ private:
     int m_failures = 0;
     // a stream URL that fails is resolved again once before the track is skipped
     QSet<QString> m_retried;
+    QElapsedTimer m_startTimer; // since the current track was asked for
     QElapsedTimer m_playingFor;
 
     int m_queueGeneration = 0;
@@ -146,5 +147,4 @@ private:
     bool m_normalize = true;
     QHash<QString, double> m_loudness;
     QHash<QString, QString> m_tracking;
-    QSet<QString> m_infoRequested;
 };

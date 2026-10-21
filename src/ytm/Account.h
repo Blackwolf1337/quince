@@ -24,6 +24,8 @@ class Account : public QObject
     Q_PROPERTY(QString photo READ photo NOTIFY infoChanged)
     Q_PROPERTY(bool busy READ busy NOTIFY busyChanged)
     Q_PROPERTY(QVariantList playlists READ playlists NOTIFY playlistsChanged)
+    // [{id, name}] of the browsers whose session can be taken
+    Q_PROPERTY(QVariantList browsers READ browsers CONSTANT)
 
 public:
     Account(AccountCookies *cookies, InnerTube *innerTube, QObject *parent = nullptr);
@@ -36,11 +38,12 @@ public:
     bool busy() const { return m_busy; }
     // the account's own playlists, for "Add to playlist" and the sidebar
     QVariantList playlists() const { return m_playlists; }
+    QVariantList browsers() const;
 
     // opens the quince-login window
     Q_INVOKABLE void signIn();
     Q_INVOKABLE void importCookies(const QUrl &file);
-    // the YouTube session of an installed browser, read by yt-dlp
+    // the YouTube session of an installed browser (BrowserCookies)
     Q_INVOKABLE void importFromBrowser(const QString &browser);
     Q_INVOKABLE void signOut();
 

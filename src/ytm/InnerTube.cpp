@@ -29,6 +29,7 @@ const QByteArray kClientId = QByteArrayLiteral("67");
 InnerTube::InnerTube(QObject *parent)
     : QObject(parent)
     , m_network(new QNetworkAccessManager(this))
+    , m_plain(new QNetworkAccessManager(this))
 {
     const QLocale locale = QLocale::system();
     m_language = QLocale::languageToCode(locale.language(), QLocale::ISO639Part1);
@@ -107,8 +108,38 @@ void InnerTube::post(const QString &endpoint, const QJsonObject &body, QObject *
     fullBody.insert(QStringLiteral("context"), clientContext());
 
     QNetworkReply *reply = m_network->post(request, QJsonDocument(fullBody).toJson(QJsonDocument::Compact));
+    finish(reply, context, std::move(callback), endpoint, true);
+}
+
+void InnerTube::postAs(const ForeignClient &client, const QString &endpoint, const QJsonObject &body,
+                       QObject *context, Callback callback)
+{
+    QUrl url(QStringLiteral("https://www.youtube.com/youtubei/v1/") + endpoint);
+    url.setQuery(QStringLiteral("prettyPrint=false"));
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, QByteArrayLiteral("application/json"));
+    request.setHeader(QNetworkRequest::UserAgentHeader, client.userAgent);
+    request.setRawHeader("X-YouTube-Client-Name", client.nameId);
+    request.setRawHeader("X-YouTube-Client-Version", client.client.value(u"clientVersion").toString().toLatin1());
+
+    QJsonObject clientObject(client.client);
+    clientObject.insert(QStringLiteral("hl"), m_language);
+    clientObject.insert(QStringLiteral("gl"), m_country);
+    if (!m_visitorData.isEmpty()) {
+        clientObject.insert(QStringLiteral("visitorData"), QString::fromLatin1(m_visitorData));
+        request.setRawHeader("X-Goog-Visitor-Id", m_visitorData);
+    }
+    QJsonObject fullBody(body);
+    fullBody.insert(QStringLiteral("context"), QJsonObject{{QStringLiteral("client"), clientObject}});
+
+    QNetworkReply *reply = m_plain->post(request, QJsonDocument(fullBody).toJson(QJsonDocument::Compact));
+    finish(reply, context, std::move(callback), endpoint, false);
+}
+
+void InnerTube::finish(QNetworkReply *reply, QObject *context, Callback callback, const QString &endpoint, bool own)
+{
     QPointer<QObject> guard(context);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, guard, callback, endpoint] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, guard, callback, endpoint, own] {
         reply->deleteLater();
         if (!guard)
             return;
@@ -130,11 +161,37 @@ void InnerTube::post(const QString &endpoint, const QJsonObject &body, QObject *
             return;
         }
 
-        const QString visitor = ytm::at(response, {"responseContext", "visitorData"}).toString();
-        if (!visitor.isEmpty())
-            m_visitorData = visitor.toLatin1();
+        if (own) {
+            const QString visitor = ytm::at(response, {"responseContext", "visitorData"}).toString();
+            if (!visitor.isEmpty())
+                m_visitorData = visitor.toLatin1();
+        }
         callback(response, {});
     });
+}
+
+void InnerTube::get(const QUrl &url, QObject *context,
+                    std::function<void(const QByteArray &data, const QString &error)> callback)
+{
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
+    QNetworkReply *reply = m_plain->get(request);
+    QPointer<QObject> guard(context);
+    connect(reply, &QNetworkReply::finished, this, [reply, guard, callback] {
+        reply->deleteLater();
+        if (!guard)
+            return;
+        if (reply->error() != QNetworkReply::NoError) {
+            callback({}, reply->errorString());
+            return;
+        }
+        callback(reply->readAll(), {});
+    });
+}
+
+QByteArray InnerTube::userAgent()
+{
+    return kUserAgent;
 }
 
 void InnerTube::ping(const QUrl &url, QObject *context, std::function<void(int status)> callback)

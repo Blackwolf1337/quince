@@ -10,6 +10,16 @@
 
 class AccountCookies;
 class QNetworkAccessManager;
+class QNetworkReply;
+
+// Another InnerTube client (www.youtube.com, no account), for the player
+// answers YouTube only gives to apps.
+struct ForeignClient
+{
+    QJsonObject client; // context.client
+    QByteArray nameId; // X-YouTube-Client-Name
+    QByteArray userAgent;
+};
 
 // Client for YouTube Music's internal API (youtubei/v1, client WEB_REMIX).
 class InnerTube : public QObject
@@ -37,15 +47,33 @@ public:
     void continuation(const QString &endpoint, const QJsonObject &body, const QString &token, bool command,
                       QObject *context, Callback callback);
 
+    // The same as post, as client on www.youtube.com and without the account.
+    // It carries the visitor id of the own answers; without one YouTube
+    // answers app clients with its bot check.
+    void postAs(const ForeignClient &client, const QString &endpoint, const QJsonObject &body, QObject *context,
+                Callback callback);
+
+    // A plain GET without the account (player JS); error is empty on success.
+    void get(const QUrl &url, QObject *context, std::function<void(const QByteArray &data, const QString &error)> callback);
+
+    // a visitor id came with an answer to post
+    bool hasVisitorData() const { return !m_visitorData.isEmpty(); }
+
+    // what WEB_REMIX requests and its streams send as User-Agent
+    static QByteArray userAgent();
+
     // A plain GET with the account's cookies (playback reports); status is
     // the HTTP status, 0 when the request failed.
     void ping(const QUrl &url, QObject *context, std::function<void(int status)> callback);
 
 private:
     QJsonObject clientContext() const;
+    void finish(QNetworkReply *reply, QObject *context, Callback callback, const QString &endpoint, bool own);
     static QString clientVersion();
 
     QNetworkAccessManager *m_network = nullptr;
+    // without the cookie jar
+    QNetworkAccessManager *m_plain = nullptr;
     AccountCookies *m_cookies = nullptr;
     QString m_language;
     QString m_country;

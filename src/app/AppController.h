@@ -14,6 +14,7 @@ class Lyrics;
 class Mpris;
 class QWindow;
 class InnerTube;
+class JsSolver;
 class MpvPlayer;
 class Playback;
 class Settings;
@@ -91,8 +92,9 @@ private:
     static AppController *s_instance;
 
     MpvPlayer *m_player = nullptr;
-    StreamResolver *m_resolver = nullptr;
     InnerTube *m_innerTube = nullptr;
+    JsSolver *m_solver = nullptr;
+    StreamResolver *m_resolver = nullptr;
     Playback *m_playback = nullptr;
     Settings *m_settings = nullptr;
     AccountCookies *m_cookies = nullptr;

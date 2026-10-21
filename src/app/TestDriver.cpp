@@ -117,6 +117,14 @@ void TestDriver::run(const QString &line)
                           << "|" << playback->streamInfo();
     } else if (command == u"open") {
         m_app->openBrowse(parts.value(1));
+    } else if (command == u"call") {
+        // call <App property> <method> [string argument], e.g. call account signOut
+        auto *target = m_app->property(parts.value(1).toLatin1()).value<QObject *>();
+        const QByteArray method = parts.value(2).toLatin1();
+        const bool ok = !target ? false
+            : parts.size() > 3 ? QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, parts.mid(3).join(u' ')))
+                               : QMetaObject::invokeMethod(target, method.constData());
+        qInfo() << "test: call" << parts.mid(1) << (ok ? "ok" : "failed");
     } else if (command == u"size") {
         qInfo() << "window" << m_window->size() << "dpr" << m_window->devicePixelRatio()
                 << "content" << m_window->contentItem()->size();

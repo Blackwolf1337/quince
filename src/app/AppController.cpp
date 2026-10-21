@@ -8,6 +8,7 @@
 #include "integrations/GlobalShortcuts.h"
 #include "integrations/Mpris.h"
 #endif
+#include "player/JsSolver.h"
 #include "player/MpvPlayer.h"
 #include "player/Playback.h"
 #include "player/StreamResolver.h"
@@ -32,8 +33,9 @@ constexpr double kHistoryAfterSeconds = 10.0;
 AppController::AppController(const AppOptions &options, QObject *parent)
     : QObject(parent)
     , m_player(new MpvPlayer(options.audioOutput, this))
-    , m_resolver(new StreamResolver(this))
     , m_innerTube(new InnerTube(this))
+    , m_solver(new JsSolver(m_innerTube, this))
+    , m_resolver(new StreamResolver(m_innerTube, m_solver, this))
     , m_playback(new Playback(m_player, m_resolver, m_innerTube, this))
 {
     Q_ASSERT(!s_instance);
@@ -48,6 +50,9 @@ AppController::AppController(const AppOptions &options, QObject *parent)
     m_innerTube->setCookies(m_cookies);
     m_resolver->setCookies(m_cookies);
     m_account = new Account(m_cookies, m_innerTube, this);
+    // Premium streams and tracks VISIONOS refuses need YouTube's player JS
+    // solved; a new player is solved in the background once
+    m_solver->prepare();
 
     connect(m_account, &Account::rated, m_playback, &Playback::setLikeStatus);
 

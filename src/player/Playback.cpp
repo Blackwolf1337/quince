@@ -93,6 +93,12 @@ Playback::Playback(MpvPlayer *player, StreamResolver *resolver, InnerTube *inner
     connect(m_resolver, &StreamResolver::failed, this, &Playback::onFailed);
     connect(m_player, &MpvPlayer::trackStarted, this, &Playback::onTrackStarted);
     connect(m_player, &MpvPlayer::trackEnded, this, &Playback::onTrackEnded);
+    connect(m_player, &MpvPlayer::playbackRestarted, this, [this] {
+        if (m_startTimer.isValid()) {
+            qCDebug(lcPlayback) << "sound after" << m_startTimer.elapsed() << "ms";
+            m_startTimer.invalidate();
+        }
+    });
     connect(m_queue, &Queue::upcomingChanged, this, &Playback::prefetchUpcoming);
     connect(m_queue, &Queue::currentChanged, this, &Playback::queueStateChanged);
     connect(m_queue, &Queue::countChanged, this, &Playback::queueStateChanged);
@@ -265,41 +271,16 @@ double Playback::gainFor(const QString &videoId) const
     return -qMax(0.0, m_loudness.value(videoId, 0.0));
 }
 
-void Playback::requestPlayerInfo(const QString &videoId)
+void Playback::rememberPlayerInfo(const Stream &stream)
 {
-    if (videoId.isEmpty() || m_infoRequested.contains(videoId))
-        return;
-    if (m_infoRequested.size() > kMaxPlayerInfo) {
-        m_infoRequested.clear();
+    if (m_loudness.size() + m_tracking.size() > kMaxPlayerInfo) {
         m_loudness.clear();
         m_tracking.clear();
     }
-    m_infoRequested.insert(videoId);
-
-    // any recent day works as signature time for these fields
-    const qint64 signatureTimestamp = QDateTime::currentSecsSinceEpoch() / 86400 - 1;
-    const QJsonObject body{
-        {QStringLiteral("video_id"), videoId},
-        {QStringLiteral("playbackContext"),
-         QJsonObject{{QStringLiteral("contentPlaybackContext"),
-                      QJsonObject{{QStringLiteral("signatureTimestamp"), signatureTimestamp}}}}},
-    };
-    m_innerTube->post(QStringLiteral("player"), body, this,
-                      [this, videoId](const QJsonObject &response, const QString &error) {
-        if (!error.isEmpty()) {
-            m_infoRequested.remove(videoId);
-            return;
-        }
-        const QJsonValue loudness = ytm::at(response, {"playerConfig", "audioConfig", "loudnessDb"});
-        if (loudness.isDouble())
-            m_loudness.insert(videoId, loudness.toDouble());
-        const QString tracking = ytm::at(response, {"playbackTracking", "videostatsPlaybackUrl", "baseUrl"}).toString();
-        if (!tracking.isEmpty())
-            m_tracking.insert(videoId, tracking);
-        // the stream may have started before this arrived
-        if (videoId == m_loadedId)
-            m_player->setGain(gainFor(videoId));
-    });
+    if (!std::isnan(stream.loudnessDb))
+        m_loudness.insert(stream.videoId, stream.loudnessDb);
+    if (!stream.trackingUrl.isEmpty())
+        m_tracking.insert(stream.videoId, stream.trackingUrl);
 }
 
 void Playback::setLikeStatus(const QString &videoId, const QString &status)
@@ -492,8 +473,8 @@ void Playback::startCurrent(double start, bool paused)
     m_wantedStart = start;
     m_wantedPaused = paused;
     setLoading(true);
+    m_startTimer.start();
     m_resolver->resolve(m_wantedId);
-    requestPlayerInfo(m_wantedId);
 }
 
 void Playback::prefetchUpcoming()
@@ -515,16 +496,17 @@ void Playback::prefetchUpcoming()
     }
     if (!upcoming.isEmpty()) {
         m_resolver->resolve(upcoming);
-        requestPlayerInfo(upcoming);
     }
 }
 
 void Playback::onResolved(const Stream &stream)
 {
+    rememberPlayerInfo(stream);
     if (stream.videoId == m_wantedId) {
         m_wantedId.clear();
         m_failures = 0;
         setLoading(false);
+        qCDebug(lcPlayback) << "resolved after" << m_startTimer.elapsed() << "ms from" << stream.client;
         m_player->load(stream, stream.videoId, m_wantedStart, m_wantedPaused, gainFor(stream.videoId));
         m_loadedId = stream.videoId;
         m_playingFor.start();
@@ -577,7 +559,7 @@ void Playback::onTrackEnded(const QString &tag, bool eof, const QString &error)
         qCWarning(lcPlayback) << "stream of" << tag << "failed:" << error;
         m_loadedId.clear();
         m_queuedId.clear();
-        // googlevideo refuses some URLs (403); a fresh one from yt-dlp usually works
+        // googlevideo refuses some URLs (403); a fresh one, from the other client, usually works
         m_resolver->forget(tag);
         if (!m_retried.contains(tag) && m_queue->videoIdAt(m_queue->current()) == tag) {
             m_retried.insert(tag);

@@ -17,12 +17,25 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 endif()
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Network Widgets LinguistTools)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Network Widgets Sql LinguistTools)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Qt6 6.8 REQUIRED COMPONENTS DBus)
+    # Chromium's cookie encryption (AES-128-CBC)
+    find_package(OpenSSL REQUIRED COMPONENTS Crypto)
 endif()
 find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
+
+# QuickJS-ng (MIT) runs yt-dlp's solver for YouTube's player puzzles
+include(FetchContent)
+set(QJS_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(quickjs
+    URL https://github.com/quickjs-ng/quickjs/archive/refs/tags/v0.17.0.tar.gz
+    URL_HASH SHA256=559bc4c420475e55c7ab4510adbc562f55d7524d75e8e89d79ce4bb02f5687d9
+    EXCLUDE_FROM_ALL
+    SYSTEM
+)
+FetchContent_MakeAvailable(quickjs)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -103,6 +116,8 @@ qt_add_qml_module(quince
         src/app/ArtNetwork.cpp
         src/app/TestDriver.h
         src/app/TestDriver.cpp
+        src/player/JsSolver.h
+        src/player/JsSolver.cpp
         src/player/MpvNode.h
         src/player/MpvNode.cpp
         src/player/MpvPlayer.h
@@ -121,6 +136,8 @@ qt_add_qml_module(quince
         src/ytm/Account.cpp
         src/ytm/AccountCookies.h
         src/ytm/AccountCookies.cpp
+        src/ytm/BrowserCookies.h
+        src/ytm/BrowserCookies.cpp
         src/ytm/Json.h
         src/ytm/NetscapeCookies.h
         src/ytm/NetscapeCookies.cpp
@@ -128,6 +145,15 @@ qt_add_qml_module(quince
         src/ytm/Parser.cpp
         src/ytm/SearchSuggestions.h
         src/ytm/SearchSuggestions.cpp
+)
+
+# yt-dlp's challenge solver (yt-dlp/ejs, Unlicense; see third_party/ejs)
+qt_add_resources(quince ejs
+    PREFIX /ejs
+    BASE third_party/ejs
+    FILES
+        third_party/ejs/lib.min.js
+        third_party/ejs/core.min.js
 )
 
 # qmltyperegistrar includes QML-exposed headers by file name only
@@ -143,8 +169,13 @@ target_link_libraries(quince PRIVATE
     Qt6::QuickControls2
     Qt6::Network
     Qt6::Widgets
+    Qt6::Sql
     PkgConfig::MPV
+    qjs
 )
+if(TARGET OpenSSL::Crypto)
+    target_link_libraries(quince PRIVATE OpenSSL::Crypto)
+endif()
 if(TARGET Qt6::DBus)
     # MPRIS and notifications over the session bus
     target_sources(quince PRIVATE

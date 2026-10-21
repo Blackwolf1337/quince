@@ -3,7 +3,6 @@
 
 #include <QFile>
 #include <QLoggingCategory>
-#include <QTemporaryFile>
 
 Q_LOGGING_CATEGORY(lcCookies, "quince.cookies")
 
@@ -52,7 +51,12 @@ bool AccountCookies::importFile(const QString &netscapePath, QString *error)
             *error = file.errorString();
         return false;
     }
-    const QList<QNetworkCookie> cookies = NetscapeCookies::accountCookies(NetscapeCookies::parse(file.readAll()));
+    return importCookies(NetscapeCookies::parse(file.readAll()), error);
+}
+
+bool AccountCookies::importCookies(const QList<QNetworkCookie> &all, QString *error)
+{
+    const QList<QNetworkCookie> cookies = NetscapeCookies::accountCookies(all);
     if (NetscapeCookies::sapisid(cookies).isEmpty()) {
         if (error)
             *error = tr("These cookies are not from a signed-in YouTube session.");
@@ -69,16 +73,6 @@ void AccountCookies::signOut()
     m_saveTimer.stop();
     QFile::remove(m_path);
     setCookies({});
-}
-
-bool AccountCookies::writeCopy(QTemporaryFile &file) const
-{
-    if (!signedIn() || !file.open())
-        return false;
-    file.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner);
-    file.write(NetscapeCookies::serialize(allCookies()));
-    file.close();
-    return true;
 }
 
 bool AccountCookies::setCookiesFromUrl(const QList<QNetworkCookie> &cookies, const QUrl &url)

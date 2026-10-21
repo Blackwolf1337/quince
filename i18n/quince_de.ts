@@ -4,62 +4,57 @@
 <context>
     <name>Account</name>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="104"/>
+        <location filename="../src/ytm/Account.cpp" line="106"/>
         <source>The sign-in window (quince-login) is not installed. Import a cookies.txt instead.</source>
         <translation>Das Anmeldefenster (quince-login) ist nicht installiert. Importiere stattdessen eine cookies.txt.</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="117"/>
+        <location filename="../src/ytm/Account.cpp" line="119"/>
         <source>The sign-in did not give a YouTube session.</source>
         <translation>Die Anmeldung hat keine YouTube-Sitzung ergeben.</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="123"/>
+        <location filename="../src/ytm/Account.cpp" line="125"/>
         <source>The sign-in window could not be started: %1</source>
         <translation>Das Anmeldefenster konnte nicht gestartet werden: %1</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="136"/>
+        <location filename="../src/ytm/Account.cpp" line="138"/>
         <source>Import failed: %1</source>
         <translation>Import fehlgeschlagen: %1</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="145"/>
-        <source>yt-dlp is needed to read a browser&apos;s cookies.</source>
-        <translation>Um die Cookies eines Browsers zu lesen, wird yt-dlp gebraucht.</translation>
-    </message>
-    <message>
-        <location filename="../src/ytm/Account.cpp" line="165"/>
+        <location filename="../src/ytm/Account.cpp" line="167"/>
         <source>No YouTube session found: %1</source>
         <translation>Keine YouTube-Sitzung gefunden: %1</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="198"/>
+        <location filename="../src/ytm/Account.cpp" line="191"/>
         <source>The saved YouTube session is no longer valid. Please sign in again.</source>
         <translation>Die gespeicherte YouTube-Sitzung ist nicht mehr gültig. Bitte melde dich erneut an.</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="245"/>
+        <location filename="../src/ytm/Account.cpp" line="238"/>
         <source>Rating failed: %1</source>
         <translation>Bewerten fehlgeschlagen: %1</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="265"/>
+        <location filename="../src/ytm/Account.cpp" line="258"/>
         <source>Could not add to &quot;%1&quot;. %2</source>
         <translation>Konnte nicht zu „%1“ hinzugefügt werden. %2</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="268"/>
+        <location filename="../src/ytm/Account.cpp" line="261"/>
         <source>Added to &quot;%1&quot;</source>
         <translation>Zu „%1“ hinzugefügt</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="284"/>
+        <location filename="../src/ytm/Account.cpp" line="277"/>
         <source>Could not create &quot;%1&quot;. %2</source>
         <translation>„%1“ konnte nicht erstellt werden. %2</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="287"/>
+        <location filename="../src/ytm/Account.cpp" line="280"/>
         <source>Created &quot;%1&quot;</source>
         <translation>„%1“ erstellt</translation>
     </message>
@@ -67,7 +62,7 @@
 <context>
     <name>AccountCookies</name>
     <message>
-        <location filename="../src/ytm/AccountCookies.cpp" line="58"/>
+        <location filename="../src/ytm/AccountCookies.cpp" line="62"/>
         <source>These cookies are not from a signed-in YouTube session.</source>
         <translation>Diese Cookies stammen nicht aus einer angemeldeten YouTube-Sitzung.</translation>
     </message>
@@ -75,37 +70,37 @@
 <context>
     <name>AppController</name>
     <message>
-        <location filename="../src/app/AppController.cpp" line="63"/>
+        <location filename="../src/app/AppController.cpp" line="68"/>
         <source>Play or pause</source>
         <translation>Wiedergabe oder Pause</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="64"/>
+        <location filename="../src/app/AppController.cpp" line="69"/>
         <source>Next track</source>
         <translation>Nächster Titel</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="65"/>
+        <location filename="../src/app/AppController.cpp" line="70"/>
         <source>Previous track</source>
         <translation>Vorheriger Titel</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="66"/>
+        <location filename="../src/app/AppController.cpp" line="71"/>
         <source>Volume up</source>
         <translation>Lauter</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="69"/>
+        <location filename="../src/app/AppController.cpp" line="74"/>
         <source>Volume down</source>
         <translation>Leiser</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="72"/>
+        <location filename="../src/app/AppController.cpp" line="77"/>
         <source>Like or unlike the track</source>
         <translation>Titel mögen oder nicht mehr mögen</translation>
     </message>
     <message>
-        <location filename="../src/app/AppController.cpp" line="77"/>
+        <location filename="../src/app/AppController.cpp" line="82"/>
         <source>Show Quince</source>
         <translation>Quince anzeigen</translation>
     </message>
@@ -116,6 +111,29 @@
         <location filename="../qml/BrowseView.qml" line="131"/>
         <source>Try again</source>
         <translation>Erneut versuchen</translation>
+    </message>
+</context>
+<context>
+    <name>BrowserCookies</name>
+    <message>
+        <location filename="../src/ytm/BrowserCookies.cpp" line="531"/>
+        <source>The browser&apos;s cookies are locked with a key from the system keyring, which could not be read.</source>
+        <translation>Die Cookies des Browsers sind mit einem Schlüssel aus dem Schlüsselbund des Systems verschlüsselt, der nicht gelesen werden konnte.</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/BrowserCookies.cpp" line="557"/>
+        <source>This browser is not supported.</source>
+        <translation>Dieser Browser wird nicht unterstützt.</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/BrowserCookies.cpp" line="562"/>
+        <source>No profile of %1 was found.</source>
+        <translation>Kein Profil von %1 gefunden.</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/BrowserCookies.cpp" line="587"/>
+        <source>%1 is not signed in to YouTube.</source>
+        <translation>%1 ist nicht bei YouTube angemeldet.</translation>
     </message>
 </context>
 <context>
@@ -168,7 +186,7 @@
 <context>
     <name>InnerTube</name>
     <message>
-        <location filename="../src/ytm/InnerTube.cpp" line="129"/>
+        <location filename="../src/ytm/InnerTube.cpp" line="160"/>
         <source>YouTube Music sent an unreadable answer.</source>
         <translation>YouTube Music hat eine unlesbare Antwort geschickt.</translation>
     </message>
@@ -237,7 +255,7 @@
 <context>
     <name>MpvPlayer</name>
     <message>
-        <location filename="../src/player/MpvPlayer.cpp" line="315"/>
+        <location filename="../src/player/MpvPlayer.cpp" line="321"/>
         <source>System default</source>
         <translation>Systemstandard</translation>
     </message>
@@ -263,22 +281,22 @@
 <context>
     <name>Playback</name>
     <message>
-        <location filename="../src/player/Playback.cpp" line="234"/>
+        <location filename="../src/player/Playback.cpp" line="240"/>
         <source>That is not a YouTube link or video id.</source>
         <translation>Das ist kein YouTube-Link und keine Video-ID.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="415"/>
+        <location filename="../src/player/Playback.cpp" line="396"/>
         <source>YouTube Music has nothing to play there.</source>
         <translation>YouTube Music hat dort nichts zum Abspielen.</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="552"/>
+        <location filename="../src/player/Playback.cpp" line="534"/>
         <source>Could not play &quot;%1&quot;: %2</source>
         <translation>„%1“ konnte nicht abgespielt werden: %2</translation>
     </message>
     <message>
-        <location filename="../src/player/Playback.cpp" line="589"/>
+        <location filename="../src/player/Playback.cpp" line="571"/>
         <source>Playback stopped: %1</source>
         <translation>Wiedergabe abgebrochen: %1</translation>
     </message>
@@ -317,7 +335,7 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../login/main.cpp" line="81"/>
+        <location filename="../login/main.cpp" line="103"/>
         <source>Sign in to YouTube Music</source>
         <translation>Bei YouTube Music anmelden</translation>
     </message>
@@ -530,27 +548,27 @@
         <translation>Mit Google anmelden</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="59"/>
+        <location filename="../qml/SignInDialog.qml" line="60"/>
         <source>Or take the session of a browser where you are signed in:</source>
         <translation>Oder übernimm die Sitzung eines Browsers, in dem du angemeldet bist:</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="82"/>
+        <location filename="../qml/SignInDialog.qml" line="83"/>
         <source>Import a cookies.txt file</source>
         <translation>Eine cookies.txt importieren</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="97"/>
+        <location filename="../qml/SignInDialog.qml" line="98"/>
         <source>cookies.txt with a YouTube session</source>
         <translation>cookies.txt mit einer YouTube-Sitzung</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="98"/>
+        <location filename="../qml/SignInDialog.qml" line="99"/>
         <source>Cookie files (*.txt)</source>
         <translation>Cookie-Dateien (*.txt)</translation>
     </message>
     <message>
-        <location filename="../qml/SignInDialog.qml" line="98"/>
+        <location filename="../qml/SignInDialog.qml" line="99"/>
         <source>All files (*)</source>
         <translation>Alle Dateien (*)</translation>
     </message>
@@ -558,29 +576,19 @@
 <context>
     <name>StreamResolver</name>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="121"/>
-        <source>yt-dlp was not found. Install it, or put it next to Quince.</source>
-        <translation>yt-dlp wurde nicht gefunden. Installiere es oder lege es neben Quince.</translation>
+        <location filename="../src/player/StreamResolver.cpp" line="185"/>
+        <source>YouTube&apos;s player could not be loaded.</source>
+        <translation>Der Player von YouTube konnte nicht geladen werden.</translation>
     </message>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="151"/>
-        <source>yt-dlp could not be started: %1</source>
-        <translation>yt-dlp konnte nicht gestartet werden: %1</translation>
+        <location filename="../src/player/StreamResolver.cpp" line="311"/>
+        <source>YouTube gave no audio stream.</source>
+        <translation>YouTube lieferte keinen Audiostream.</translation>
     </message>
     <message>
-        <location filename="../src/player/StreamResolver.cpp" line="169"/>
-        <source>yt-dlp stopped without a result (timeout or crash).</source>
-        <translation>yt-dlp hat ohne Ergebnis aufgehört (Zeitüberschreitung oder Absturz).</translation>
-    </message>
-    <message>
-        <location filename="../src/player/StreamResolver.cpp" line="178"/>
-        <source>yt-dlp gave no readable answer: %1</source>
-        <translation>yt-dlp hat keine lesbare Antwort gegeben: %1</translation>
-    </message>
-    <message>
-        <location filename="../src/player/StreamResolver.cpp" line="186"/>
-        <source>yt-dlp found no audio stream.</source>
-        <translation>yt-dlp hat keinen Audiostream gefunden.</translation>
+        <location filename="../src/player/StreamResolver.cpp" line="360"/>
+        <source>YouTube&apos;s player puzzle could not be solved: %1</source>
+        <translation>Das Player-Rätsel von YouTube konnte nicht gelöst werden: %1</translation>
     </message>
 </context>
 <context>

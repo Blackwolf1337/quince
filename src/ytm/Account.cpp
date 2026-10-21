@@ -1,5 +1,6 @@
 #include "ytm/Account.h"
 #include "ytm/AccountCookies.h"
+#include "ytm/BrowserCookies.h"
 #include "ytm/InnerTube.h"
 #include "ytm/Json.h"
 #include "ytm/Parser.h"
@@ -8,11 +9,12 @@
 #include <QDateTime>
 #include <QFile>
 #include <QJsonArray>
+#include <QPointer>
+#include <QThread>
 #include <QLoggingCategory>
 #include <QProcess>
 #include <QRandomGenerator>
 #include <QStandardPaths>
-#include <QTemporaryDir>
 #include <QUrlQuery>
 
 #include <memory>
@@ -136,46 +138,37 @@ void Account::importCookies(const QUrl &file)
         emit message(tr("Import failed: %1").arg(error));
 }
 
+QVariantList Account::browsers() const
+{
+    QVariantList out;
+    for (const BrowserCookies::Browser &browser : BrowserCookies::installed())
+        out.append(QVariantMap{{QStringLiteral("id"), browser.id}, {QStringLiteral("name"), browser.name}});
+    return out;
+}
+
 void Account::importFromBrowser(const QString &browser)
 {
-    const QString ytdlp = QStandardPaths::findExecutable(QStringLiteral("yt-dlp"),
-                                                         {QCoreApplication::applicationDirPath()});
-    const QString program = ytdlp.isEmpty() ? QStandardPaths::findExecutable(QStringLiteral("yt-dlp")) : ytdlp;
-    if (program.isEmpty() || m_busy) {
-        emit message(tr("yt-dlp is needed to read a browser's cookies."));
+    if (m_busy)
         return;
-    }
-
-    // yt-dlp writes every cookie of the browser profile into this folder;
-    // only YouTube's and Google's are kept. The folder lives as long as the
-    // callback, so it also goes when the app quits during the import.
-    auto dir = std::make_shared<QTemporaryDir>();
-    if (!dir->isValid())
-        return;
-    QFile::setPermissions(dir->path(), QFileDevice::ReadOwner | QFileDevice::WriteOwner | QFileDevice::ExeOwner);
-    const QString jar = dir->filePath(QStringLiteral("cookies.txt"));
-
-    auto *process = new QProcess(this);
-    connect(process, &QProcess::finished, this, [this, process, dir, jar] {
-        process->deleteLater();
-        setBusy(false);
-        QString error;
-        if (!m_cookies->importFile(jar, &error)) {
-            const QString stderrText = QString::fromUtf8(process->readAllStandardError()).trimmed();
-            emit message(tr("No YouTube session found: %1").arg(stderrText.isEmpty() ? error : stderrText.section(u'\n', -1)));
-        }
-        dir->remove();
-    });
     setBusy(true);
-    process->start(program, {
-        QStringLiteral("--ignore-config"),
-        QStringLiteral("--cookies-from-browser"), browser,
-        QStringLiteral("--cookies"), jar,
-        QStringLiteral("--simulate"),
-        QStringLiteral("--no-playlist"),
-        QStringLiteral("--no-warnings"),
-        QStringLiteral("https://music.youtube.com/watch?v=dQw4w9WgXcQ"),
+    // file copies and the keyring over D-Bus, off the UI thread
+    QPointer<Account> self(this);
+    QThread *thread = QThread::create([self, browser] {
+        QString error;
+        const QList<QNetworkCookie> cookies = BrowserCookies::read(browser, &error);
+        QMetaObject::invokeMethod(qApp, [self, cookies, error] {
+            if (!self)
+                return;
+            self->setBusy(false);
+            QString importError = error;
+            if (importError.isEmpty())
+                self->m_cookies->importCookies(cookies, &importError);
+            if (!importError.isEmpty())
+                emit self->message(tr("No YouTube session found: %1").arg(importError));
+        });
     });
+    connect(thread, &QThread::finished, thread, &QObject::deleteLater);
+    thread->start();
 }
 
 void Account::signOut()

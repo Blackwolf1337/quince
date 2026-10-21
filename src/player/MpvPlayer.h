@@ -83,6 +83,8 @@ signals:
     // eof: played to its end; error: why it stopped, empty if it did not fail
     void trackEnded(const QString &tag, bool eof, const QString &error);
     void playbackError(const QString &message);
+    // audio runs (after a load or a seek)
+    void playbackRestarted();
 
 private:
     static void wakeup(void *ctx);

@@ -56,6 +56,7 @@ Dialog {
 
         Label {
             Layout.topMargin: 6
+            visible: App.account.browsers.length > 0
             text: qsTr("Or take the session of a browser where you are signed in:")
             color: Style.textDim
             wrapMode: Text.Wrap
@@ -66,13 +67,13 @@ Dialog {
             Layout.fillWidth: true
             spacing: 8
             Repeater {
-                model: ["firefox", "chromium", "chrome", "brave", "vivaldi"]
+                model: App.account.browsers
                 Button {
-                    required property string modelData
-                    text: modelData.charAt(0).toUpperCase() + modelData.slice(1)
+                    required property var modelData
+                    text: modelData.name
                     flat: true
                     enabled: !App.account.busy
-                    onClicked: App.account.importFromBrowser(modelData)
+                    onClicked: App.account.importFromBrowser(modelData.id)
                 }
             }
         }

@@ -224,6 +224,9 @@ void MpvPlayer::handleEvent(const mpv_event &event)
         }
         break;
     }
+    case MPV_EVENT_PLAYBACK_RESTART:
+        emit playbackRestarted();
+        break;
     case MPV_EVENT_SET_PROPERTY_REPLY:
         if (event.error < 0)
             qCWarning(lcPlayer) << "mpv property failed:" << mpv_error_string(event.error);
@@ -261,6 +264,9 @@ void MpvPlayer::loadFile(const Stream &stream, const QString &tag, const char *f
     }
     if (!fields.isEmpty())
         options.insert(QStringLiteral("http-header-fields"), fields.join(u','));
+    // googlevideo refuses open-ended requests for some URLs (403) and throttles
+    // long ones; bounded 10 MiB ranges are what yt-dlp asks for too
+    options.insert(QStringLiteral("stream-lavf-o"), QStringLiteral("request_size=10485760,multiple_requests=1"));
     if (start > 0)
         options.insert(QStringLiteral("start"), QString::number(start, 'f', 3));
     // a per-file option: mpv puts the old value back when the file ends

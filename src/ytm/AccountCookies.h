@@ -4,8 +4,6 @@
 #include <QString>
 #include <QTimer>
 
-class QTemporaryFile;
-
 // The signed-in Google session. Requests to YouTube Music take their cookies
 // from here and the cookies the server renews come back here; the jar is kept
 // as cookies.txt with owner-only permissions.
@@ -24,11 +22,9 @@ public:
     void reload();
     // takes the YouTube and Google cookies of a cookies.txt
     bool importFile(const QString &netscapePath, QString *error);
+    // takes the YouTube and Google cookies of a signed-in session
+    bool importCookies(const QList<QNetworkCookie> &cookies, QString *error);
     void signOut();
-
-    // A private copy for one yt-dlp run, so yt-dlp writing its cookies back
-    // never races with us or another yt-dlp. False when signed out.
-    bool writeCopy(QTemporaryFile &file) const;
 
     bool setCookiesFromUrl(const QList<QNetworkCookie> &cookies, const QUrl &url) override;
 

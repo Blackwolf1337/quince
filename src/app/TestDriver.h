@@ -11,6 +11,7 @@ class AppController;
 //   wait <ms> | click <x> <y> [right] | move <x> <y> | scroll <x> <y> <dy>
 //   type <text> | key <Return|Escape|Down|Up|Space|Backspace|Tab>
 //   open <browseId> | shot <file> | state | size | sh <command> | quit
+//   call <App property> <method> [string argument]
 class TestDriver : public QObject
 {
     Q_OBJECT
