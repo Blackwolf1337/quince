@@ -23,6 +23,12 @@ github=https://github.com/Blackwolf1337/quince
 tap_url=${TAP_URL:-}
 cd "$repo"
 
+# the tap is pushed at the end: know where before anything is tagged
+if [[ -z ${TAP_DIR:-} && -z $tap_url ]]; then
+	echo "set TAP_URL to the tap repository you push to, or TAP_DIR to a clone of it" >&2
+	exit 1
+fi
+
 [[ $(git branch --show-current) == master ]] || { echo "not on master" >&2; exit 1; }
 [[ -z $(git status --porcelain) ]] || { echo "the tree has changes" >&2; exit 1; }
 git rev-parse -q --verify "refs/tags/$tag" > /dev/null && { echo "$tag exists already" >&2; exit 1; }
