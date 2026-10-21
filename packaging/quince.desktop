@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=Quince
+GenericName=Music Player
+Comment=Native YouTube Music player
+Exec=quince
+Icon=quince
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+Keywords=YouTube;Music;Player;Lyrics;
+StartupWMClass=quince
+SingleMainWindow=true
