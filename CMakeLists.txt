@@ -17,7 +17,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 endif()
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Network Widgets)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Network Widgets LinguistTools)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Qt6 6.8 REQUIRED COMPONENTS DBus)
 endif()
@@ -191,6 +191,17 @@ if(NOT MSVC)
 endif()
 target_link_libraries(quince-parsedump PRIVATE Qt6::Core)
 set_target_properties(quince-parsedump PROPERTIES WIN32_EXECUTABLE OFF MACOSX_BUNDLE OFF)
+
+# UI texts; the language follows the system locale
+set(QUINCE_TRANSLATED quince)
+if(TARGET quince-login)
+    list(APPEND QUINCE_TRANSLATED quince-login)
+endif()
+qt_add_translations(TARGETS ${QUINCE_TRANSLATED}
+    TS_FILES i18n/quince_de.ts
+    RESOURCE_PREFIX /i18n
+    LUPDATE_OPTIONS -no-obsolete
+)
 
 include(GNUInstallDirs)
 install(TARGETS quince

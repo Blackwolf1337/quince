@@ -4,6 +4,9 @@
 #include "player/MpvPlayer.h"
 
 #include <QCommandLineParser>
+#include <QLibraryInfo>
+#include <QLocale>
+#include <QTranslator>
 #include <QElapsedTimer>
 #include <QLoggingCategory>
 #include <QFile>
@@ -28,6 +31,15 @@ int main(int argc, char *argv[])
     QGuiApplication::setApplicationDisplayName(QStringLiteral("Quince"));
     QGuiApplication::setApplicationVersion(QStringLiteral(PROJECT_VERSION));
     QGuiApplication::setDesktopFileName(QStringLiteral("quince"));
+
+    // Quince's own texts and Qt's standard ones (dialog buttons) in the system language
+    QTranslator translator;
+    if (translator.load(QLocale(), QStringLiteral("quince"), QStringLiteral("_"), QStringLiteral(":/i18n")))
+        QCoreApplication::installTranslator(&translator);
+    QTranslator qtTranslator;
+    if (qtTranslator.load(QLocale(), QStringLiteral("qtbase"), QStringLiteral("_"),
+                          QLibraryInfo::path(QLibraryInfo::TranslationsPath)))
+        QCoreApplication::installTranslator(&qtTranslator);
 
     // libmpv parses numbers with the C locale; QGuiApplication has just set
     // LC_NUMERIC from the environment, which breaks it on e.g. de_DE.

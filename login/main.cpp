@@ -5,6 +5,9 @@
 #include "ytm/NetscapeCookies.h"
 
 #include <QApplication>
+#include <QLibraryInfo>
+#include <QLocale>
+#include <QTranslator>
 #include <QHash>
 #include <QNetworkCookie>
 #include <QRegularExpression>
@@ -35,6 +38,15 @@ int main(int argc, char *argv[])
     QApplication::setApplicationName(QStringLiteral("quince-login"));
     QApplication::setApplicationDisplayName(QStringLiteral("Quince"));
     QApplication::setDesktopFileName(QStringLiteral("quince"));
+
+    // Quince's own texts and Qt's standard ones (dialog buttons) in the system language
+    QTranslator translator;
+    if (translator.load(QLocale(), QStringLiteral("quince"), QStringLiteral("_"), QStringLiteral(":/i18n")))
+        QCoreApplication::installTranslator(&translator);
+    QTranslator qtTranslator;
+    if (qtTranslator.load(QLocale(), QStringLiteral("qtbase"), QStringLiteral("_"),
+                          QLibraryInfo::path(QLibraryInfo::TranslationsPath)))
+        QCoreApplication::installTranslator(&qtTranslator);
     // closing the window without signing in must not end with exit code 0
     app.setQuitOnLastWindowClosed(false);
 

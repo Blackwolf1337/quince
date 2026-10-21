@@ -309,8 +309,14 @@ void MpvPlayer::filterAudioDevices()
     QVariantList devices;
     for (const QVariant &v : std::as_const(m_allAudioDevices)) {
         const QString name = v.toMap().value(QStringLiteral("name")).toString();
-        if (name == u"auto" || backend.isEmpty() || name.startsWith(backend + u'/'))
+        if (name == u"auto") {
+            // mpv's own label is English only
+            QVariantMap automatic = v.toMap();
+            automatic.insert(QStringLiteral("description"), tr("System default"));
+            devices.append(automatic);
+        } else if (backend.isEmpty() || name.startsWith(backend + u'/')) {
             devices.append(v);
+        }
     }
     if (devices != m_audioDevices) {
         m_audioDevices = devices;
