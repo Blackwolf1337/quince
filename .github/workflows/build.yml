@@ -109,7 +109,9 @@ jobs:
           args=()
           for f in $(brewdeps | sed 's/ -> .*//' | sort -u); do args+=(-x "$f"); done
           if [ ${#args[@]} -gt 0 ]; then
-            dylibbundler -of -b "${args[@]}" -d "$app/Contents/Frameworks" -p @executable_path/../Frameworks/
+            # -s: where @rpath libraries are (it would ask on stdin otherwise)
+            dylibbundler -of -b "${args[@]}" -d "$app/Contents/Frameworks" -p @executable_path/../Frameworks/ \
+                         -s "$(brew --prefix)/lib" -s "$(brew --prefix qt)/lib" < /dev/null
           fi
           left=$(brewdeps)
           if [ -n "$left" ]; then echo "$left" | head -40 | sed 's/^/::error::/'; exit 1; fi
