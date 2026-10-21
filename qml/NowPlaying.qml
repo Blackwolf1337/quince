@@ -122,19 +122,21 @@ Item {
         }
         // ambient-mode: the video, much enlarged and blurred, as its own light
         MultiEffect {
-            x: cover.x - cover.width * 0.05
-            y: cover.y - cover.height * 0.1
-            width: cover.width * 1.1
-            height: cover.height * 1.2
-            visible: !!video.item && video.item.ready
+            // its reach grows with the size setting (1: a tenth beyond the picture)
+            readonly property real reach: App.settings.ambientSize / 100
+            x: cover.x - cover.width * 0.05 * reach
+            y: cover.y - cover.height * 0.1 * reach
+            width: cover.width * (1 + 0.1 * reach)
+            height: cover.height * (1 + 0.2 * reach)
+            visible: !!video.item && video.item.ready && opacity > 0
             source: video.item ? video.item.picture : null
             // the blur runs out softly beyond the picture
             autoPaddingEnabled: true
             blurEnabled: true
             blur: 1.0
-            blurMax: 64
+            blurMax: Math.round(64 * reach)
             saturation: 0.3
-            opacity: 0.6
+            opacity: App.settings.ambientStrength / 100
         }
         // light behind the cover
         Glow {

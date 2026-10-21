@@ -34,6 +34,8 @@ public:
     explicit InnerTube(QObject *parent = nullptr);
 
     void setLocale(const QString &language, const QString &country);
+    // the language of YouTube's texts (hl), the country stays
+    void setLanguage(const QString &language) { m_language = language; }
     // requests carry the account's cookies and the SAPISIDHASH header from now on
     void setCookies(AccountCookies *cookies);
 

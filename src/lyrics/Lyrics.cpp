@@ -1,4 +1,5 @@
 #include "lyrics/Lyrics.h"
+#include "lyrics/Romanizer.h"
 #include "app/Settings.h"
 #include "player/MpvPlayer.h"
 #include "player/Playback.h"
@@ -22,13 +23,23 @@ Q_LOGGING_CATEGORY(lcLyrics, "quince.lyrics")
 namespace {
 
 const QString kLrclib = QStringLiteral("https://lrclib.net/api/");
+const QString kMegalobiz = QStringLiteral("https://api.megalobiz.com/api/public/v1/");
+// the sources in the order they are asked; the synced ones first
+const QStringList kSources{QStringLiteral("lrclib"), QStringLiteral("megalobiz"), QStringLiteral("youtube"),
+                           QStringLiteral("genius")};
 // Genius serves its pages to browsers
 const QByteArray kBrowserAgent =
     QByteArrayLiteral("Mozilla/5.0 (X11; Linux x86_64; rv:140.0) Gecko/20100101 Firefox/140.0");
-// LRCLIB asks clients to name themselves
+// LRCLIB and Megalobiz ask clients to name themselves
 const QByteArray kUserAgent = QByteArrayLiteral("Quince/" PROJECT_VERSION " (native YouTube Music player)");
 // a search hit may differ this much in length and still be the same recording
 constexpr double kDurationTolerance = 3.0;
+// the same, for the looser search (Pear takes 15 s for Megalobiz)
+constexpr double kInexactTolerance = 15.0;
+// Megalobiz's own match score of title and artist, 0..1, for the exact and
+// the looser search ("Song (Live at ...)" scores 0.78 against "Song")
+constexpr double kMegalobizScore = 0.8;
+constexpr double kMegalobizInexactScore = 0.7;
 // lines are shown this early, the eye is slower than the ear
 constexpr double kLead = 0.25;
 
@@ -49,7 +60,18 @@ Lyrics::Lyrics(Playback *playback, MpvPlayer *player, InnerTube *innerTube, Sett
     , m_innerTube(innerTube)
     , m_settings(settings)
     , m_network(new QNetworkAccessManager(this))
+    , m_romanizer(new Romanizer(this))
 {
+    m_romanized = m_settings->lyricsRomanize();
+    m_chinese = m_settings->lyricsChinese();
+    connect(m_romanizer, &Romanizer::done, this, &Lyrics::onScripts);
+    connect(m_settings, &Settings::changed, this, [this] {
+        if (m_settings->lyricsRomanize() == m_romanized && m_settings->lyricsChinese() == m_chinese)
+            return;
+        m_romanized = m_settings->lyricsRomanize();
+        m_chinese = m_settings->lyricsChinese();
+        applyScripts();
+    });
     connect(m_playback, &Playback::trackChanged, this, &Lyrics::onTrackChanged);
     connect(m_player, &MpvPlayer::positionChanged, this, &Lyrics::updateCurrentLine);
 }
@@ -110,13 +132,15 @@ void Lyrics::setLoading(bool loading)
     emit loadingChanged();
 }
 
-void Lyrics::setResult(const QVariantList &lines, bool synced, const QString &source)
+void Lyrics::setResult(const QVariantList &lines, bool synced, const QString &source, const QString &sourceUrl)
 {
     if (!source.isEmpty())
         qCDebug(lcLyrics) << lines.size() << "lines from" << source << (synced ? "synced" : "");
     m_lines = lines;
+    m_raw = lines;
     m_synced = synced;
     m_source = source;
+    m_sourceUrl = sourceUrl;
     m_times.clear();
     for (const QVariant &v : lines)
         m_times.append(v.toMap().value(QStringLiteral("time")).toDouble());
@@ -125,6 +149,45 @@ void Lyrics::setResult(const QVariantList &lines, bool synced, const QString &so
     emit linesChanged();
     emit currentLineChanged();
     updateCurrentLine();
+    applyScripts();
+}
+
+void Lyrics::applyScripts()
+{
+    const int request = ++m_scriptRequest;
+    if (m_raw.isEmpty())
+        return;
+    if (!m_romanized && m_chinese.isEmpty()) {
+        if (m_lines != m_raw) {
+            m_lines = m_raw;
+            emit linesChanged();
+        }
+        return;
+    }
+    QStringList texts;
+    texts.reserve(m_raw.size());
+    for (const QVariant &line : std::as_const(m_raw))
+        texts.append(line.toMap().value(QStringLiteral("text")).toString());
+    m_romanizer->process(request, texts, m_romanized, m_chinese);
+}
+
+void Lyrics::onScripts(int request, const QStringList &texts, const QStringList &romanized)
+{
+    // a newer track or setting has asked since
+    if (request != m_scriptRequest || texts.size() != m_raw.size())
+        return;
+    QVariantList lines;
+    lines.reserve(m_raw.size());
+    for (qsizetype i = 0; i < m_raw.size(); ++i) {
+        QVariantMap line = m_raw.at(i).toMap();
+        line.insert(QStringLiteral("text"), texts.at(i));
+        line.insert(QStringLiteral("romanized"), romanized.value(i));
+        lines.append(line);
+    }
+    if (lines == m_lines)
+        return;
+    m_lines = lines;
+    emit linesChanged();
 }
 
 void Lyrics::updateCurrentLine()
@@ -145,26 +208,63 @@ void Lyrics::onTrackChanged()
 {
     const QVariantMap track = m_playback->track();
     const QString videoId = track.value(QStringLiteral("videoId")).toString();
-    // the same track again, e.g. after its queue entry got more details
-    if (videoId == m_videoId)
+    const bool titled = !track.value(QStringLiteral("title")).toString().isEmpty();
+    // the same track again, e.g. after its queue entry got more details; a
+    // link opened bare is asked again once its title is known
+    if (videoId == m_videoId && (m_titled || !titled))
         return;
     m_videoId = videoId;
+    m_titled = titled;
     const int generation = ++m_generation;
     setResult({}, false, {});
     if (videoId.isEmpty())
         return;
 
+    // the preferred source first; QUINCE_LYRICS=<source> does the same for test runs
+    const QString first = qEnvironmentVariable("QUINCE_LYRICS", m_settings->lyricsPreferred());
+    m_order.clear();
+    m_step = 0;
+    for (const QString &source : kSources) {
+        const bool on = source == u"lrclib" ? m_settings->lyricsLrclib()
+                      : source == u"megalobiz" ? m_settings->lyricsMegalobiz()
+                      : source == u"genius" ? m_settings->lyricsGenius()
+                                            : true;
+        if (on || source == first)
+            m_order.append(source);
+    }
+    if (m_order.removeOne(first))
+        m_order.prepend(first);
+
     setLoading(true);
-    // QUINCE_LYRICS=genius asks Genius first (test runs of that source)
-    if (qEnvironmentVariable("QUINCE_LYRICS") == u"genius")
-        fetchGenius(track, generation);
-    else if (!m_settings->lyricsLrclib())
+    // nothing to search for yet; the details follow
+    if (titled)
+        tryNext(track, generation);
+}
+
+void Lyrics::tryNext(const QVariantMap &track, int generation)
+{
+    if (generation != m_generation)
+        return;
+    if (m_step >= m_order.size()) {
+        setResult({}, false, {});
+        return;
+    }
+    const QString source = m_order.at(m_step++);
+    if (source == u"lrclib") {
+        if (track.value(QStringLiteral("durationSeconds")).toInt() > 0)
+            fetchLrclib(track, generation);
+        else if (m_settings->lyricsInexact())
+            // the exact lookup needs the length; quick picks come without it
+            searchLrclib(track, generation);
+        else
+            tryNext(track, generation);
+    } else if (source == u"megalobiz") {
+        fetchMegalobiz(track, generation);
+    } else if (source == u"youtube") {
         fetchYouTube(track, generation);
-    else if (track.value(QStringLiteral("durationSeconds")).toInt() > 0)
-        fetchLrclib(track, generation);
-    else
-        // the exact lookup needs the length; quick picks come without it
-        searchLrclib(track, generation);
+    } else {
+        fetchGenius(track, generation);
+    }
 }
 
 void Lyrics::fetchLrclib(const QVariantMap &track, int generation)
@@ -193,7 +293,10 @@ void Lyrics::fetchLrclib(const QVariantMap &track, int generation)
             return;
         }
         // no exact match: the album or the length may differ a little
-        searchLrclib(track, generation);
+        if (m_settings->lyricsInexact())
+            searchLrclib(track, generation);
+        else
+            tryNext(track, generation);
     });
 }
 
@@ -229,7 +332,7 @@ void Lyrics::searchLrclib(const QVariantMap &track, int generation)
             setResult(parseLrc(best), true, QStringLiteral("LRCLIB"));
             return;
         }
-        fetchYouTube(track, generation);
+        tryNext(track, generation);
     });
 }
 
@@ -243,7 +346,7 @@ void Lyrics::fetchYouTube(const QVariantMap &track, int generation)
             return;
         const QString browseId = ytm::parseWatchNext(response).lyricsBrowseId;
         if (!error.isEmpty() || browseId.isEmpty()) {
-            fetchGenius(track, generation);
+            tryNext(track, generation);
             return;
         }
         m_innerTube->post(QStringLiteral("browse"), {{QStringLiteral("browseId"), browseId}}, this,
@@ -257,7 +360,7 @@ void Lyrics::fetchYouTube(const QVariantMap &track, int generation)
             // "Source: LyricFind" and the like, below the text
             const QString source = ytm::textOf(ytm::at(shelf, {"footer"}));
             if (!error.isEmpty() || text.isEmpty()) {
-                fetchGenius(track, generation);
+                tryNext(track, generation);
                 return;
             }
             QVariantList lines;
@@ -339,21 +442,16 @@ QString geniusLyrics(const QString &html)
 
 } // namespace
 
-// Genius, when LRCLIB and YouTube have nothing: its search, then the song
-// page (unsynced text)
+// Genius: its search, then the song page (unsynced text)
 void Lyrics::fetchGenius(const QVariantMap &track, int generation)
 {
-    if (!m_settings->lyricsGenius()) {
-        setResult({}, false, {});
-        return;
-    }
     const QString artist = firstArtist(track);
     QUrl url(QStringLiteral("https://genius.com/api/search/multi"));
     url.setQuery(QUrlQuery{{QStringLiteral("q"), artist + u' ' + cleanTitle(track.value(QStringLiteral("title")).toString())}});
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::UserAgentHeader, kBrowserAgent);
     QNetworkReply *reply = m_network->get(request);
-    connect(reply, &QNetworkReply::finished, this, [this, reply, artist, generation] {
+    connect(reply, &QNetworkReply::finished, this, [this, reply, artist, track, generation] {
         reply->deleteLater();
         if (generation != m_generation)
             return;
@@ -376,25 +474,91 @@ void Lyrics::fetchGenius(const QVariantMap &track, int generation)
             break;
         }
         if (page.isEmpty()) {
-            setResult({}, false, {});
+            tryNext(track, generation);
             return;
         }
         QNetworkRequest pageRequest{QUrl(page)};
         pageRequest.setHeader(QNetworkRequest::UserAgentHeader, kBrowserAgent);
         QNetworkReply *pageReply = m_network->get(pageRequest);
-        connect(pageReply, &QNetworkReply::finished, this, [this, pageReply, generation] {
+        connect(pageReply, &QNetworkReply::finished, this, [this, pageReply, page, track, generation] {
             pageReply->deleteLater();
             if (generation != m_generation)
                 return;
             const QString text = geniusLyrics(QString::fromUtf8(pageReply->readAll()));
             if (text.isEmpty()) {
-                setResult({}, false, {});
+                tryNext(track, generation);
                 return;
             }
             QVariantList lines;
             for (const QString &line : text.split(u'\n'))
                 lines.append(QVariantMap{{QStringLiteral("time"), -1}, {QStringLiteral("text"), line.trimmed()}});
-            setResult(lines, false, QStringLiteral("Genius"));
+            setResult(lines, false, QStringLiteral("Genius"), page);
+        });
+    });
+}
+
+// Megalobiz's public API: a search that weighs the length, then the LRC sheet
+// of the best hit. Without a key it allows 30 requests a minute per address.
+void Lyrics::fetchMegalobiz(const QVariantMap &track, int generation)
+{
+    const double duration = track.value(QStringLiteral("durationSeconds")).toDouble();
+    if (duration <= 0 && !m_settings->lyricsInexact()) {
+        tryNext(track, generation);
+        return;
+    }
+    QUrlQuery query;
+    query.addQueryItem(QStringLiteral("title"), cleanTitle(track.value(QStringLiteral("title")).toString()));
+    query.addQueryItem(QStringLiteral("artist"), firstArtist(track));
+    if (duration > 0)
+        query.addQueryItem(QStringLiteral("duration"), QString::number(qRound(duration)));
+    query.addQueryItem(QStringLiteral("limit"), QStringLiteral("5"));
+    QUrl url(kMegalobiz + QStringLiteral("search"));
+    url.setQuery(query);
+
+    QNetworkRequest request(url);
+    request.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
+    QNetworkReply *reply = m_network->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply, duration, track, generation] {
+        reply->deleteLater();
+        if (generation != m_generation)
+            return;
+        const bool inexact = m_settings->lyricsInexact();
+        const double tolerance = inexact ? kInexactTolerance : kDurationTolerance;
+        const double minScore = inexact ? kMegalobizInexactScore : kMegalobizScore;
+        QJsonObject best;
+        double bestDiff = tolerance + 1;
+        const QJsonArray results = QJsonDocument::fromJson(reply->readAll()).object().value(u"results").toArray();
+        for (const QJsonValue &v : results) {
+            const QJsonObject hit = v.toObject();
+            // without a known length the best scored hit is taken
+            const double diff = duration > 0 ? std::abs(hit.value(u"duration").toDouble() - duration) : 0.0;
+            if (hit.value(u"score").toDouble() >= minScore && diff <= tolerance && diff < bestDiff) {
+                best = hit;
+                bestDiff = diff;
+            }
+        }
+        qCDebug(lcLyrics) << "Megalobiz:" << results.size() << "hits for" << reply->url().query(QUrl::FullyDecoded);
+        const QString lrcUrl = best.value(u"lrc_url").toString();
+        if (reply->error() != QNetworkReply::NoError || lrcUrl.isEmpty()) {
+            if (reply->error() != QNetworkReply::NoError)
+                qCDebug(lcLyrics) << "Megalobiz:" << reply->errorString();
+            tryNext(track, generation);
+            return;
+        }
+        QNetworkRequest lrcRequest{QUrl(lrcUrl)};
+        lrcRequest.setHeader(QNetworkRequest::UserAgentHeader, kUserAgent);
+        QNetworkReply *lrcReply = m_network->get(lrcRequest);
+        const QString page = best.value(u"url").toString();
+        connect(lrcReply, &QNetworkReply::finished, this, [this, lrcReply, page, track, generation] {
+            lrcReply->deleteLater();
+            if (generation != m_generation)
+                return;
+            const QVariantList lines = parseLrc(QString::fromUtf8(lrcReply->readAll()));
+            if (lrcReply->error() != QNetworkReply::NoError || lines.isEmpty()) {
+                tryNext(track, generation);
+                return;
+            }
+            setResult(lines, true, QStringLiteral("Megalobiz"), page);
         });
     });
 }

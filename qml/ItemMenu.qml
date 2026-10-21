@@ -49,6 +49,11 @@ StyledMenu {
     }
     MenuSeparator {}
     MenuItem {
+        text: qsTr("Copy link")
+        enabled: !!menu.item.videoId || !!menu.item.browseId
+        onTriggered: App.copyLink(menu.item)
+    }
+    MenuItem {
         text: qsTr("Go to album")
         enabled: !!menu.item.album && !!menu.item.album.id
         onTriggered: App.openBrowse(menu.item.album.id)

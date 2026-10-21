@@ -74,6 +74,7 @@ private:
         QString path;
         QString error;
         AudioFile::Format format = AudioFile::Format::Opus;
+        int mp3Kbps = 320;
         // while downloading
         Stream stream;
         qint64 size = 0;

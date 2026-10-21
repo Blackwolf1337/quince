@@ -9,7 +9,7 @@ Rectangle {
     // see-through for compositor blur (Settings: transparent window)
     property bool translucent: false
 
-    color: translucent ? Qt.alpha(Style.background, 0.8) : Style.background
+    color: translucent ? Qt.alpha(Style.background, App.settings.windowOpacity / 100) : Style.background
     clip: true
 
     Glow {

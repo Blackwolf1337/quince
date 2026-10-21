@@ -116,7 +116,7 @@ Item {
                 RoundButton {
                     icon.source: "icons/more.svg"
                     flat: true
-                    visible: App.account.signedIn
+                    visible: !!header.row.browseId
                     enabled: !App.account.busy
                     ToolTip.visible: hovered
                     ToolTip.text: qsTr("More")
@@ -125,17 +125,27 @@ Item {
                     StyledMenu {
                         id: rateMenu
                         MenuItem {
+                            text: qsTr("Copy link")
+                            onTriggered: App.copyLink(header.row)
+                        }
+                        MenuItem {
                             text: qsTr("Like all songs")
+                            visible: App.account.signedIn
+                            height: visible ? implicitHeight : 0
                             icon.source: "icons/like.svg"
                             onTriggered: header.rateAllRequested("LIKE")
                         }
                         MenuItem {
                             text: qsTr("Dislike all songs")
+                            visible: App.account.signedIn
+                            height: visible ? implicitHeight : 0
                             icon.source: "icons/dislike.svg"
                             onTriggered: header.rateAllRequested("DISLIKE")
                         }
                         MenuItem {
                             text: qsTr("Remove all ratings")
+                            visible: App.account.signedIn
+                            height: visible ? implicitHeight : 0
                             onTriggered: header.rateAllRequested("INDIFFERENT")
                         }
                     }

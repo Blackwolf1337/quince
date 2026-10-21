@@ -12,6 +12,7 @@
 #include <QProcess>
 #include <QQuickItem>
 #include <QQuickWindow>
+#include <QElapsedTimer>
 #include <QTimer>
 #include <QWheelEvent>
 
@@ -86,11 +87,25 @@ void TestDriver::run(const QString &line)
             button = parts.value(3) == u"right" ? Qt::RightButton : Qt::LeftButton;
         mouse(parts.value(1).toInt(), parts.value(2).toInt(), button);
     } else if (command == u"scroll") {
+        // like a mouse wheel: notches of 120 without pixel deltas
         const QPointF pos(parts.value(1).toInt(), parts.value(2).toInt());
         const int dy = parts.value(3).toInt();
-        QWheelEvent wheel(pos, m_window->mapToGlobal(pos), QPoint(0, dy), QPoint(0, dy), Qt::NoButton,
-                          Qt::NoModifier, Qt::NoScrollPhase, false);
-        QCoreApplication::sendEvent(m_window, &wheel);
+        int delay = 0;
+        for (int left = dy; left != 0; delay += 16) {
+            const int notch = left > 0 ? qMin(left, 120) : qMax(left, -120);
+            left -= notch;
+            // apart in time, as a wheel turns: Flickable takes its speed from the gaps
+            QTimer::singleShot(delay, m_window, [window = m_window, pos, notch] {
+                QWheelEvent wheel(pos, window->mapToGlobal(pos), QPoint(), QPoint(0, notch), Qt::NoButton,
+                                  Qt::NoModifier, Qt::NoScrollPhase, false);
+                // Flickable measures the wheel's speed by the event times
+                static QElapsedTimer clock;
+                if (!clock.isValid())
+                    clock.start();
+                wheel.setTimestamp(ulong(clock.elapsed()) + 1);
+                QCoreApplication::sendEvent(window, &wheel);
+            });
+        }
     } else if (command == u"type") {
         // Qt key codes of printable ASCII are their upper case character codes
         for (const QChar c : line.mid(5))
@@ -149,6 +164,11 @@ void TestDriver::run(const QString &line)
                 || (number && QMetaObject::invokeMethod(target, method.constData(), Q_ARG(double, value)))
                 || QMetaObject::invokeMethod(target, method.constData(), Q_ARG(QString, argument));
         qInfo() << "test: call" << parts.mid(1) << (ok ? "ok" : "failed");
+    } else if (command == u"set") {
+        // set <App property> <property> <value>, e.g. set settings lyricsEffect scale
+        QObject *target = m_app->property(parts.value(1).toLatin1()).value<QObject *>();
+        const bool ok = target && target->setProperty(parts.value(2).toLatin1(), parts.mid(3).join(u' '));
+        qInfo() << "test: set" << parts.mid(1) << (ok ? "ok" : "failed");
     } else if (command == u"size") {
         qInfo() << "window" << m_window->size() << "dpr" << m_window->devicePixelRatio()
                 << "content" << m_window->contentItem()->size();

@@ -430,7 +430,8 @@ void MpvPlayer::onStarted(int deckIndex, const QString &tag)
     emit trackStarted(tag);
 }
 
-void MpvPlayer::crossfadeTo(const Stream &stream, const QString &tag, double gainDb, double seconds)
+void MpvPlayer::crossfadeTo(const Stream &stream, const QString &tag, double gainDb, double seconds,
+                            double inSeconds)
 {
     abortCrossfade();
     const int other = 1 - m_active;
@@ -442,6 +443,7 @@ void MpvPlayer::crossfadeTo(const Stream &stream, const QString &tag, double gai
     clearQueued();
     m_crossfadeTag = tag;
     m_fadeSeconds = qMax(0.5, seconds);
+    m_fadeInSeconds = qBound(0.5, inSeconds, m_fadeSeconds);
     m_decks[other].startingTag.clear();
     m_decks[other].waitingNext.reset();
     setDeckProperty(other, "volume", 0.0);
@@ -451,13 +453,15 @@ void MpvPlayer::crossfadeTo(const Stream &stream, const QString &tag, double gai
 
 void MpvPlayer::beginFade()
 {
-    qCDebug(lcPlayer) << "fade begins over" << m_fadeSeconds << "s, deck" << m_fadeFrom + 1 << "to" << m_active + 1;
+    qCDebug(lcPlayer) << "fade begins over" << m_fadeSeconds << "s (in" << m_fadeInSeconds << "s), deck"
+                      << m_fadeFrom + 1 << "to" << m_active + 1;
     m_fadeClock.start();
     m_fadeTimer.start();
     stepFade();
 }
 
-// equal-power curve: the sum of both stays as loud as one track
+// equal-power curve: the sum of both stays as loud as one track (when both
+// fades are as long; a shorter fade-in brings the new track up sooner)
 void MpvPlayer::stepFade()
 {
     if (m_fadeFrom < 0) {
@@ -474,7 +478,8 @@ void MpvPlayer::stepFade()
     m_fadeClock.restart();
     m_fadeProgress = qMin(1.0, m_fadeProgress + elapsed / m_fadeSeconds);
     const double angle = m_fadeProgress * M_PI / 2;
-    setDeckProperty(m_active, "volume", m_volume * std::sin(angle));
+    const double inAngle = qMin(1.0, m_fadeProgress * m_fadeSeconds / m_fadeInSeconds) * M_PI / 2;
+    setDeckProperty(m_active, "volume", m_volume * std::sin(inAngle));
     setDeckProperty(m_fadeFrom, "volume", m_volume * std::cos(angle));
     if (m_fadeProgress >= 1.0)
         endFade();

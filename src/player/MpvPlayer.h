@@ -54,9 +54,10 @@ public:
     // stream queued before.
     void queueNext(const Stream &stream, const QString &tag, double gainDb = 0);
     void clearQueued();
-    // Starts stream on the other deck and fades over to it within seconds;
+    // Starts stream on the other deck and fades over to it: the old deck
+    // fades out within seconds, the new one in within inSeconds;
     // trackStarted(tag) follows once it plays, crossfadeFailed(tag) if it cannot.
-    void crossfadeTo(const Stream &stream, const QString &tag, double gainDb, double seconds);
+    void crossfadeTo(const Stream &stream, const QString &tag, double gainDb, double seconds, double inSeconds);
     bool crossfading() const { return m_fadeFrom >= 0 || !m_crossfadeTag.isEmpty(); }
     // gain of the file playing now, for when its loudness arrived late
     void setGain(double gainDb);
@@ -90,6 +91,8 @@ public:
     // every audio backend, which blocks its core, and so playback, until all
     // have answered.
     Q_INVOKABLE void watchAudioDevices();
+    // the device list's own label in the language just chosen
+    void retranslate() { filterAudioDevices(); }
     QString audioDevice() const { return m_audioDevice; }
 
     void setPaused(bool paused);
@@ -176,6 +179,7 @@ private:
     int m_fadeFrom = -1;
     QString m_crossfadeTag;
     double m_fadeSeconds = 0;
+    double m_fadeInSeconds = 0;
     double m_fadeProgress = 0;
     QElapsedTimer m_fadeClock;
     QTimer m_fadeTimer;

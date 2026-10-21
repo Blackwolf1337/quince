@@ -35,6 +35,7 @@ private:
     void send(quint32 opcode, const QByteArray &json);
     void scheduleUpdate();
     void sendActivity();
+    void onPausedChanged();
     static QStringList socketCandidates();
 
     Playback *m_playback = nullptr;
@@ -48,5 +49,8 @@ private:
     QByteArray m_buffer;
     QTimer m_retry;
     QTimer m_update;
+    // runs while paused; once it fires the status is cleared until playback goes on
+    QTimer m_pauseTimeout;
+    bool m_pausedTooLong = false;
     double m_lastPosition = 0;
 };

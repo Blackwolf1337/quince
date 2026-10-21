@@ -11,6 +11,8 @@ QtObject {
     readonly property color surface: App.theme.surface
     readonly property color surfaceHigh: App.theme.surfaceHigh
     readonly property color glow: App.theme.glow
+    // the glows' strength from the settings (1 as designed)
+    readonly property real glowScale: App.settings.glowStrength / 100
     readonly property color hover: "#12ffffff"
     readonly property color pressed: "#1effffff"
     readonly property color line: "#14ffffff"

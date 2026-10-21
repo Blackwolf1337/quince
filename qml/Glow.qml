@@ -8,6 +8,7 @@ Shape {
 
     property color color: Style.glow
     property real strength: 0.5
+    readonly property real alpha: Math.min(1, strength * Style.glowScale)
 
     width: 600
     height: 600
@@ -22,13 +23,13 @@ Shape {
             focalX: centerX
             focalY: centerY
             // a smooth falloff (1 - r)^2.5; few stops show as rings
-            GradientStop { position: 0.0; color: Qt.alpha(glow.color, glow.strength) }
-            GradientStop { position: 0.15; color: Qt.alpha(glow.color, glow.strength * 0.666) }
-            GradientStop { position: 0.3; color: Qt.alpha(glow.color, glow.strength * 0.41) }
-            GradientStop { position: 0.45; color: Qt.alpha(glow.color, glow.strength * 0.226) }
-            GradientStop { position: 0.6; color: Qt.alpha(glow.color, glow.strength * 0.101) }
-            GradientStop { position: 0.75; color: Qt.alpha(glow.color, glow.strength * 0.031) }
-            GradientStop { position: 0.9; color: Qt.alpha(glow.color, glow.strength * 0.003) }
+            GradientStop { position: 0.0; color: Qt.alpha(glow.color, glow.alpha) }
+            GradientStop { position: 0.15; color: Qt.alpha(glow.color, glow.alpha * 0.666) }
+            GradientStop { position: 0.3; color: Qt.alpha(glow.color, glow.alpha * 0.41) }
+            GradientStop { position: 0.45; color: Qt.alpha(glow.color, glow.alpha * 0.226) }
+            GradientStop { position: 0.6; color: Qt.alpha(glow.color, glow.alpha * 0.101) }
+            GradientStop { position: 0.75; color: Qt.alpha(glow.color, glow.alpha * 0.031) }
+            GradientStop { position: 0.9; color: Qt.alpha(glow.color, glow.alpha * 0.003) }
             GradientStop { position: 1.0; color: Qt.alpha(glow.color, 0) }
         }
         PathRectangle {

@@ -71,8 +71,21 @@ ApplicationWindow {
         stack.push(browseComponent, page)
     }
 
-    width: 1280
-    height: 800
+    // the start section, and after signing in or out
+    function goStart() {
+        const page = App.settings.startPage
+        const ids = {explore: "FEmusic_explore", library: "FEmusic_library_landing", liked: "VLLM"}
+        if (page in ids && (page === "explore" || App.account.signedIn))
+            goSection(page, ids[page])
+        else
+            goSection("home", "")
+    }
+
+    // the last size; the compositor may still choose another
+    width: Math.max(minimumWidth, App.settings.savedWindowSize().width)
+    height: Math.max(minimumHeight, App.settings.savedWindowSize().height)
+    onWidthChanged: sizeSaver.restart()
+    onHeightChanged: sizeSaver.restart()
     minimumWidth: 820
     minimumHeight: 520
     visible: true
@@ -96,6 +109,20 @@ ApplicationWindow {
     Component.onCompleted: {
         Style.backdrop = scene
         Style.effects = GraphicsInfo.api !== GraphicsInfo.Software
+        if (App.settings.startPage !== "home")
+            goStart()
+    }
+
+    Timer {
+        id: sizeSaver
+        interval: 600
+        onTriggered: {
+            // a maximized or full screen window keeps the size it had before
+            if (window.visibility !== Window.Windowed)
+                return
+            App.settings.windowWidth = window.width
+            App.settings.windowHeight = window.height
+        }
     }
 
     Connections {
@@ -119,8 +146,14 @@ ApplicationWindow {
         target: App.account
         // pages and the home cache belong to the account they were loaded for
         function onSignedInChanged() {
-            window.goSection("home", "")
+            window.goStart()
         }
+        function onMessage(text) {
+            window.showToast(text, false)
+        }
+    }
+    Connections {
+        target: App
         function onMessage(text) {
             window.showToast(text, false)
         }
@@ -279,13 +312,23 @@ ApplicationWindow {
                     color: Style.textDim
                     font.pixelSize: 14
                     font.features: { "tnum": 1 }
-                    text: Qt.formatTime(new Date(), Qt.locale().timeFormat(Locale.ShortFormat))
+                    // the system's format, or 24 or 12 hours; seconds if asked
+                    readonly property string format: {
+                        const seconds = App.settings.clockSeconds
+                        if (App.settings.clockHours === "24")
+                            return seconds ? "HH:mm:ss" : "HH:mm"
+                        if (App.settings.clockHours === "12")
+                            return seconds ? "h:mm:ss AP" : "h:mm AP"
+                        const short = Qt.locale().timeFormat(Locale.ShortFormat)
+                        return seconds ? short.replace("mm", "mm:ss") : short
+                    }
+                    text: Qt.formatTime(new Date(), format)
 
                     Timer {
                         interval: 1000
                         repeat: true
                         running: clock.visible
-                        onTriggered: clock.text = Qt.formatTime(new Date(), Qt.locale().timeFormat(Locale.ShortFormat))
+                        onTriggered: clock.text = Qt.formatTime(new Date(), clock.format)
                     }
                 }
                 // keeps the search centered against the two buttons on the left

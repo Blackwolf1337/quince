@@ -22,8 +22,10 @@ Window {
 
     // not translated: window rules match it
     title: "Quince mini player"
-    width: 340
-    height: showVideo && playback.videoPlaying ? 240 : 340
+    // the width it was left at; a video makes it wide, the cover square
+    width: Math.max(minimumWidth, App.settings.savedMiniWidth())
+    height: showVideo && playback.videoPlaying ? Math.round(width * 240 / 340) : width
+    onWidthChanged: if (visible) widthSaver.restart()
     minimumWidth: 220
     minimumHeight: 160
     flags: Qt.Window | Qt.FramelessWindowHint | Qt.WindowStaysOnTopHint
@@ -31,6 +33,12 @@ Window {
 
     Material.theme: Material.Dark
     Material.accent: Style.accent
+
+    Timer {
+        id: widthSaver
+        interval: 600
+        onTriggered: App.settings.miniWidth = mini.width
+    }
 
     Art {
         id: cover

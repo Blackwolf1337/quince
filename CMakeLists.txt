@@ -27,6 +27,8 @@ find_package(PkgConfig REQUIRED)
 pkg_check_modules(MPV REQUIRED IMPORTED_TARGET mpv)
 # downloads: remuxing and MP3 encoding (the FFmpeg mpv uses)
 pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET libavformat libavcodec libavutil libswresample)
+# romanized lyrics: pinyin and Simplified/Traditional Chinese (Qt uses the same ICU)
+pkg_check_modules(ICU REQUIRED IMPORTED_TARGET icu-uc icu-i18n)
 
 # QuickJS-ng (MIT) runs yt-dlp's solver for YouTube's player puzzles
 include(FetchContent)
@@ -38,6 +40,8 @@ FetchContent_Declare(quickjs
     SYSTEM
 )
 FetchContent_MakeAvailable(quickjs)
+include(GNUInstallDirs)
+include(cmake/Mecab.cmake)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -138,6 +142,10 @@ qt_add_qml_module(quince
         src/integrations/SponsorBlock.cpp
         src/lyrics/Lyrics.h
         src/lyrics/Lyrics.cpp
+        src/lyrics/Romanizer.h
+        src/app/Language.h
+        src/app/Language.cpp
+        src/lyrics/Romanizer.cpp
         src/app/ArtNetwork.cpp
         src/app/TestDriver.h
         src/app/TestDriver.cpp
@@ -202,8 +210,11 @@ target_link_libraries(quince PRIVATE
     Qt6::OpenGL
     PkgConfig::MPV
     PkgConfig::FFMPEG
+    PkgConfig::ICU
     qjs
+    mecab
 )
+add_dependencies(quince mecab-ipadic)
 if(TARGET OpenSSL::Crypto)
     target_link_libraries(quince PRIVATE OpenSSL::Crypto)
 endif()
@@ -253,6 +264,19 @@ if(NOT MSVC)
 endif()
 target_link_libraries(quince-parsedump PRIVATE Qt6::Core)
 set_target_properties(quince-parsedump PROPERTIES WIN32_EXECUTABLE OFF MACOSX_BUNDLE OFF)
+
+# development aid: romanizes lines given as arguments (the Lyrics code path)
+qt_add_executable(quince-romanize
+    tools/romanize.cpp
+    src/lyrics/Romanizer.cpp
+)
+target_include_directories(quince-romanize PRIVATE src)
+if(NOT MSVC)
+    target_compile_options(quince-romanize PRIVATE -Wall -Wextra)
+endif()
+target_link_libraries(quince-romanize PRIVATE Qt6::Core PkgConfig::ICU mecab)
+add_dependencies(quince-romanize mecab-ipadic)
+set_target_properties(quince-romanize PROPERTIES WIN32_EXECUTABLE OFF MACOSX_BUNDLE OFF)
 
 # UI texts; the language follows the system locale
 set(QUINCE_TRANSLATED quince)

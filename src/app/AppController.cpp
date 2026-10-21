@@ -1,5 +1,6 @@
 #include "app/AppController.h"
 #include "app/ColorTheme.h"
+#include "app/Language.h"
 #include "app/Settings.h"
 #include "integrations/Desktop.h"
 #include "integrations/Discord.h"
@@ -20,6 +21,8 @@
 #include "ytm/InnerTube.h"
 #include "ytm/Parser.h"
 
+#include <QClipboard>
+#include <QGuiApplication>
 #include <QJSEngine>
 #include <QStandardPaths>
 #include <QTimer>
@@ -63,6 +66,9 @@ AppController::AppController(const AppOptions &options, QObject *parent)
     s_instance = this;
 
     m_settings = new Settings(this);
+    // before anything keeps a translated text
+    auto *language = new Language(m_settings, this);
+    m_innerTube->setLanguage(language->code());
     applySettings();
     connect(m_settings, &Settings::changed, this, &AppController::applySettings);
 
@@ -85,6 +91,15 @@ AppController::AppController(const AppOptions &options, QObject *parent)
     m_desktop = new Desktop(m_playback, m_player, m_settings, this);
     m_discord = new Discord(m_playback, m_player, m_settings, this);
     connect(m_theme, &ColorTheme::coverReady, m_desktop, &Desktop::setCover);
+    connect(language, &Language::changed, this, [this, language] {
+        // pages loaded from now on come in the new language
+        m_innerTube->setLanguage(language->code());
+        m_player->retranslate();
+        m_desktop->retranslate();
+        // the preset name comes from a call, not a qsTr() binding
+        emit m_effects->changed();
+        emit languageChanged();
+    });
 #ifdef QUINCE_DBUS
     m_mpris = new Mpris(m_playback, m_player, m_settings, this);
     if (m_settings->globalShortcuts()) {
@@ -127,7 +142,7 @@ AppController::AppController(const AppOptions &options, QObject *parent)
     if (!options.playOnStart.isEmpty()) {
         const QString text = options.playOnStart;
         QTimer::singleShot(0, this, [this, text] { m_playback->playText(text); });
-    } else if (options.restoreSession) {
+    } else if (options.restoreSession && m_settings->resumeSession()) {
         QTimer::singleShot(0, m_playback, &Playback::restoreSession);
     }
 }
@@ -198,6 +213,26 @@ void AppController::setVolumeSlider(double slider)
 void AppController::requestDialog(const QString &name, const QVariantMap &data)
 {
     emit dialogRequested(name, data);
+}
+
+void AppController::copyLink(const QVariantMap &item)
+{
+    const QString base = QStringLiteral("https://music.youtube.com/");
+    const QString videoId = item.value(QStringLiteral("videoId")).toString();
+    const QString browseId = item.value(QStringLiteral("browseId")).toString();
+    QString link;
+    if (!videoId.isEmpty())
+        link = base + QStringLiteral("watch?v=") + videoId;
+    else if (browseId.startsWith(u"VL"))
+        link = base + QStringLiteral("playlist?list=") + browseId.mid(2);
+    else if (browseId.startsWith(u"UC"))
+        link = base + QStringLiteral("channel/") + browseId;
+    else if (!browseId.isEmpty())
+        link = base + QStringLiteral("browse/") + browseId;
+    if (link.isEmpty())
+        return;
+    QGuiApplication::clipboard()->setText(link);
+    emit message(tr("Link copied"));
 }
 
 QString AppController::art(const QString &url, int pixels) const

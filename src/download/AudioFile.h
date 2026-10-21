@@ -10,7 +10,7 @@ namespace AudioFile {
 enum class Format {
     Opus, // the Opus stream copied into Ogg (.opus)
     M4a, // the AAC stream copied into MP4 (.m4a)
-    Mp3, // encoded, 320 kbit/s (.mp3)
+    Mp3, // encoded (.mp3)
 };
 
 struct Tags
@@ -30,6 +30,6 @@ QString extension(Format format);
 
 // Blocks (a few seconds for MP3); run it on a worker thread. Returns an
 // error text, empty on success.
-QString write(const QString &input, const QString &output, Format format, const Tags &tags);
+QString write(const QString &input, const QString &output, Format format, const Tags &tags, int mp3Kbps = 320);
 
 } // namespace AudioFile

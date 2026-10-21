@@ -731,10 +731,11 @@ void Playback::setCaption(int index)
     emit captionsChanged();
 }
 
-void Playback::setCrossfade(double seconds)
+void Playback::setCrossfade(double seconds, double inSeconds)
 {
     const double old = m_crossfade;
     m_crossfade = seconds;
+    m_crossfadeIn = inSeconds;
     if (!m_upcoming || m_player->crossfading() || m_videoMode)
         return;
     // the queued track moves between mpv's playlist and the crossfade
@@ -759,7 +760,8 @@ void Playback::checkCrossfade()
     if (duration - position > seconds)
         return;
     qCDebug(lcPlayback) << "crossfade to" << m_queuedId << "over" << seconds << "s";
-    m_player->crossfadeTo(*m_upcoming, m_queuedId, gainFor(m_queuedId), seconds);
+    const double in = m_crossfadeIn > 0 ? qMin(m_crossfadeIn, seconds) : seconds;
+    m_player->crossfadeTo(*m_upcoming, m_queuedId, gainFor(m_queuedId), seconds, in);
 }
 
 void Playback::onFailed(const QString &videoId, const QString &error)

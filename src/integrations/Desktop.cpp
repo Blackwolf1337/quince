@@ -51,6 +51,13 @@ Desktop::Desktop(Playback *playback, MpvPlayer *player, Settings *settings, QObj
     connect(m_settings, &Settings::changed, this, &Desktop::applySettings);
     connect(m_playback, &Playback::trackChanged, this, &Desktop::updateTray);
     connect(m_player, &MpvPlayer::pausedChanged, this, &Desktop::updateTray);
+    // the notification again when playback goes on (Settings)
+    connect(m_player, &MpvPlayer::pausedChanged, this, [this] {
+        if (!m_player->paused() && !m_player->idle() && m_settings->notifyOnResume()) {
+            m_notifiedId.clear();
+            notifyTrack();
+        }
+    });
     // a moment for the cover, then the notification goes out with or without it
     connect(m_playback, &Playback::trackChanged, this, [this] {
         QTimer::singleShot(kCoverWaitMs, this, &Desktop::notifyTrack);
@@ -91,21 +98,34 @@ void Desktop::createTray()
     m_nowPlaying = m_menu->addAction(QString());
     m_nowPlaying->setEnabled(false);
     m_menu->addSeparator();
-    m_playPause = m_menu->addAction(tr("Play"), m_player, &MpvPlayer::togglePause);
-    m_menu->addAction(tr("Next"), m_playback, &Playback::next);
-    m_menu->addAction(tr("Previous"), m_playback, &Playback::previous);
+    m_playPause = m_menu->addAction(QString(), m_player, &MpvPlayer::togglePause);
+    m_next = m_menu->addAction(QString(), m_playback, &Playback::next);
+    m_previous = m_menu->addAction(QString(), m_playback, &Playback::previous);
     m_menu->addSeparator();
-    m_menu->addAction(tr("Show or hide Quince"), this, &Desktop::toggleWindow);
-    m_menu->addAction(tr("Quit"), qApp, &QCoreApplication::quit);
+    m_show = m_menu->addAction(QString(), this, &Desktop::toggleWindow);
+    m_quit = m_menu->addAction(QString(), qApp, &QCoreApplication::quit);
 
     m_tray = new QSystemTrayIcon(QIcon(kIcon), this);
     m_tray->setContextMenu(m_menu);
     connect(m_tray, &QSystemTrayIcon::activated, this, [this](QSystemTrayIcon::ActivationReason reason) {
-        if (reason == QSystemTrayIcon::Trigger)
+        if (reason == QSystemTrayIcon::Trigger && m_settings->trayClickPlays())
+            m_player->togglePause();
+        else if (reason == QSystemTrayIcon::Trigger)
             toggleWindow();
         else if (reason == QSystemTrayIcon::MiddleClick)
             m_player->togglePause();
     });
+    retranslate();
+}
+
+void Desktop::retranslate()
+{
+    if (!m_menu)
+        return;
+    m_next->setText(tr("Next"));
+    m_previous->setText(tr("Previous"));
+    m_show->setText(tr("Show or hide Quince"));
+    m_quit->setText(tr("Quit"));
     updateTray();
 }
 
@@ -161,9 +181,12 @@ void Desktop::sendNotification(const QString &title, const QString &body, const 
     QDBusMessage call = QDBusMessage::createMethodCall(
         QStringLiteral("org.freedesktop.Notifications"), QStringLiteral("/org/freedesktop/Notifications"),
         QStringLiteral("org.freedesktop.Notifications"), QStringLiteral("Notify"));
+    const QString urgency = m_settings->notificationUrgency();
     QVariantMap hints{
         {QStringLiteral("desktop-entry"), QStringLiteral("quince")},
         {QStringLiteral("transient"), true},
+        // the spec's byte: 0 low, 1 normal, 2 critical
+        {QStringLiteral("urgency"), QVariant::fromValue(uchar(urgency == u"low" ? 0 : urgency == u"critical" ? 2 : 1))},
     };
     if (!imagePath.isEmpty())
         hints.insert(QStringLiteral("image-path"), imagePath);

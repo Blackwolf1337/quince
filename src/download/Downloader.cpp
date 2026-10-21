@@ -191,12 +191,15 @@ void Downloader::addPage(const QString &browseId)
         const QString name = header.value(QStringLiteral("title")).toString();
 
         auto added = std::make_shared<int>(0);
-        auto addItems = [this, albumTags, cover, added](const QVariantList &items) {
+        const int limit = album ? 0 : m_settings->downloadPlaylistMax();
+        auto addItems = [this, albumTags, cover, added, limit](const QVariantList &items) {
             for (const QVariant &v : items) {
                 const QVariantMap track = v.toMap();
                 if (track.value(QStringLiteral("videoId")).toString().isEmpty()
                     || track.value(QStringLiteral("unavailable")).toBool())
                     continue;
+                if (limit > 0 && *added >= limit)
+                    return;
                 ++*added;
                 const int number = albumTags.album.isEmpty() ? 0
                     : (track.value(QStringLiteral("index")).toInt() > 0 ? track.value(QStringLiteral("index")).toInt()
@@ -213,8 +216,9 @@ void Downloader::addPage(const QString &browseId)
 
         // a long playlist goes on in further pages
         auto next = std::make_shared<std::function<void(QString, bool, int)>>();
-        *next = [this, body, addItems, added, name, weak = std::weak_ptr(next)](QString token, bool command, int pages) {
-            if (token.isEmpty() || pages >= kMaxPages) {
+        *next = [this, body, addItems, added, limit, name, weak = std::weak_ptr(next)](QString token, bool command,
+                                                                                      int pages) {
+            if (token.isEmpty() || pages >= kMaxPages || (limit > 0 && *added >= limit)) {
                 emit message(tr("Downloading %n track(s) of \"%1\".", "", *added).arg(name));
                 return;
             }
@@ -257,6 +261,7 @@ void Downloader::addJob(const QVariantMap &track, const AudioFile::Tags &albumTa
     job->tags.track = number;
     job->coverUrl = coverUrl;
     job->format = format();
+    job->mp3Kbps = m_settings->downloadMp3Kbps();
 
     const int row = int(m_jobs.size());
     beginInsertRows({}, row, row);
@@ -268,11 +273,22 @@ void Downloader::addJob(const QVariantMap &track, const AudioFile::Tags &albumTa
 void Downloader::schedule()
 {
     int active = running();
+    const bool skipExisting = m_settings->downloadSkipExisting();
     for (int row = 0; row < m_jobs.size() && active < kParallel; ++row) {
-        if (m_jobs.at(row)->state == u"waiting") {
-            startJob(row);
-            ++active;
+        Job &job = *m_jobs.at(row);
+        if (job.state != u"waiting")
+            continue;
+        // the file of an earlier download is kept as it is
+        if (const QString target = targetPath(job); skipExisting && QFileInfo::exists(target)) {
+            job.path = target;
+            job.state = QStringLiteral("done");
+            job.progress = 1;
+            qCDebug(lcDownload) << "already there:" << target;
+            changed(row);
+            continue;
         }
+        startJob(row);
+        ++active;
     }
     emit runningChanged();
 }
@@ -416,9 +432,10 @@ void Downloader::maybeWrite(int row)
     const QString output = job->path;
     const AudioFile::Format format = job->format;
     const AudioFile::Tags tags = job->tags;
+    const int kbps = job->mp3Kbps;
     QPointer<Downloader> self(this);
-    QThread *thread = QThread::create([self, job, input, output, format, tags] {
-        const QString error = AudioFile::write(input, output, format, tags);
+    QThread *thread = QThread::create([self, job, input, output, format, tags, kbps] {
+        const QString error = AudioFile::write(input, output, format, tags, kbps);
         QFile::remove(input);
         if (!error.isEmpty())
             QFile::remove(output);

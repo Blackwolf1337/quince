@@ -82,7 +82,7 @@ Item {
                 width: seek.visualPosition * parent.width
                 height: parent.height
                 radius: parent.radius
-                color: Style.accent
+                color: App.settings.coloredProgress ? Style.accent : Style.text
             }
         }
         handle: Rectangle {

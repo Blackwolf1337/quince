@@ -19,10 +19,6 @@ namespace {
 const QString kApi = QStringLiteral("https://sponsor.ajay.app/api/skipSegments/");
 // the kinds of parts skipped in music: no music, sponsor spots, self
 // promotion, "subscribe" reminders
-const QStringList kCategories{
-    QStringLiteral("music_offtopic"), QStringLiteral("sponsor"), QStringLiteral("selfpromo"),
-    QStringLiteral("interaction"),
-};
 // a segment that ends this close to where it starts is not worth a seek
 constexpr double kMinimumSkip = 1.0;
 
@@ -43,13 +39,14 @@ void SponsorBlock::onStream(const QString &videoId)
 {
     m_videoId = videoId;
     m_segments.clear();
-    if (!m_settings->sponsorBlock() || videoId.isEmpty())
+    const QStringList categories = m_settings->sponsorBlockCategories();
+    if (!m_settings->sponsorBlock() || videoId.isEmpty() || categories.isEmpty())
         return;
 
     const QByteArray hash = QCryptographicHash::hash(videoId.toUtf8(), QCryptographicHash::Sha256).toHex();
     QUrl url(kApi + QString::fromLatin1(hash.left(4)));
     url.setQuery(QUrlQuery{{QStringLiteral("categories"),
-                            QString::fromUtf8(QJsonDocument(QJsonArray::fromStringList(kCategories))
+                            QString::fromUtf8(QJsonDocument(QJsonArray::fromStringList(categories))
                                                   .toJson(QJsonDocument::Compact))}});
     QNetworkReply *reply = m_network->get(QNetworkRequest(url));
     connect(reply, &QNetworkReply::finished, this, [this, reply, videoId] {
@@ -98,5 +95,9 @@ QString SponsorBlock::describe(const QString &category) const
         return tr("Skipped a sponsor spot");
     if (category == u"selfpromo")
         return tr("Skipped self promotion");
+    if (category == u"intro")
+        return tr("Skipped the intro");
+    if (category == u"outro")
+        return tr("Skipped the outro");
     return tr("Skipped a reminder to subscribe");
 }

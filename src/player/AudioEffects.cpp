@@ -15,6 +15,8 @@ const QString kPreset = QStringLiteral("effects/preset");
 const QString kCompressor = QStringLiteral("effects/compressor");
 const QString kSpeed = QStringLiteral("effects/speed");
 const QString kSkipSilences = QStringLiteral("effects/skipSilences");
+const QString kSkipSilencesAtStart = QStringLiteral("effects/skipSilencesAtStart");
+const QString kCrossfadeIn = QStringLiteral("effects/crossfadeIn");
 const QString kCrossfade = QStringLiteral("effects/crossfade");
 
 // ten octave bands, as in most players
@@ -40,6 +42,8 @@ const QList<Preset> kPresets{
 
 // silence played this much faster while skip-silences runs over it
 constexpr double kSilenceSpeed = 10.0;
+// "only at the start": a silence beginning this early counts as the start
+constexpr double kStartWindow = 0.5;
 
 } // namespace
 
@@ -64,6 +68,8 @@ bool AudioEffects::compressor() const { return m_settings->value(kCompressor, fa
 double AudioEffects::speed() const { return m_settings->value(kSpeed, 1.0).toDouble(); }
 bool AudioEffects::skipSilences() const { return m_settings->value(kSkipSilences, false).toBool(); }
 double AudioEffects::crossfade() const { return m_settings->value(kCrossfade, 0.0).toDouble(); }
+double AudioEffects::crossfadeIn() const { return m_settings->value(kCrossfadeIn, 0.0).toDouble(); }
+bool AudioEffects::skipSilencesAtStart() const { return m_settings->value(kSkipSilencesAtStart, false).toBool(); }
 
 QVariantList AudioEffects::bands() const
 {
@@ -118,6 +124,18 @@ void AudioEffects::setCrossfade(double seconds)
 {
     m_settings->set(kCrossfade, qBound(0.0, std::round(seconds), 12.0));
     apply();
+}
+
+void AudioEffects::setCrossfadeIn(double seconds)
+{
+    m_settings->set(kCrossfadeIn, qBound(0.0, std::round(seconds * 2) / 2, 12.0));
+    apply();
+}
+
+void AudioEffects::setSkipSilencesAtStart(bool on)
+{
+    m_settings->set(kSkipSilencesAtStart, on);
+    emit changed();
 }
 
 void AudioEffects::setBand(int band, double gainDb)
@@ -182,7 +200,7 @@ void AudioEffects::apply()
     qCDebug(lcEffects) << "af" << filters << "speed" << speed() << "crossfade" << crossfade();
     m_player->setFilters(filters);
     m_player->setSpeed(speed());
-    m_playback->setCrossfade(crossfade());
+    m_playback->setCrossfade(crossfade(), crossfadeIn());
     if (!skipSilences() && m_skipping) {
         m_skipping = false;
         m_player->setSpeedBoost(1.0);
@@ -197,6 +215,9 @@ void AudioEffects::onSilence(const QVariantMap &values)
     if (!skipSilences())
         return;
     if (values.contains(QStringLiteral("lavfi.silence_start")) && !m_skipping) {
+        // a silence that starts later than the track itself is part of the music
+        if (skipSilencesAtStart() && values.value(QStringLiteral("lavfi.silence_start")).toDouble() > kStartWindow)
+            return;
         m_skipping = true;
         qCDebug(lcEffects) << "silence from" << values.value(QStringLiteral("lavfi.silence_start")).toString();
         m_player->setSpeedBoost(kSilenceSpeed);

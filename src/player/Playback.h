@@ -84,9 +84,10 @@ public:
     void setSkipDisliked(bool on) { m_skipDisliked = on; }
     // disable-autoplay: a track or list the user picks starts paused
     void setStartPaused(bool on) { m_startPaused = on; }
-    // crossfade: seconds the next track fades in over the end of this one;
+    // crossfade: seconds the next track overlaps the end of this one while
+    // this one fades out, and how fast the next fades in (0: as long);
     // 0 plays them gapless (also in video mode)
-    void setCrossfade(double seconds);
+    void setCrossfade(double seconds, double inSeconds);
     // video-toggle: videos play with their picture, songs with their music
     // video when YouTube has one; the track playing restarts in the new mode
     void setVideoMode(bool on);
@@ -176,6 +177,7 @@ private:
     // its stream, for a crossfade (gapless hands it to mpv at once)
     std::optional<Stream> m_upcoming;
     double m_crossfade = 0;
+    double m_crossfadeIn = 0;
     // streams asked for the current and the next entry
     QString m_wantedStream;
     bool m_wantedVideo = false;

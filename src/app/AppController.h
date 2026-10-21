@@ -92,11 +92,16 @@ public:
     // Opens a dialog of the main window (signin, addToPlaylist) from places
     // that do not live long enough to own it, like a context menu.
     Q_INVOKABLE void requestDialog(const QString &name, const QVariantMap &data = {});
+    // the music.youtube.com link of a track, album, playlist or artist to the clipboard
+    Q_INVOKABLE void copyLink(const QVariantMap &item);
 
 signals:
     // QML pushes a page for target {browseId, params}
     void navigateRequested(const QVariantMap &target);
     void dialogRequested(const QString &name, const QVariantMap &data);
+    void languageChanged();
+    // short feedback for the toast
+    void message(const QString &text);
 
 private:
     void applySettings();

@@ -28,8 +28,12 @@ class AudioEffects : public QObject
     Q_PROPERTY(bool compressor READ compressor WRITE setCompressor NOTIFY changed)
     Q_PROPERTY(double speed READ speed WRITE setSpeed NOTIFY changed)
     Q_PROPERTY(bool skipSilences READ skipSilences WRITE setSkipSilences NOTIFY changed)
-    // seconds; 0 plays tracks gapless instead
+    // only the silence a track starts with
+    Q_PROPERTY(bool skipSilencesAtStart READ skipSilencesAtStart WRITE setSkipSilencesAtStart NOTIFY changed)
+    // seconds the old track fades out; 0 plays tracks gapless instead
     Q_PROPERTY(double crossfade READ crossfade WRITE setCrossfade NOTIFY changed)
+    // seconds the new one fades in, within the crossfade; 0 the same as the crossfade
+    Q_PROPERTY(double crossfadeIn READ crossfadeIn WRITE setCrossfadeIn NOTIFY changed)
 
 public:
     AudioEffects(MpvPlayer *player, Playback *playback, Settings *settings, QObject *parent = nullptr);
@@ -42,13 +46,17 @@ public:
     bool compressor() const;
     double speed() const;
     bool skipSilences() const;
+    bool skipSilencesAtStart() const;
     double crossfade() const;
+    double crossfadeIn() const;
 
     void setEqualizer(bool on);
     void setCompressor(bool on);
     void setSpeed(double speed);
     void setSkipSilences(bool on);
+    void setSkipSilencesAtStart(bool on);
     void setCrossfade(double seconds);
+    void setCrossfadeIn(double seconds);
 
     Q_INVOKABLE void setBand(int band, double gainDb);
     // a named set of band gains; "Custom" keeps the bands as they are

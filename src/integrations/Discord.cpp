@@ -57,9 +57,19 @@ Discord::Discord(Playback *playback, MpvPlayer *player, Settings *settings, QObj
     m_update.setInterval(kUpdateDelayMs);
     connect(&m_update, &QTimer::timeout, this, &Discord::sendActivity);
 
-    connect(m_settings, &Settings::changed, this, &Discord::applySettings);
+    m_pauseTimeout.setSingleShot(true);
+    connect(&m_pauseTimeout, &QTimer::timeout, this, [this] {
+        m_pausedTooLong = true;
+        scheduleUpdate();
+    });
+
+    connect(m_settings, &Settings::changed, this, [this] {
+        applySettings();
+        onPausedChanged();
+        scheduleUpdate();
+    });
     connect(m_playback, &Playback::trackChanged, this, &Discord::scheduleUpdate);
-    connect(m_player, &MpvPlayer::pausedChanged, this, &Discord::scheduleUpdate);
+    connect(m_player, &MpvPlayer::pausedChanged, this, &Discord::onPausedChanged);
     connect(m_player, &MpvPlayer::idleChanged, this, &Discord::scheduleUpdate);
     connect(m_player, &MpvPlayer::positionChanged, this, [this] {
         const double position = m_player->position();
@@ -201,6 +211,20 @@ void Discord::send(quint32 opcode, const QByteArray &json)
     m_socket->write(QByteArray(reinterpret_cast<const char *>(header.data()), header.size()) + json);
 }
 
+void Discord::onPausedChanged()
+{
+    const int minutes = m_settings->discordPauseMinutes();
+    if (m_player->paused() && minutes > 0) {
+        // a settings change while paused keeps the time already waited
+        if (!m_pauseTimeout.isActive() && !m_pausedTooLong)
+            m_pauseTimeout.start(minutes * 60 * 1000);
+    } else {
+        m_pauseTimeout.stop();
+        m_pausedTooLong = false;
+    }
+    scheduleUpdate();
+}
+
 void Discord::scheduleUpdate()
 {
     if (m_ready && !m_update.isActive())
@@ -216,7 +240,7 @@ void Discord::sendActivity()
     const QString videoId = track.value(QStringLiteral("videoId")).toString();
     QJsonObject args{{QStringLiteral("pid"), static_cast<qint64>(QCoreApplication::applicationPid())}};
 
-    if (!videoId.isEmpty() && !m_player->idle()) {
+    if (!videoId.isEmpty() && !m_player->idle() && !m_pausedTooLong) {
         QString artists = track.value(QStringLiteral("artistText")).toString();
         if (artists.isEmpty()) {
             QStringList names;
@@ -232,23 +256,29 @@ void Discord::sendActivity()
         if (cover.startsWith(u"https://"))
             assets.insert(QStringLiteral("large_image"), cover);
 
+        // what the member list shows after the name: 0 the app, 1 state, 2 details
+        const QString shows = m_settings->discordShows();
         QJsonObject activity{
             {QStringLiteral("type"), 2}, // "Listening to"
             {QStringLiteral("details"), clip(title)},
             {QStringLiteral("state"), clip(artists)},
             {QStringLiteral("assets"), assets},
-            {QStringLiteral("buttons"),
-             QJsonArray{QJsonObject{{QStringLiteral("label"), QStringLiteral("Listen on YouTube Music")},
-                                    {QStringLiteral("url"), QStringLiteral("https://music.youtube.com/watch?v=")
-                                                                + videoId}}}},
+            {QStringLiteral("status_display_type"), shows == u"artist" ? 1 : shows == u"title" ? 2 : 0},
         };
+        if (m_settings->discordButton()) {
+            activity.insert(QStringLiteral("buttons"),
+                            QJsonArray{QJsonObject{{QStringLiteral("label"), QStringLiteral("Listen on YouTube Music")},
+                                                   {QStringLiteral("url"),
+                                                    QStringLiteral("https://music.youtube.com/watch?v=") + videoId}}});
+        }
         if (!m_player->paused() && m_player->duration() > 0) {
             const qint64 start = QDateTime::currentMSecsSinceEpoch()
                                  - static_cast<qint64>(m_player->position() * 1000.0);
-            activity.insert(QStringLiteral("timestamps"),
-                            QJsonObject{{QStringLiteral("start"), start},
-                                        {QStringLiteral("end"),
-                                         start + static_cast<qint64>(m_player->duration() * 1000.0)}});
+            QJsonObject timestamps{{QStringLiteral("start"), start}};
+            // without the end Discord counts up instead of showing the time left
+            if (!m_settings->discordHideTimeLeft())
+                timestamps.insert(QStringLiteral("end"), start + static_cast<qint64>(m_player->duration() * 1000.0));
+            activity.insert(QStringLiteral("timestamps"), timestamps);
         }
         args.insert(QStringLiteral("activity"), activity);
     }

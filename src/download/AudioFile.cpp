@@ -268,7 +268,7 @@ QString extension(Format format)
     return {};
 }
 
-QString write(const QString &input, const QString &output, Format format, const Tags &tags)
+QString write(const QString &input, const QString &output, Format format, const Tags &tags, int mp3Kbps)
 {
     AVFormatContext *inRaw = nullptr;
     if (int r = avformat_open_input(&inRaw, input.toUtf8().constData(), nullptr, nullptr); r < 0)
@@ -308,7 +308,7 @@ QString write(const QString &input, const QString &output, Format format, const 
             return errorText(r);
 
         encoder.reset(avcodec_alloc_context3(encoderCodec));
-        encoder->bit_rate = 320000;
+        encoder->bit_rate = int64_t(mp3Kbps) * 1000;
         encoder->sample_rate = decoder->sample_rate == 44100 ? 44100 : 48000;
         av_channel_layout_default(&encoder->ch_layout, qMin(2, decoder->ch_layout.nb_channels));
         const void *formats = nullptr;

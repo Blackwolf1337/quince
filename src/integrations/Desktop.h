@@ -25,6 +25,8 @@ public:
     void setWindow(QWindow *window);
     // the cover of the playing track, decoded once by the color theme
     void setCover(const QString &videoId, const QImage &cover);
+    // the tray menu in the language just chosen
+    void retranslate();
 
 private:
     void applySettings();
@@ -43,6 +45,10 @@ private:
     QMenu *m_menu = nullptr;
     QAction *m_nowPlaying = nullptr;
     QAction *m_playPause = nullptr;
+    QAction *m_next = nullptr;
+    QAction *m_previous = nullptr;
+    QAction *m_show = nullptr;
+    QAction *m_quit = nullptr;
 
     QString m_notifiedId;
     QString m_coverId;
