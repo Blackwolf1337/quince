@@ -255,11 +255,11 @@ Item {
                 spacing: 18
 
                 ToolButton {
-                    icon.source: "icons/dislike.svg"
+                    icon.source: "icons/like.svg"
                     visible: App.account.signedIn
                     checkable: true
-                    checked: view.track.likeStatus === "DISLIKE"
-                    onClicked: App.account.rate(view.track.videoId, checked ? "DISLIKE" : "INDIFFERENT")
+                    checked: view.track.likeStatus === "LIKE"
+                    onClicked: App.account.rate(view.track.videoId, checked ? "LIKE" : "INDIFFERENT")
                 }
                 ToolButton {
                     icon.source: "icons/previous.svg"
@@ -293,11 +293,11 @@ Item {
                     onClicked: view.playback.next()
                 }
                 ToolButton {
-                    icon.source: "icons/like.svg"
+                    icon.source: "icons/dislike.svg"
                     visible: App.account.signedIn
                     checkable: true
-                    checked: view.track.likeStatus === "LIKE"
-                    onClicked: App.account.rate(view.track.videoId, checked ? "LIKE" : "INDIFFERENT")
+                    checked: view.track.likeStatus === "DISLIKE"
+                    onClicked: App.account.rate(view.track.videoId, checked ? "DISLIKE" : "INDIFFERENT")
                 }
             }
             // video-toggle, its quality and captions; the visualizer

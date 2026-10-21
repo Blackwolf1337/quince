@@ -224,15 +224,6 @@ Item {
         }
 
         ToolButton {
-            icon.source: "icons/dislike.svg"
-            visible: App.account.signedIn && !!bar.track.videoId
-            checkable: true
-            checked: bar.track.likeStatus === "DISLIKE"
-            ToolTip.visible: hovered
-            ToolTip.text: qsTr("Dislike")
-            onClicked: App.account.rate(bar.track.videoId, checked ? "DISLIKE" : "INDIFFERENT")
-        }
-        ToolButton {
             icon.source: "icons/like.svg"
             visible: App.account.signedIn && !!bar.track.videoId
             checkable: true
@@ -240,6 +231,15 @@ Item {
             ToolTip.visible: hovered
             ToolTip.text: qsTr("Like")
             onClicked: App.account.rate(bar.track.videoId, checked ? "LIKE" : "INDIFFERENT")
+        }
+        ToolButton {
+            icon.source: "icons/dislike.svg"
+            visible: App.account.signedIn && !!bar.track.videoId
+            checkable: true
+            checked: bar.track.likeStatus === "DISLIKE"
+            ToolTip.visible: hovered
+            ToolTip.text: qsTr("Dislike")
+            onClicked: App.account.rate(bar.track.videoId, checked ? "DISLIKE" : "INDIFFERENT")
         }
 
         ToolButton {
