@@ -9,6 +9,8 @@ ApplicationWindow {
 
     property string section: "home"
     property bool queueOpen: false
+    // the settings category last open, for this session
+    property string settingsPage: "playback"
     // pages left by going back, for going forward again
     property var forwardPages: []
 
@@ -136,8 +138,11 @@ ApplicationWindow {
                 signInComponent.createObject(window.contentItem).open()
             else if (name === "addToPlaylist")
                 playlistPickerComponent.createObject(window.contentItem, {item: data.item}).open()
-            else if (name === "settings")
-                settingsComponent.createObject(window.contentItem).open()
+            else if (name === "settings") {
+                const settings = settingsComponent.createObject(window.contentItem, {page: window.settingsPage})
+                settings.pageChanged.connect(() => window.settingsPage = settings.page)
+                settings.open()
+            }
             else if (name === "equalizer")
                 equalizerComponent.createObject(window.contentItem).open()
         }

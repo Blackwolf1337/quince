@@ -93,6 +93,7 @@ qt_add_qml_module(quince
     RESOURCES
         qml/fonts/InterVariable.ttf
         qml/icons/account.svg
+        qml/icons/broadcast.svg
         qml/icons/back.svg
         qml/icons/captions.svg
         qml/icons/chevron-left.svg
@@ -106,10 +107,12 @@ qt_add_qml_module(quince
         qml/icons/history.svg
         qml/icons/home.svg
         qml/icons/library.svg
+        qml/icons/monitor.svg
         qml/icons/like.svg
         qml/icons/miniplayer.svg
         qml/icons/more.svg
         qml/icons/next.svg
+        qml/icons/palette.svg
         qml/icons/pause.svg
         qml/icons/play.svg
         qml/icons/playlist.svg
