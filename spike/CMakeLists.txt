@@ -38,10 +38,11 @@ if(WIN32)
     set_target_properties(PkgConfig::MPV PROPERTIES INTERFACE_INCLUDE_DIRECTORIES "${found}")
 endif()
 
-# FemtoVG (GL) for the mpv underlay, software renderer as fallback. Static,
-# except on Windows: Slint's headers always declare dllimport there
+# FemtoVG (GL) for the mpv underlay, software renderer as fallback. Static on
+# Linux only: Slint's headers always declare dllimport on Windows, and a static
+# libslint_cpp.a does not carry its macOS frameworks to the final link
 include(FetchContent)
-if(WIN32)
+if(WIN32 OR APPLE)
     set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
 else()
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
