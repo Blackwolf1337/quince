@@ -46,8 +46,10 @@ jobs:
       - name: Errors as annotations
         if: failure()
         run: |
-          grep -aiE -A4 "error|failed|undefined" ci.log 2>/dev/null | grep -v "^--$" | head -45 \
+          # real errors only: crate names like thiserror would match a plain "error"
+          grep -aE -A4 "error(\[|:)|Error:|undefined|FAILED|ld: " ci.log 2>/dev/null | grep -v "^--$" | head -45 \
             | sed 's/%/%25/g; s/^/::error::/' || true
+          tail -8 ci.log 2>/dev/null | sed 's/%/%25/g; s/^/::warning::/' || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -87,5 +89,7 @@ jobs:
       - name: Errors as annotations
         if: failure()
         run: |
-          grep -aiE -A4 "error|failed|undefined" ci.log 2>/dev/null | grep -v "^--$" | head -45 \
+          # real errors only: crate names like thiserror would match a plain "error"
+          grep -aE -A4 "error(\[|:)|Error:|undefined|FAILED|ld: " ci.log 2>/dev/null | grep -v "^--$" | head -45 \
             | sed 's/%/%25/g; s/^/::error::/' || true
+          tail -8 ci.log 2>/dev/null | sed 's/%/%25/g; s/^/::warning::/' || true
