@@ -1,0 +1,88 @@
+# Phase 0 Slint spike (spike/): builds it on macOS and Windows, and on macOS
+# also runs it once with --check (mpv video in a Slint window, read back)
+name: spike
+
+on:
+  push:
+    branches: [slint-spike]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v5
+      - name: Dependencies
+        run: |
+          brew install cmake ninja pkgconf qt mpv ffmpeg
+          rustup update stable && rustup default stable
+          rustc --version
+      - name: Build
+        run: |
+          set -o pipefail
+          cmake -S spike -B build-spike -G Ninja -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" 2>&1 | tee ci.log
+          cmake --build build-spike 2>&1 | tee -a ci.log
+          ls -la build-spike/quince-spike
+          strip -o quince-spike.stripped build-spike/quince-spike && ls -la quince-spike.stripped
+      - name: Run
+        continue-on-error: true
+        run: |
+          ffmpeg -loglevel error -f lavfi -i testsrc2=size=1280x720:rate=30 -t 20 \
+                 -c:v libx264 -pix_fmt yuv420p test.mp4
+          cd build-spike
+          ./quince-spike ../test.mp4 --check --ao=null 2>&1 | tee run.log &
+          pid=$!
+          # the spike quits by itself after about 4 s of playback
+          for i in $(seq 60); do kill -0 $pid 2>/dev/null || break; sleep 1; done
+          kill $pid 2>/dev/null || true
+          wait $pid; echo "exit $?"
+      - name: Errors as annotations
+        if: failure()
+        run: |
+          grep -aiE -A4 "error|failed|undefined" ci.log 2>/dev/null | grep -v "^--$" | head -45 \
+            | sed 's/%/%25/g; s/^/::error::/' || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: spike-macos
+          path: |
+            build-spike/spike-frame.ppm
+            build-spike/run.log
+            ci.log
+          if-no-files-found: ignore
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-pkgconf
+            mingw-w64-ucrt-x86_64-rust
+            mingw-w64-ucrt-x86_64-qt6-base
+            mingw-w64-ucrt-x86_64-mpv
+      - name: Build
+        run: |
+          set -o pipefail
+          rustc --version
+          cmake -S spike -B build-spike -G Ninja -DCMAKE_BUILD_TYPE=Release 2>&1 | tee ci.log
+          cmake --build build-spike 2>&1 | tee -a ci.log
+          ls -la build-spike/quince-spike.exe build-spike/_deps/slint-build/slint_cpp.dll
+      - name: Errors as annotations
+        if: failure()
+        run: |
+          grep -aiE -A4 "error|failed|undefined" ci.log 2>/dev/null | grep -v "^--$" | head -45 \
+            | sed 's/%/%25/g; s/^/::error::/' || true

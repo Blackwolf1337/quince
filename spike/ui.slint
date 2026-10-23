@@ -1,0 +1,121 @@
+import { Button, Slider } from "std-widgets.slint";
+
+import "../qml/fonts/InterVariable.ttf";
+
+// the window background is the only thing under the video: FemtoVG clears with
+// it, then the rendering notifier draws mpv, then the items below draw on top
+export component SpikeWindow inherits Window {
+    title: "Quince Slint spike";
+    preferred-width: 1100px;
+    preferred-height: 700px;
+    background: #121216;
+    default-font-family: "Inter Variable";
+
+    in property <int> qt-ticks;
+    in property <string> media-title: "Nothing loaded";
+    in property <bool> paused;
+    in property <float> position;
+
+    // physical-pixel rect of the video area, read by the renderer every frame
+    out property <length> video-x: video.absolute-position.x;
+    out property <length> video-y: video.absolute-position.y;
+    out property <length> video-w: video.width;
+    out property <length> video-h: video.height;
+
+    callback toggle-pause();
+    callback seek(float);
+    callback ping-qt();
+
+    VerticalLayout {
+        padding: 16px;
+        spacing: 12px;
+
+        HorizontalLayout {
+            spacing: 12px;
+            Rectangle {
+                width: 220px;
+                background: #1e1e26;
+                border-radius: 8px;
+                VerticalLayout {
+                    padding: 12px;
+                    spacing: 8px;
+                    alignment: start;
+                    Text { text: "Sidebar"; font-size: 18px; font-weight: 700; color: white; }
+                    Text { text: "日本語の歌詞 テスト"; color: #ddd; }
+                    Text { text: "Привет, 中文, 한국어"; color: #ddd; }
+                    Text { text: "Qt ticks: " + root.qt-ticks; color: #9ad; }
+                    Button { text: "Ping Qt thread"; clicked => { root.ping-qt(); } }
+                    search := Button {
+                        text: "Open popup";
+                        clicked => { popup.show(); }
+                    }
+                }
+            }
+
+            // nothing opaque may cover this: the video is drawn below the items
+            video := Rectangle {
+                horizontal-stretch: 1;
+                border-radius: 8px;
+                border-width: 1px;
+                border-color: #ffffff30;
+
+                // translucent overlay on top of the video
+                Rectangle {
+                    x: 12px;
+                    y: parent.height - self.height - 12px;
+                    width: parent.width - 24px;
+                    height: 56px;
+                    background: #00000090;
+                    border-radius: 8px;
+                    HorizontalLayout {
+                        padding: 10px;
+                        spacing: 10px;
+                        Button {
+                            text: root.paused ? "Play" : "Pause";
+                            clicked => { root.toggle-pause(); }
+                        }
+                        Slider {
+                            minimum: 0;
+                            maximum: 1;
+                            value: root.position;
+                            released(v) => { root.seek(v); }
+                        }
+                    }
+                }
+            }
+        }
+
+        Text {
+            text: root.media-title;
+            color: white;
+            font-size: 16px;
+        }
+    }
+
+    popup := PopupWindow {
+        x: 240px;
+        y: 120px;
+        width: 260px;
+        height: 120px;
+        Rectangle {
+            background: #2a2a34;
+            border-radius: 8px;
+            Text { text: "PopupWindow works"; color: white; }
+        }
+    }
+}
+
+export component SpikeTray inherits SystemTrayIcon {
+    icon: @image-url("../qml/icons/quince.svg");
+    tooltip: "Quince spike";
+    title: "Quince spike";
+
+    callback toggle-pause();
+    callback quit();
+
+    Menu {
+        MenuItem { title: "Play/Pause"; activated => { root.toggle-pause(); } }
+        MenuSeparator {}
+        MenuItem { title: "Quit"; activated => { root.quit(); } }
+    }
+}
