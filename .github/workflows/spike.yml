@@ -27,7 +27,8 @@ jobs:
                 -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" 2>&1 | tee ci.log
           cmake --build build-spike 2>&1 | tee -a ci.log
           ls -la build-spike/quince-spike
-          strip -o quince-spike.stripped build-spike/quince-spike && ls -la quince-spike.stripped
+          strip -o quince-spike.stripped build-spike/quince-spike
+          echo "::notice::stripped size $(stat -f %z quince-spike.stripped) bytes"
       - name: Run
         continue-on-error: true
         run: |
@@ -40,6 +41,8 @@ jobs:
           for i in $(seq 60); do kill -0 $pid 2>/dev/null || break; sleep 1; done
           kill $pid 2>/dev/null || true
           wait $pid; echo "exit $?"
+          # results as annotations: readable through the API without a login
+          grep -aE "spike:|check:|panicked|rror" run.log | head -20 | sed 's/%/%25/g; s/^/::notice::/' || true
       - name: Errors as annotations
         if: failure()
         run: |
