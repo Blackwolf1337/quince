@@ -125,13 +125,28 @@ int main(int argc, char *argv[])
         self.exec(app);
     });
 
-    (*window)->window().on_close_requested([] {
-        slint::quit_event_loop();
+    (*window)->window().on_close_requested([&] {
+        if ((*window)->global<ui::App>().get_close_to_tray())
+            host.setWindowState(false, false);
+        else
+            slint::quit_event_loop();
         return slint::CloseRequestResponse::HideWindow;
     });
+    // the window's state for the core, and its size once it stayed the same
+    // for a tick (a maximized window keeps the size it had before)
     slint::Timer windowState;
+    slint::LogicalSize lastSize({ 0.f, 0.f }), savedSize({ 0.f, 0.f });
     windowState.start(slint::TimerMode::Repeated, kWindowStateInterval, [&] {
-        host.setWindowState((*window)->window().is_visible(), (*window)->window().is_minimized());
+        const slint::Window &w = (*window)->window();
+        host.setWindowState(w.is_visible(), w.is_minimized());
+        const float scale = w.scale_factor();
+        const slint::LogicalSize size({ float(w.size().width) / scale, float(w.size().height) / scale });
+        if (w.is_visible() && !w.is_maximized() && !w.is_minimized() && size.width == lastSize.width
+            && size.height == lastSize.height && (size.width != savedSize.width || size.height != savedSize.height)) {
+            savedSize = size;
+            (*window)->global<ui::App>().invoke_save_window_size(int(size.width), int(size.height));
+        }
+        lastSize = size;
     });
 
     (*window)->show();

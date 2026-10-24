@@ -201,6 +201,10 @@ export global App {
     callback set-video-height(int);
     callback mini-state-changed(MiniState);
 
+    // closing the window only hides it (tray on and closeToTray set)
+    in property <bool> close-to-tray;
+
+    callback save-window-size(int, int);
     callback section-requested(string, string);
     callback set-video-mode(bool);
     callback request-dialog(string);

@@ -134,8 +134,7 @@ export component MiniPlayer inherits Window {
                         padding-right: 8px;
                         ToolButton {
                             icon: Icons.miniplayer;
-                            accessible-role: button;
-                            accessible-label: @tr("Back to the full window");
+                            tooltip: @tr("Back to the full window");
                             clicked => {
                                 root.restore();
                             }

@@ -277,8 +277,7 @@ export component NowPlaying inherits Rectangle {
         icon: Icons.chevron-left;
         rotation: -90;
         opacity: root.progress;
-        accessible-role: button;
-        accessible-label: @tr("Close");
+        tooltip: @tr("Close");
         clicked => {
             App.now-playing-open = false;
         }
@@ -408,7 +407,7 @@ export component NowPlaying inherits Rectangle {
                 if !Player.video-playing: MenuButton {
                     icon: Icons.visualizer;
                     checked: App.visualizer != "";
-                    accessible-label: @tr("Visualizer");
+                    tooltip: @tr("Visualizer");
                     for id[index] in root.visualizers: ChoiceItem {
                         label: root.visualizer-names[index];
                         checked: App.visualizer == id;
@@ -421,15 +420,14 @@ export component NowPlaying inherits Rectangle {
                     icon: Icons.video;
                     text: App.video-mode ? @tr("Video") : @tr("Song");
                     checked: App.video-mode;
-                    accessible-role: button;
-                    accessible-label: @tr("Switch between song and music video");
+                    tooltip: @tr("Switch between song and music video");
                     clicked => {
                         App.set-video-mode(!App.video-mode);
                     }
                 }
                 if Player.video-playing: MenuButton {
                     text: App.video-height + "p";
-                    accessible-label: @tr("Video quality");
+                    tooltip: @tr("Video quality");
                     for height in [2160, 1440, 1080, 720, 480, 360]: ChoiceItem {
                         label: height + "p";
                         checked: App.video-height == height;
@@ -441,7 +439,7 @@ export component NowPlaying inherits Rectangle {
                 if Player.video-playing && Player.captions.length > 0: MenuButton {
                     icon: Icons.captions;
                     checked: Player.caption >= 0;
-                    accessible-label: @tr("Captions");
+                    tooltip: @tr("Captions");
                     ChoiceItem {
                         label: @tr("Off");
                         checked: Player.caption < 0;

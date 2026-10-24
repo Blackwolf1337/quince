@@ -236,6 +236,13 @@ void bindApp(AppController &app, const Window &window)
          [](ui::MainWindow &w, bool v) { w.global<ui::App>().set_colored_progress(v); });
     bind(window, settings, &Settings::changed, [](Settings *s) { return s->videoMode(); },
          [](ui::MainWindow &w, bool v) { w.global<ui::App>().set_video_mode(v); });
+    bind(window, settings, &Settings::changed, [](Settings *s) { return s->tray() && s->closeToTray(); },
+         [](ui::MainWindow &w, bool v) { w.global<ui::App>().set_close_to_tray(v); });
+    // the last window size (logical pixels); the compositor may still choose another
+    toUi(window, [size = settings->savedWindowSize()](ui::MainWindow &w) {
+        if (size.width() > 0 && size.height() > 0)
+            w.window().set_size(slint::LogicalSize({ float(size.width()), float(size.height()) }));
+    });
     bind(window, app.downloads(), &Downloader::runningChanged, [](Downloader *d) { return d->running(); },
          [](ui::MainWindow &w, int v) { w.global<ui::App>().set_downloads_running(v); });
 
@@ -343,6 +350,12 @@ void connectCallbacks(AppController *app, const Window &window, const Tray &tray
         a.on_sign_out([account] { toCore(account, [account] { account->signOut(); }); });
 
         auto &appState = w.global<ui::App>();
+        appState.on_save_window_size([settings](int width, int height) {
+            toCore(settings, [settings, width, height] {
+                settings->setWindowWidth(width);
+                settings->setWindowHeight(height);
+            });
+        });
         appState.on_set_video_mode([settings](bool on) { toCore(settings, [settings, on] { settings->setVideoMode(on); }); });
         appState.on_request_dialog([app](const slint::SharedString &name) {
             toCore(app, [app, n = fromSlint(name)] { app->requestDialog(n); });
