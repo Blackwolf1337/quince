@@ -21,7 +21,7 @@ constexpr size_t kMaxImages = 400;
 // blurred covers: downloaded this large, blurred small; the look of the QML
 // backdrop's MultiEffect (a quarter more saturation, darker)
 constexpr int kBlurSource = 120;
-const BlurLook kCoverBlur { 64, 64, 5, 1.25f, -0.35f, false };
+const BlurLook kCoverBlur { 96, 96, 2, 1.25f, -0.35f, false };
 
 std::string keyOf(const std::string &url, int pixels)
 {

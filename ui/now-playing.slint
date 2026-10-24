@@ -295,14 +295,23 @@ export component NowPlaying inherits Rectangle {
         spacing: 56px;
         opacity: Math.max(0, root.progress * 1.4 - 0.4);
 
+        // both columns grow from their preferred widths by the same amount, as
+        // with QML's RowLayout; the cover keeps its size at the left
         VerticalLayout {
-            width: root.slot-width;
-            alignment: center;
+            min-width: root.slot-width;
+            preferred-width: root.slot-width;
+            horizontal-stretch: 1;
+            // at the bottom, as in QML (a spacer above it all)
+            alignment: end;
             spacing: 14px;
 
             // the cover itself flies above
-            slot := Rectangle {
-                height: root.slot-height;
+            HorizontalLayout {
+                alignment: start;
+                slot := Rectangle {
+                    width: root.slot-width;
+                    height: root.slot-height;
+                }
             }
 
             VerticalLayout {
@@ -319,17 +328,23 @@ export component NowPlaying inherits Rectangle {
                 font-size: 16px;
             }
 
+            // Material's slider is 48 px tall; the times sit 10 px into it
             VerticalLayout {
                 padding-top: 8px;
-                spacing: 2px;
+                spacing: 0;
 
                 seek := ThinSlider {
+                    height: 38px;
                     minimum: 0;
                     maximum: Math.max(Player.duration, 0.01);
                     value: Player.position;
                     enabled: Player.duration > 0;
                     fill: Style.accent;
+                    track: Style.accent.with-alpha(0.3);
                     thickness: 4px;
+                    active-thickness: 4px;
+                    knob-always: true;
+                    knob-color: Style.accent;
                     released(value) => {
                         Player.seek(value);
                     }
@@ -458,6 +473,7 @@ export component NowPlaying inherits Rectangle {
         QueuePanel {
             horizontal-stretch: 1;
             min-width: 320px;
+            preferred-width: 320px;
         }
     }
 

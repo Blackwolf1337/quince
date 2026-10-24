@@ -17,7 +17,8 @@ component Tab inherits Rectangle {
     height: 44px;
     Text {
         text: root.text;
-        color: root.selected ? Style.accent : Style.text-dim;
+        // Material's tabs: the open one in the accent color, the others white
+        color: root.selected ? Style.accent : Style.text;
         font-size: 14px;
         font-weight: 600;
     }

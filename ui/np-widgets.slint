@@ -55,18 +55,24 @@ export component RoundPlayButton inherits Rectangle {
     in property <image> pause-icon;
     callback clicked();
 
+    // Material's RoundButton: 72 px with a 60 px circle in it
     width: 72px;
     height: self.width;
-    border-radius: self.width / 2;
-    background: Style.accent;
-    transform-scale: touch.pressed ? 0.92 : touch.has-hover ? 1.05 : 1;
-    animate transform-scale { duration: Style.fast; easing: cubic-bezier(0.33, 1, 0.68, 1); }
 
-    Image {
-        width: root.icon-size;
-        height: root.icon-size;
-        source: root.playing ? root.pause-icon : root.play-icon;
-        colorize: #111114;
+    Rectangle {
+        width: 60px;
+        height: self.width;
+        border-radius: self.width / 2;
+        background: Style.accent;
+        transform-scale: touch.pressed ? 0.92 : touch.has-hover ? 1.05 : 1;
+        animate transform-scale { duration: Style.fast; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+
+        Image {
+            width: root.icon-size;
+            height: root.icon-size;
+            source: root.playing ? root.pause-icon : root.play-icon;
+            colorize: #111114;
+        }
     }
 
     touch := TouchArea {
