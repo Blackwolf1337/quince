@@ -218,6 +218,8 @@ FetchContent_Declare(Slint
     EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(Slint)
+# a smaller library: link-time optimization over all of Slint's crates
+corrosion_set_env_vars(slint_cpp CARGO_PROFILE_RELEASE_LTO=fat CARGO_PROFILE_RELEASE_CODEGEN_UNITS=1)
 # the rest of the project builds its own libraries statically
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 

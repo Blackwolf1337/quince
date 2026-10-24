@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # What windeployqt does, from Linux: the Qt plugins Quince uses, Qt's
-# translations, and every DLL any of it loads from the MSYS2 tree.
+# translations, and every DLL any of it loads from the MSYS2 tree. Also strips
+# what the build made (MSYS2's DLLs come stripped).
 # usage: deploy.py <dist folder with quince.exe> <msys2 ucrt64 dir>
 import os
 import shutil
@@ -33,9 +34,16 @@ for p in PLUGINS:
 # where Qt finds all this (MSYS2's Qt would look below share\qt6\)
 shutil.copy2(os.path.join(os.path.dirname(os.path.abspath(__file__)), "qt.conf"), os.path.join(dist, "qt.conf"))
 
-for f in os.listdir(qt_translations):
-    if f.startswith("qtbase_"):
+# Qt's own texts in the languages Quince has (i18n/quince_<lang>.ts)
+i18n = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "i18n")
+languages = [f[len("quince_"):-len(".ts")] for f in os.listdir(i18n) if f.startswith("quince_") and f.endswith(".ts")]
+for lang in languages:
+    f = "qtbase_%s.qm" % lang
+    if os.path.exists(os.path.join(qt_translations, f)):
         copy(os.path.join(qt_translations, f), os.path.join(dist, "translations", f))
+
+for f in ("quince.exe", "slint_cpp.dll"):
+    subprocess.run(["x86_64-w64-mingw32-strip", "--strip-unneeded", os.path.join(dist, f)], check=True)
 
 # every DLL from the MSYS2 tree that something in the folder loads
 bin_dir = os.path.join(ucrt, "bin")

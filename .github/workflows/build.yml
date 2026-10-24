@@ -56,8 +56,12 @@ jobs:
           deploy=$(command -v windeployqt6 || command -v windeployqt-qt6 || echo /ucrt64/share/qt6/bin/windeployqt.exe)
           # the window is Slint's: no style or icon plugins (windeployqt insists on
           # the platform plugin of an app that links QtGui)
+          # Qt's own texts only in the languages Quince has
+          langs=$(ls i18n/quince_*.ts | sed 's/.*quince_\(.*\)\.ts/\1/' | paste -sd,)
           "$deploy" --release --no-compiler-runtime --skip-plugin-types styles,iconengines,generic,platforminputcontexts \
-            "$dist/quince.exe"
+            --translations "$langs" "$dist/quince.exe"
+          # what the build made (MSYS2's DLLs come stripped)
+          strip --strip-unneeded "$dist/quince.exe" "$dist/slint_cpp.dll"
           # MSYS2's Qt would look for plugins below share\qt6\
           cp packaging/windows/qt.conf "$dist/qt.conf"
           # every DLL of the MSYS2 prefix that the exe and the Qt plugins load
@@ -112,6 +116,8 @@ jobs:
           old=$(otool -L "$app/Contents/MacOS/Quince" | awk '/libslint_cpp/ {print $1}')
           new=@executable_path/../Frameworks/libslint_cpp.dylib
           if [ "$old" != "$new" ]; then install_name_tool -change "$old" "$new" "$app/Contents/MacOS/Quince"; fi
+          # local symbols out of what the build made (before signing)
+          strip -x "$app/Contents/MacOS/Quince" "$slint"
           # Homebrew libraries a binary of the bundle still loads (its own id aside)
           brewdeps() {
             find "$app/Contents" -type f \( -name '*.dylib' -o -perm -u+x \) | while read -r f; do
@@ -183,7 +189,8 @@ jobs:
           set -o pipefail
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr 2>&1 | tee ci.log
           cmake --build build 2>&1 | tee -a ci.log
-          DESTDIR="$PWD/pkg" cmake --install build
+          # stripped: quince-bin's PKGBUILD takes the binaries as they are (!strip)
+          DESTDIR="$PWD/pkg" cmake --install build --strip
           ver=$(git describe --tags --always)
           tar --zstd -cf "quince-$ver-x86_64.tar.zst" -C pkg usr
           ls -la quince-*.tar.zst
