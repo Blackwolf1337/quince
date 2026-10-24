@@ -84,8 +84,12 @@ qt_standard_project_setup(REQUIRES 6.8)
 qt_add_library(quince_core STATIC
     src/app/AppController.h
     src/app/AppController.cpp
+    src/app/ArtCache.h
+    src/app/ArtCache.cpp
     src/app/ColorTheme.h
     src/app/ColorTheme.cpp
+    src/app/CommandLine.h
+    src/app/CommandLine.cpp
     src/app/Language.h
     src/app/Language.cpp
     src/app/Settings.h
@@ -324,6 +328,74 @@ elseif(APPLE)
                 $<TARGET_BUNDLE_CONTENT_DIR:quince>/Resources
         VERBATIM
     )
+endif()
+
+# The Slint frontend (work in progress, see docs/architecture.md): needs a
+# Rust toolchain (1.92 or newer) to build Slint.
+option(QUINCE_SLINT "Build the Slint frontend quince-slint" OFF)
+if(QUINCE_SLINT)
+    # FemtoVG (OpenGL) for the video underlay, the software renderer as a
+    # fallback. Static on Linux only: Slint's headers always declare dllimport
+    # on Windows, and a static libslint_cpp.a does not carry its macOS
+    # frameworks to the final link.
+    if(WIN32 OR APPLE)
+        set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+    else()
+        set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+    endif()
+    set(SLINT_FEATURE_INTERPRETER OFF CACHE BOOL "" FORCE)
+    set(SLINT_FEATURE_RENDERER_SKIA OFF CACHE BOOL "" FORCE)
+    set(SLINT_FEATURE_RENDERER_FEMTOVG ON CACHE BOOL "" FORCE)
+    set(SLINT_FEATURE_SYSTEM_TRAY ON CACHE BOOL "" FORCE)
+    set(SLINT_STYLE "fluent-dark" CACHE STRING "Slint widget style of quince-slint")
+    FetchContent_Declare(Slint
+        GIT_REPOSITORY https://github.com/slint-ui/slint.git
+        GIT_TAG v1.18.1
+        GIT_SHALLOW TRUE
+        SOURCE_SUBDIR api/cpp
+        PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/SlintPatch.cmake
+        UPDATE_DISCONNECTED TRUE
+    )
+    FetchContent_MakeAvailable(Slint)
+    # the rest of the project builds its own libraries statically
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+
+    add_executable(quince-slint
+        src/slint/main.cpp
+        src/slint/Bindings.h
+        src/slint/Bindings.cpp
+        src/slint/Bridge.h
+        src/slint/Gl.h
+        src/slint/Gl.cpp
+        src/slint/ImageCache.h
+        src/slint/ImageCache.cpp
+        src/slint/ModelMirror.h
+        src/slint/SlintHost.h
+        src/slint/SlintHost.cpp
+        src/slint/VideoRenderer.h
+        src/slint/VideoRenderer.cpp
+    )
+    slint_target_sources(quince-slint ui/main.slint)
+    set_property(TARGET quince-slint PROPERTY SLINT_EMBED_RESOURCES embed-files)
+    target_include_directories(quince-slint PRIVATE src/slint)
+    if(NOT MSVC)
+        target_compile_options(quince-slint PRIVATE -Wall -Wextra)
+    endif()
+    target_link_libraries(quince-slint PRIVATE quince_core Slint::Slint PkgConfig::MPV)
+    add_dependencies(quince-slint mecab-ipadic)
+    if(WIN32)
+        target_link_libraries(quince-slint PRIVATE opengl32 shell32)
+        set_target_properties(quince-slint PROPERTIES WIN32_EXECUTABLE ON)
+    elseif(APPLE)
+        # Gl.cpp looks the GL entry points up with dlsym(RTLD_DEFAULT)
+        target_link_libraries(quince-slint PRIVATE "-framework OpenGL")
+    else()
+        # static Slint finds fonts through fontconfig but does not link it;
+        # mpv's own EGL context (VideoRenderer.cpp)
+        pkg_check_modules(FONTCONFIG REQUIRED IMPORTED_TARGET fontconfig)
+        pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
+        target_link_libraries(quince-slint PRIVATE PkgConfig::FONTCONFIG PkgConfig::EGL ${CMAKE_DL_LIBS})
+    endif()
 endif()
 
 # Sign-in window. Built only when QtWebEngine is there; the player itself

@@ -1,0 +1,416 @@
+// The Slint frontend (phase 2 skeleton): player bar, queue, video, tray.
+// The globals mirror the core's objects; src/slint/Bindings.cpp keeps them in
+// step and forwards the callbacks to the core thread.
+
+import { Button, LineEdit, ListView, Slider } from "std-widgets.slint";
+
+import "../qml/fonts/InterVariable.ttf";
+
+export struct QueueRow {
+    title: string,
+    subtitle: string,
+    art-url: string,
+    art: image,
+    current: bool,
+}
+
+export global Theme {
+    in property <color> accent: #ffc83d;
+    in property <color> background: #101014;
+    in property <color> surface: #1b1b21;
+    in property <color> surface-high: #26262e;
+    out property <color> text: #f2f2f5;
+    out property <color> text-dim: #a0a0aa;
+}
+
+export global Player {
+    in property <string> title;
+    in property <string> subtitle;
+    in property <image> art;
+    in property <bool> paused: true;
+    in property <bool> idle: true;
+    in property <bool> loading;
+    in property <float> position;
+    in property <float> duration;
+    // the settings' volume slider position, 0..100
+    in property <float> volume;
+    in property <bool> has-next;
+    in property <bool> has-previous;
+    in property <bool> video-playing;
+    in property <string> error;
+    in property <[QueueRow]> queue;
+
+    callback toggle-pause();
+    callback next();
+    callback previous();
+    callback seek(float);
+    callback set-volume(float);
+    callback play-index(int);
+    callback play-text(string);
+
+    // m:ss
+    public pure function time(seconds: float) -> string {
+        if seconds < 0 || seconds != seconds {
+            return "0:00";
+        }
+        let s = Math.floor(seconds);
+        let rest = Math.mod(s, 60);
+        return Math.floor(s / 60) + ":" + (rest < 10 ? "0" : "") + rest;
+    }
+}
+
+component IconButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> enabled: true;
+    in property <bool> primary;
+    callback clicked();
+
+    width: self.primary ? 48px : 40px;
+    height: self.width;
+    border-radius: self.width / 2;
+    background: self.primary ? Theme.accent : touch.has-hover && self.enabled ? Theme.surface-high : transparent;
+    opacity: self.enabled ? 1 : 0.4;
+
+    Text {
+        text: root.label;
+        color: root.primary ? #101014 : Theme.text;
+        font-size: root.primary ? 18px : 16px;
+        font-weight: 700;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component Cover inherits Rectangle {
+    in property <image> source;
+
+    border-radius: 6px;
+    clip: true;
+    background: Theme.surface-high;
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.source;
+        image-fit: cover;
+    }
+}
+
+component QueueItem inherits Rectangle {
+    in property <QueueRow> entry;
+    callback clicked();
+
+    height: 56px;
+    border-radius: 8px;
+    background: self.entry.current ? Theme.surface-high : touch.has-hover ? #ffffff0c : transparent;
+
+    HorizontalLayout {
+        padding: 8px;
+        spacing: 10px;
+        Cover {
+            width: 40px;
+            height: 40px;
+            source: root.entry.art;
+        }
+        VerticalLayout {
+            alignment: center;
+            Text {
+                text: root.entry.title;
+                color: root.entry.current ? Theme.accent : Theme.text;
+                overflow: elide;
+            }
+            Text {
+                text: root.entry.subtitle;
+                color: Theme.text-dim;
+                font-size: 12px;
+                overflow: elide;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component PlayerBar inherits Rectangle {
+    height: 84px;
+    background: Theme.surface;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 16px;
+
+        HorizontalLayout {
+            width: 300px;
+            spacing: 12px;
+            alignment: start;
+            Cover {
+                y: (parent.height - self.height) / 2;
+                width: 56px;
+                height: 56px;
+                source: Player.art;
+            }
+            VerticalLayout {
+                alignment: center;
+                Text {
+                    text: Player.idle && Player.title == "" ? "Nothing playing" : Player.title;
+                    color: Theme.text;
+                    font-weight: 600;
+                    overflow: elide;
+                }
+                Text {
+                    text: Player.error != "" ? Player.error : Player.subtitle;
+                    color: Player.error != "" ? #ff7070 : Theme.text-dim;
+                    font-size: 12px;
+                    overflow: elide;
+                }
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+            HorizontalLayout {
+                alignment: center;
+                spacing: 12px;
+                IconButton {
+                    label: "⏮";
+                    enabled: Player.has-previous;
+                    clicked => {
+                        Player.previous();
+                    }
+                }
+                IconButton {
+                    primary: true;
+                    label: Player.paused || Player.idle ? "▶" : "⏸";
+                    clicked => {
+                        Player.toggle-pause();
+                    }
+                }
+                IconButton {
+                    label: "⏭";
+                    enabled: Player.has-next;
+                    clicked => {
+                        Player.next();
+                    }
+                }
+            }
+            HorizontalLayout {
+                spacing: 8px;
+                Text {
+                    text: Player.time(Player.position);
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+                Slider {
+                    minimum: 0;
+                    maximum: Math.max(Player.duration, 1);
+                    value: Player.position;
+                    released(value) => {
+                        Player.seek(value);
+                    }
+                }
+                Text {
+                    text: Player.time(Player.duration);
+                    color: Theme.text-dim;
+                    font-size: 12px;
+                    vertical-alignment: center;
+                }
+            }
+        }
+
+        HorizontalLayout {
+            width: 180px;
+            alignment: end;
+            Slider {
+                width: 140px;
+                minimum: 0;
+                maximum: 100;
+                value: Player.volume;
+                changed(value) => {
+                    Player.set-volume(value);
+                }
+            }
+        }
+    }
+}
+
+export component MainWindow inherits Window {
+    title: "Quince";
+    icon: @image-url("../qml/icons/quince.svg");
+    preferred-width: 1280px;
+    preferred-height: 800px;
+    min-width: 900px;
+    min-height: 600px;
+    // FemtoVG clears with this, mpv draws next, the items come on top: nothing
+    // opaque may lie over the video area
+    background: Theme.background;
+    default-font-family: "Inter Variable";
+    default-font-size: 14px;
+
+    // the video area for src/slint/VideoRenderer.cpp
+    out property <bool> video-shown: Player.video-playing;
+    out property <length> video-x: video.absolute-position.x;
+    out property <length> video-y: video.absolute-position.y;
+    out property <length> video-width: video.width;
+    out property <length> video-height: video.height;
+
+    // the system clipboard through a hidden text field (Slint has no API for it)
+    public function copy-text(text: string) {
+        clip.text = text;
+        clip.select-all();
+        clip.copy();
+    }
+
+    VerticalLayout {
+        HorizontalLayout {
+            padding: 12px;
+            spacing: 12px;
+
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 12px;
+
+                LineEdit {
+                    placeholder-text: "Video id or link";
+                    accepted(text) => {
+                        Player.play-text(text);
+                        self.text = "";
+                    }
+                }
+
+                Rectangle {
+                    vertical-stretch: 1;
+
+                    video := Rectangle {
+                        visible: Player.video-playing;
+                    }
+
+                    if !Player.video-playing: VerticalLayout {
+                        alignment: center;
+                        spacing: 16px;
+                        HorizontalLayout {
+                            alignment: center;
+                            Cover {
+                                width: 320px;
+                                height: 320px;
+                                border-radius: 12px;
+                                source: Player.art;
+                            }
+                        }
+                        Text {
+                            text: Player.title;
+                            color: Theme.text;
+                            font-size: 22px;
+                            font-weight: 700;
+                            horizontal-alignment: center;
+                        }
+                        Text {
+                            text: Player.subtitle;
+                            color: Theme.text-dim;
+                            horizontal-alignment: center;
+                        }
+                    }
+                }
+            }
+
+            Rectangle {
+                width: 340px;
+                background: Theme.surface;
+                border-radius: 12px;
+
+                VerticalLayout {
+                    padding: 8px;
+                    spacing: 4px;
+                    Text {
+                        text: "Queue";
+                        color: Theme.text;
+                        font-size: 16px;
+                        font-weight: 700;
+                    }
+                    ListView {
+                        for entry[index] in Player.queue: QueueItem {
+                            entry: entry;
+                            clicked => {
+                                Player.play-index(index);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        PlayerBar { }
+    }
+
+    clip := TextInput {
+        visible: false;
+        width: 0;
+        height: 0;
+    }
+}
+
+// A SystemTrayIcon has its own copy of the globals: the C++ side feeds it
+export component TrayIcon inherits SystemTrayIcon {
+    icon: @image-url("../qml/icons/quince.svg");
+    in property <string> now-playing: "Nothing playing";
+    in property <bool> playing;
+    tooltip: self.now-playing;
+    title: "Quince";
+
+    callback toggle-pause();
+    callback next();
+    callback previous();
+    callback toggle-window();
+    callback quit();
+
+    Menu {
+        MenuItem {
+            title: root.now-playing;
+            enabled: false;
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: root.playing ? "Pause" : "Play";
+            activated => {
+                root.toggle-pause();
+            }
+        }
+        MenuItem {
+            title: "Next";
+            activated => {
+                root.next();
+            }
+        }
+        MenuItem {
+            title: "Previous";
+            activated => {
+                root.previous();
+            }
+        }
+        MenuSeparator { }
+        MenuItem {
+            title: "Show or hide Quince";
+            activated => {
+                root.toggle-window();
+            }
+        }
+        MenuItem {
+            title: "Quit";
+            activated => {
+                root.quit();
+            }
+        }
+    }
+}

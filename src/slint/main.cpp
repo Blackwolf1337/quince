@@ -1,0 +1,157 @@
+// The Slint frontend. Slint keeps the main thread (winit needs it on macOS);
+// the core (QCoreApplication, AppController and everything it owns) runs on a
+// thread of its own. Bridge.h has the rules for crossing between the two.
+
+#include "Bindings.h"
+#include "ImageCache.h"
+#include "SlintHost.h"
+#include "VideoRenderer.h"
+#include "app/AppController.h"
+#include "app/CommandLine.h"
+#include "player/MpvPlayer.h"
+
+#include <QCoreApplication>
+#include <QImage>
+#include <QTimer>
+
+#include <chrono>
+#include <clocale>
+#include <cstring>
+#include <cstdio>
+#include <mutex>
+#include <optional>
+#include <thread>
+
+namespace {
+
+// how often the Slint thread tells the core whether the window is in front
+constexpr auto kWindowStateInterval = std::chrono::seconds(1);
+
+// The core's thread and its event loop, and a way to end it from the Slint
+// thread at any time, also before the loop runs.
+class CoreThread
+{
+public:
+    template<typename Run>
+    void start(Run run)
+    {
+        m_thread = std::thread([this, run] { run(*this); });
+    }
+
+    // core thread: the loop, unless quit() came first
+    void exec(QCoreApplication &app)
+    {
+        {
+            std::lock_guard lock(m_mutex);
+            if (m_quit)
+                return;
+            m_app = &app;
+        }
+        app.exec();
+        std::lock_guard lock(m_mutex);
+        m_app = nullptr;
+    }
+
+    // Slint thread: ends the loop and waits for the thread (the session is
+    // saved on the way out)
+    void quit()
+    {
+        {
+            std::lock_guard lock(m_mutex);
+            m_quit = true;
+            if (m_app)
+                QMetaObject::invokeMethod(m_app, &QCoreApplication::quit, Qt::QueuedConnection);
+        }
+        if (m_thread.joinable())
+            m_thread.join();
+    }
+
+private:
+    std::thread m_thread;
+    std::mutex m_mutex;
+    QCoreApplication *m_app = nullptr;
+    bool m_quit = false;
+};
+
+// test runs: a picture of the window (without the video under it) as PNG
+void saveScreenshot(MainWindow &w, const QString &file, QObject *coreObject)
+{
+    auto shot = w.window().take_snapshot();
+    if (!shot)
+        return;
+    const int width = int(shot->width()), height = int(shot->height());
+    QImage image(width, height, QImage::Format_RGBA8888);
+    for (int y = 0; y < height; y++)
+        std::memcpy(image.scanLine(y), shot->begin() + size_t(y) * width, size_t(width) * 4);
+    // the PNG is written on the core thread; Slint's pixels were copied
+    bridge::toCore(coreObject, [image, file] { image.save(file); });
+}
+
+} // namespace
+
+int main(int argc, char *argv[])
+{
+    // the window first: it shows while the core starts
+    std::optional<slint::ComponentHandle<MainWindow>> window(MainWindow::create());
+    std::optional<slint::ComponentHandle<TrayIcon>> tray(TrayIcon::create());
+    const bridge::Window weakWindow(*window);
+    const bridge::Tray weakTray(*tray);
+
+    VideoRenderer video(weakWindow);
+    if ((*window)->window().set_rendering_notifier(std::ref(video)))
+        std::fprintf(stderr, "quince: Slint renders without OpenGL here, no video\n");
+    SlintHost host(weakWindow);
+    ImageCache images;
+
+    CoreThread core;
+    core.start([&](CoreThread &self) {
+        QCoreApplication app(argc, argv);
+        QCoreApplication::setApplicationName(QStringLiteral("quince"));
+        QCoreApplication::setApplicationVersion(QStringLiteral(PROJECT_VERSION));
+        // libmpv parses numbers with the C locale; QCoreApplication has just
+        // set LC_NUMERIC from the environment, which breaks it on e.g. de_DE
+        std::setlocale(LC_NUMERIC, "C");
+        const CommandLine line = parseCommandLine(app);
+
+        AppController controller(line.app, &host);
+        images.startCore(&app);
+        bindCore(controller, weakWindow, weakTray, &images, &video, &host);
+
+        if (line.quitAfterMs >= 0) {
+            QTimer::singleShot(line.quitAfterMs, &app, [&app, weakWindow, shot = line.screenshot, &controller] {
+                const MpvPlayer *player = controller.player();
+                qInfo("test: position %.1f duration %.1f paused %d idle %d", player->position(), player->duration(),
+                      player->paused(), player->idle());
+                bridge::toUi(weakWindow, [shot, &app](MainWindow &w) {
+                    if (!shot.isEmpty())
+                        saveScreenshot(w, shot, &app);
+                    slint::quit_event_loop();
+                });
+            });
+        }
+        self.exec(app);
+    });
+
+    (*window)->window().on_close_requested([] {
+        slint::quit_event_loop();
+        return slint::CloseRequestResponse::HideWindow;
+    });
+    slint::Timer windowState;
+    windowState.start(slint::TimerMode::Repeated, kWindowStateInterval, [&] {
+        host.setWindowState((*window)->window().is_visible(), (*window)->window().is_minimized());
+    });
+
+    (*window)->show();
+    host.setWindowState(true, false);
+    slint::run_event_loop(slint::EventLoopMode::RunUntilQuit);
+
+    // Slint's objects go first, on this thread: the window takes the mpv
+    // render context with it while the core and its players still run
+    windowState.stop();
+    (*window)->hide();
+    window.reset();
+    tray.reset();
+    images.clear();
+    core.quit();
+    return 0;
+}

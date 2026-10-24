@@ -35,6 +35,8 @@ src/integrations   Discord, notifications, MPRIS, global shortcuts, SponsorBlock
 src/app            controller, settings, language, colors, UiHost (what the core needs from a frontend)
 src/qml            the Qt Quick frontend: main, QML type registration, video item, tray, test driver
 qml                the interface
+src/slint          the Slint frontend (QUINCE_SLINT, work in progress): threads, bindings, images, video
+ui                 its interface
 cmake              Mecab.cmake (builds MeCab and the dictionary)
 login              quince-login
 tools              quince-parsedump, quince-romanize
@@ -44,3 +46,5 @@ packaging          desktop file
 ```
 
 Everything under src except src/qml builds into the static library quince_core, which links no QtQml or QtQuick. The frontend registers the core's types for QML in src/qml/Registrations.h.
+
+The Slint frontend runs Slint on the main thread and the core (QCoreApplication, AppController) on a second one. src/slint/Bridge.h has the rules for crossing: values cross as plain copies; Slint objects stay on the Slint thread, Qt objects on the core thread. mpv draws the video under the Slint items in an EGL context of its own, because FemtoVG's GL state breaks mpv's rendering of hardware decoded frames.

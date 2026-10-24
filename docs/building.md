@@ -34,6 +34,10 @@ cmake --build build
 ./build/quince
 ```
 
+## Slint frontend (work in progress)
+
+`-DQUINCE_SLINT=ON` also builds `quince-slint`, a frontend made with Slint instead of Qt Quick, on the same core. It needs a Rust toolchain (1.92 or newer); CMake downloads Slint 1.18.1 and builds it with cargo, which also downloads its crates. So far it has the player bar, the queue, video and the tray.
+
 ## Install
 
 Install (binaries, desktop file, icon), user-local or system-wide:

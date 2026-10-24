@@ -1,4 +1,5 @@
 #include "app/AppController.h"
+#include "app/CommandLine.h"
 #include "qml/ArtNetwork.h"
 #include "app/Settings.h"
 #include "qml/TestDriver.h"
@@ -7,7 +8,6 @@
 #include "qml/QmlHost.h"
 #include "qml/Tray.h"
 
-#include <QCommandLineParser>
 #include <QElapsedTimer>
 #include <QLoggingCategory>
 #include <QFile>
@@ -39,45 +39,9 @@ int main(int argc, char *argv[])
     // LC_NUMERIC from the environment, which breaks it on e.g. de_DE.
     std::setlocale(LC_NUMERIC, "C");
 
-    QCommandLineParser parser;
-    parser.setApplicationDescription(QStringLiteral("Native YouTube Music player"));
-    parser.addHelpOption();
-    parser.addVersionOption();
-    const QCommandLineOption aoOption(QStringLiteral("ao"),
-                                      QStringLiteral("mpv audio output driver (null for silence)."),
-                                      QStringLiteral("driver"));
-    const QCommandLineOption playOption(QStringLiteral("play"),
-                                        QStringLiteral("Video id or link to play on start."),
-                                        QStringLiteral("id"));
-    const QCommandLineOption quitAfterOption(QStringLiteral("quit-after"),
-                                             QStringLiteral("Quit after this many milliseconds (test runs)."),
-                                             QStringLiteral("ms"));
-    const QCommandLineOption screenshotOption(QStringLiteral("screenshot"),
-                                              QStringLiteral("Save a picture of the window before quitting (test runs)."),
-                                              QStringLiteral("file"));
-    parser.addOption(aoOption);
-    parser.addOption(playOption);
-    parser.addOption(quitAfterOption);
-    parser.addOption(screenshotOption);
-    const QCommandLineOption stepsOption(QStringLiteral("steps"),
-                                         QStringLiteral("Replay the input script in file (test runs)."),
-                                         QStringLiteral("file"));
-    const QCommandLineOption noSessionOption(QStringLiteral("no-session"),
-                                             QStringLiteral("Do not restore the last queue."));
-    const QCommandLineOption appIdOption(QStringLiteral("app-id"),
-                                         QStringLiteral("Wayland app id / X11 class (default quince)."),
-                                         QStringLiteral("id"));
-    parser.addOption(stepsOption);
-    parser.addOption(noSessionOption);
-    parser.addOption(appIdOption);
-    parser.process(app);
-    if (parser.isSet(appIdOption))
-        QGuiApplication::setDesktopFileName(parser.value(appIdOption));
-
-    AppOptions options;
-    options.audioOutput = parser.value(aoOption);
-    options.playOnStart = parser.value(playOption);
-    options.restoreSession = !parser.isSet(noSessionOption);
+    const CommandLine line = parseCommandLine(app);
+    if (!line.appId.isEmpty())
+        QGuiApplication::setDesktopFileName(line.appId);
 
     QQuickStyle::setStyle(QStringLiteral("Material"));
     // mpv draws video through OpenGL (MpvVideoItem); the default elsewhere is
@@ -94,7 +58,7 @@ int main(int argc, char *argv[])
 
     // window, clipboard and notifications for the core; the window comes later
     QmlHost host;
-    AppController controller(options, &host);
+    AppController controller(line.app, &host);
     Tray tray(controller.playback(), controller.player(), controller.settings(), &host);
     host.setTray(&tray);
     // 8 bits per channel: some EGL setups hand out 16-bit (RGB565) surfaces,
@@ -129,8 +93,8 @@ int main(int argc, char *argv[])
         });
     }
 
-    if (parser.isSet(stepsOption)) {
-        QFile script(parser.value(stepsOption));
+    if (!line.steps.isEmpty()) {
+        QFile script(line.steps);
         auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().value(0));
         if (window && script.open(QIODevice::ReadOnly)) {
             const QStringList lines = QString::fromUtf8(script.readAll()).split(u'\n');
@@ -139,9 +103,9 @@ int main(int argc, char *argv[])
         }
     }
 
-    if (parser.isSet(quitAfterOption)) {
-        const QString shot = parser.value(screenshotOption);
-        QTimer::singleShot(parser.value(quitAfterOption).toInt(), &app, [&engine, &controller, shot] {
+    if (line.quitAfterMs >= 0) {
+        const QString shot = line.screenshot;
+        QTimer::singleShot(line.quitAfterMs, &app, [&engine, &controller, shot] {
             auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().value(0));
             if (window && !shot.isEmpty())
                 window->grabWindow().save(shot);
