@@ -29,6 +29,7 @@ cmake -S . -B /cache/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OF
 cmake --build /cache/build
 rm -rf /cache/dist && cmake --install /cache/build --prefix /cache/dist/Quince
 python3 packaging/windows/deploy.py /cache/dist/Quince /cache/msys/ucrt64
+packaging/windows/trim-icu.sh /cache/dist/Quince
 ver=$(git -c safe.directory=/src describe --tags --always)
 rm -f /src/Quince-*-windows-x64.zip
 (cd /cache/dist && zip -qr9 "/src/Quince-$ver-windows-x64.zip" Quince)
