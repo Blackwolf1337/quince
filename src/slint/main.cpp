@@ -84,6 +84,18 @@ int main(int argc, char *argv[])
     // the window crashed it on Windows); the core thread does not run yet
     QCoreApplication::setApplicationName(QStringLiteral("quince"));
     const QSize startSize = Settings().savedWindowSize();
+    // the Wayland app id / X11 class: desktops group, list and pick windows
+    // by it (none at all without); before the window, so not from
+    // parseCommandLine on the core thread
+    std::string appId = "quince";
+    for (int i = 1; i < argc; i++) {
+        const std::string_view arg = argv[i];
+        if (arg.starts_with("--app-id="))
+            appId = arg.substr(9);
+        else if (arg == "--app-id" && i + 1 < argc)
+            appId = argv[i + 1];
+    }
+    slint::set_xdg_app_id(appId);
     std::optional<slint::ComponentHandle<ui::MainWindow>> window(ui::MainWindow::create());
     if (startSize.width() > 0 && startSize.height() > 0) {
         (*window)->set_start_width(float(startSize.width()));
