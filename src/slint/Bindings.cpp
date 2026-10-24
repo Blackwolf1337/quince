@@ -173,19 +173,7 @@ void bindPlayer(AppController &app, const Window &window, ImageCache *images)
         },
         [](ui::MainWindow &w, std::shared_ptr<slint::VectorModel<ui::ListItem>> model) { w.global<ui::Player>().set_queue(model); },
         [images](const std::shared_ptr<slint::VectorModel<ui::ListItem>> &model, size_t, const QueueData &d) {
-            // rows move while the picture loads: it goes to every row with this cover
-            images->get(d.artUrl, kRowArt * 2, [weak = std::weak_ptr(model), url = str(d.artUrl)](const slint::Image &image) {
-                auto m = weak.lock();
-                if (!m)
-                    return;
-                for (size_t i = 0; i < m->row_count(); i++) {
-                    ui::ListItem row = *m->row_data(i);
-                    if (row.art_url == url) {
-                        row.art = image;
-                        m->set_row_data(i, row);
-                    }
-                }
-            });
+            loadRowArt(images, model, d.artUrl, kRowArt * 2);
         });
 }
 

@@ -226,7 +226,7 @@ void bindEffects(AudioEffects *effects, const Window &window)
         auto &a = w.global<ui::App>();
         a.on_set_band([effects](int band, float gain) { toCore(effects, [effects, band, gain] { effects->setBand(band, gain); }); });
         a.on_apply_preset([effects](const slint::SharedString &id) {
-            toCore(effects, [effects, id = props::qstr(id)] { effects->applyPreset(id); });
+            toCore(effects, [effects, id = fromSlint(id)] { effects->applyPreset(id); });
         });
     });
 }
@@ -272,7 +272,7 @@ void bindAccount(AppController &app, const Window &window)
     toUi(window, [account, picked](ui::MainWindow &w) {
         auto &a = w.global<ui::Account>();
         a.on_import_from_browser([account](const slint::SharedString &id) {
-            toCore(account, [account, id = props::qstr(id)] { account->importFromBrowser(id); });
+            toCore(account, [account, id = fromSlint(id)] { account->importFromBrowser(id); });
         });
         a.on_import_cookies([account](const slint::SharedString &title, const slint::SharedString &filter) {
             filepicker::openFile(std::string(std::string_view(title)), std::string(std::string_view(filter)), "txt",
@@ -283,12 +283,12 @@ void bindAccount(AppController &app, const Window &window)
             });
         });
         a.on_add_to_playlist([account, picked](const slint::SharedString &browseId, const slint::SharedString &title) {
-            toCore(account, [account, picked, id = props::qstr(browseId), t = props::qstr(title)] {
+            toCore(account, [account, picked, id = fromSlint(browseId), t = fromSlint(title)] {
                 account->addToPlaylist(id, picked->item.value(QStringLiteral("videoId")).toString(), t);
             });
         });
         a.on_create_playlist([account, picked](const slint::SharedString &title) {
-            toCore(account, [account, picked, t = props::qstr(title).trimmed()] {
+            toCore(account, [account, picked, t = fromSlint(title).trimmed()] {
                 account->createPlaylist(t, picked->item.value(QStringLiteral("videoId")).toString());
             });
         });
@@ -330,19 +330,7 @@ void bindDownloads(Downloader *downloads, const Window &window, ImageCache *imag
             w.global<ui::App>().set_downloads(model);
         },
         [images](const std::shared_ptr<slint::VectorModel<ui::DownloadRow>> &model, size_t, const DownloadData &d) {
-            // rows move while the picture loads: it goes to every row with this cover
-            images->get(d.artUrl, kRowArt * 2, [weak = std::weak_ptr(model), url = str(d.artUrl)](const slint::Image &image) {
-                auto m = weak.lock();
-                if (!m)
-                    return;
-                for (size_t i = 0; i < m->row_count(); i++) {
-                    ui::DownloadRow row = *m->row_data(i);
-                    if (row.art_url == url) {
-                        row.art = image;
-                        m->set_row_data(i, row);
-                    }
-                }
-            });
+            loadRowArt(images, model, d.artUrl, kRowArt * 2);
         });
 
     toUi(window, [downloads](ui::MainWindow &w) {

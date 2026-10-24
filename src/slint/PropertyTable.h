@@ -38,11 +38,6 @@ struct Field
 // the same order of types as Member
 using Value = std::variant<bool, int, double, std::string>;
 
-inline QString qstr(const slint::SharedString &s)
-{
-    return QString::fromUtf8(s.data(), qsizetype(s.size()));
-}
-
 namespace detail {
 
 inline Value toValue(const QVariant &v, std::type_identity<bool>)

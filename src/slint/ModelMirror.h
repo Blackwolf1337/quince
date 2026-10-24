@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Bridge.h"
+#include "ImageCache.h"
 
 #include <QAbstractItemModel>
 
@@ -87,3 +88,23 @@ struct ModelMirror
         reset();
     }
 };
+
+// Slint thread: the cover at url, once loaded, into every row of model whose
+// art_url is url (rows move while it loads). Row needs art_url and art.
+template<typename Row>
+void loadRowArt(ImageCache *images, const std::shared_ptr<slint::VectorModel<Row>> &model, const std::string &url,
+                int pixels)
+{
+    images->get(url, pixels, [weak = std::weak_ptr(model), key = bridge::str(url)](const slint::Image &image) {
+        auto m = weak.lock();
+        if (!m)
+            return;
+        for (size_t i = 0; i < m->row_count(); i++) {
+            Row row = *m->row_data(i);
+            if (row.art_url == key) {
+                row.art = image;
+                m->set_row_data(i, row);
+            }
+        }
+    });
+}
