@@ -9,7 +9,8 @@
 set -euo pipefail
 in=$1
 out=$2
-icupkg=$(command -v icupkg || echo "$(brew --prefix icu4c)/bin/icupkg")
+# ICU puts it in sbin (Homebrew: not on PATH)
+icupkg=$(command -v icupkg || echo "$(brew --prefix icu4c)/sbin/icupkg")
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
