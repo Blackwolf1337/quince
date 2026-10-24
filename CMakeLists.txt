@@ -362,6 +362,22 @@ if(QUINCE_SLINT)
     # the rest of the project builds its own libraries statically
     set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
+    # nativefiledialog-extended (zlib): the system's file and folder pickers.
+    # On Linux through the xdg desktop portal over libdbus, without GTK; no
+    # parent window is passed, so no X11 or Wayland glue.
+    set(NFD_PORTAL ON CACHE BOOL "" FORCE)
+    set(NFD_X11 OFF CACHE BOOL "" FORCE)
+    set(NFD_WAYLAND OFF CACHE BOOL "" FORCE)
+    set(NFD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+    set(NFD_INSTALL OFF CACHE BOOL "" FORCE)
+    FetchContent_Declare(nfd
+        URL https://github.com/btzy/nativefiledialog-extended/archive/refs/tags/v1.4.1.tar.gz
+        URL_HASH SHA256=4a01eafa921169f009f3e83bea8e287d9e5d0b94ca9064cf7f0a546652d7c884
+        EXCLUDE_FROM_ALL
+        SYSTEM
+    )
+    FetchContent_MakeAvailable(nfd)
+
     add_executable(quince-slint
         src/slint/main.cpp
         src/slint/Areas.h
@@ -369,6 +385,9 @@ if(QUINCE_SLINT)
         src/slint/SearchBindings.cpp
         src/slint/NowPlayingBindings.cpp
         src/slint/DialogsBindings.cpp
+        src/slint/FilePicker.h
+        src/slint/FilePicker.cpp
+        src/slint/PropertyTable.h
         src/slint/Bindings.h
         src/slint/Bindings.cpp
         src/slint/Bridge.h
@@ -394,10 +413,11 @@ if(QUINCE_SLINT)
     if(NOT MSVC)
         target_compile_options(quince-slint PRIVATE -Wall -Wextra)
     endif()
-    target_link_libraries(quince-slint PRIVATE quince_core Slint::Slint PkgConfig::MPV)
+    target_link_libraries(quince-slint PRIVATE quince_core Slint::Slint PkgConfig::MPV nfd::nfd)
     add_dependencies(quince-slint mecab-ipadic)
     if(WIN32)
-        target_link_libraries(quince-slint PRIVATE opengl32 shell32)
+        # ole32 and uuid: nfd's COM dialog, which its static library does not link
+        target_link_libraries(quince-slint PRIVATE opengl32 shell32 ole32 uuid)
         set_target_properties(quince-slint PROPERTIES WIN32_EXECUTABLE ON)
     elseif(APPLE)
         # Gl.cpp looks the GL entry points up with dlsym(RTLD_DEFAULT)

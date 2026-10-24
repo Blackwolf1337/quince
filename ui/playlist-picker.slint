@@ -1,0 +1,75 @@
+// "Add to playlist": the account's own playlists, or a new one
+// (qml/PlaylistPicker.qml). The item stays on the core side.
+
+import { ListView } from "std-widgets.slint";
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { Account } from "globals.slint";
+import { Button, DialogFrame, TextField } from "dialog-widgets.slint";
+
+export component PlaylistPicker inherits DialogFrame {
+    callback picked();
+
+    title: @tr("Add to playlist");
+    button-text: @tr("Cancel");
+
+    function create() {
+        if new-title.text.replace-all(" ", "") != "" {
+            Account.create-playlist(new-title.text);
+            root.picked();
+        }
+    }
+
+    HorizontalLayout {
+        spacing: 8px;
+        new-title := TextField {
+            horizontal-stretch: 1;
+            placeholder: @tr("New playlist");
+            accepted => {
+                root.create();
+            }
+        }
+        Button {
+            text: @tr("Create");
+            raised: true;
+            enabled: new-title.text.replace-all(" ", "") != "";
+            clicked => {
+                root.create();
+            }
+        }
+    }
+
+    ListView {
+        vertical-stretch: 1;
+        for playlist in Account.own-playlists: Rectangle {
+            height: 48px;
+            border-radius: Style.radius;
+            background: touch.pressed ? Style.pressed : touch.has-hover ? Style.hover : transparent;
+            HorizontalLayout {
+                padding-left: 16px;
+                padding-right: 16px;
+                spacing: 16px;
+                Image {
+                    width: 22px;
+                    height: 22px;
+                    y: (parent.height - self.height) / 2;
+                    source: Icons.playlist;
+                    colorize: Style.text;
+                }
+                Text {
+                    text: playlist.title;
+                    color: Style.text;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+            }
+            touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    Account.add-to-playlist(playlist.browse-id, playlist.title);
+                    root.picked();
+                }
+            }
+        }
+    }
+}

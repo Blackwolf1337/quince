@@ -1,0 +1,1377 @@
+// The settings (qml/SettingsDialog.qml): categories on the left, the chosen
+// page of cards on the right. A search shows the matching rows of every page
+// at once. Options that depend on a switch only show while it is on.
+//
+// Slint layouts do not skip hidden items, so rows, cards and pages that do
+// not show get no height. Each card knows its rows by id and shows while one
+// of them does.
+
+import { ScrollView } from "std-widgets.slint";
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { ToolButton } from "widgets.slint";
+import { App } from "globals.slint";
+import { Choice } from "dialogs-data.slint";
+import { Button, CheckBox, Chip, ComboBox, DialogFrame, Motion, Slider, SpinBox, Switch, TextField } from "dialog-widgets.slint";
+
+// the search: the field's text in lower case
+global Search {
+    in-out property <string> query;
+    out property <bool> searching: Search.query.replace-all(" ", "") != "";
+
+    public pure function hit(text: string) -> bool {
+        if !Search.searching || text == "" {
+            return false;
+        }
+        let lower = text.to-lowercase();
+        return lower.replace-all(Search.query, "") != lower;
+    }
+}
+
+component RowText inherits VerticalLayout {
+    in property <string> title;
+    in property <string> hint;
+
+    spacing: 2px;
+    alignment: center;
+    horizontal-stretch: 1;
+    min-width: 0;
+    Text {
+        text: root.title;
+        color: Style.text;
+        font-size: 14px;
+        wrap: word-wrap;
+    }
+    if root.hint != "": Text {
+        text: root.hint;
+        color: Style.text-dim;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+}
+
+// A setting in a card: a line above it (the card hides the first one), and a
+// bar on the left that ties a sub-option to the one above.
+component RowFrame inherits Rectangle {
+    in property <string> title;
+    in property <string> hint;
+    // a sub-option: only while its parent option is on
+    in property <bool> shown: true;
+    in property <bool> sub;
+    // a click anywhere on the row emits tapped (switch rows)
+    in property <bool> tappable;
+    // a search for the row's card or page shows the whole card
+    in property <bool> match-all;
+    out property <bool> showing: root.shown && (!Search.searching || Search.hit(root.title) || Search.hit(root.hint) || root.match-all);
+    callback tapped();
+
+    height: root.showing ? Math.max(52px, content.preferred-height + 20px) : 0px;
+    visible: root.showing;
+    opacity: root.showing ? 1 : 0;
+    animate opacity { duration: Style.normal; easing: Motion.out-cubic; }
+
+    if root.tappable: TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.tapped();
+        }
+    }
+    Rectangle {
+        x: 16px;
+        y: 0;
+        width: parent.width - 32px;
+        height: 1px;
+        background: Style.line;
+    }
+    if root.sub: Rectangle {
+        x: 24px;
+        y: 12px;
+        width: 2px;
+        height: parent.height - 24px;
+        border-radius: 1px;
+        background: Style.accent.with-alpha(0.45);
+    }
+    content := VerticalLayout {
+        x: root.sub ? 40px : 16px;
+        y: (parent.height - self.height) / 2;
+        width: parent.width - self.x - 12px;
+        height: self.preferred-height;
+        spacing: 8px;
+        @children
+    }
+}
+
+// title and hint on the left, the controls on the right
+component SettingRow inherits RowFrame {
+    HorizontalLayout {
+        spacing: 16px;
+        RowText {
+            title: root.title;
+            hint: root.hint;
+        }
+        HorizontalLayout {
+            horizontal-stretch: 0;
+            spacing: 8px;
+            alignment: end;
+            cross-axis-alignment: center;
+            @children
+        }
+    }
+}
+
+// title and hint above the controls
+component WideRow inherits RowFrame {
+    RowText {
+        title: root.title;
+        hint: root.hint;
+    }
+    @children
+}
+
+component SwitchRow inherits SettingRow {
+    in property <bool> checked;
+    callback toggled(bool);
+
+    tappable: true;
+    tapped => {
+        root.toggled(!root.checked);
+    }
+    Switch {
+        checked: root.checked;
+        toggled(on) => {
+            root.toggled(on);
+        }
+    }
+}
+
+component ChoiceRow inherits SettingRow {
+    in property <[Choice]> options;
+    in property <string> value;
+    callback chosen(string);
+
+    ComboBox {
+        options: root.options;
+        value: root.value;
+        chosen(id) => {
+            root.chosen(id);
+        }
+    }
+}
+
+component SliderRow inherits SettingRow {
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+    in property <float> step: 1;
+    in property <float> value;
+    // the value under the knob, for the label
+    out property <float> current: slider.shown;
+    in property <string> label: Math.round(root.current) + " %";
+    callback moved(float);
+
+    slider := Slider {
+        minimum: root.minimum;
+        maximum: root.maximum;
+        step: root.step;
+        value: root.value;
+        moved(v) => {
+            root.moved(v);
+        }
+    }
+    Text {
+        width: 64px;
+        text: root.label;
+        color: Style.text-dim;
+        horizontal-alignment: right;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}
+
+component SpinRow inherits SettingRow {
+    in property <int> minimum: 0;
+    in property <int> maximum: 100;
+    in property <int> step: 1;
+    in property <int> value;
+    in property <bool> editable;
+    callback modified(int);
+
+    SpinBox {
+        minimum: root.minimum;
+        maximum: root.maximum;
+        step: root.step;
+        value: root.value;
+        editable: root.editable;
+        modified(v) => {
+            root.modified(v);
+        }
+    }
+}
+
+// Rows on a rounded surface, under a small title. Shows while one of its rows
+// does (any); a search for its title or its page shows all of them.
+component Card inherits Rectangle {
+    in property <string> title;
+    in property <bool> any;
+    in property <bool> page-hit;
+    out property <bool> match-all: Search.hit(root.title) || root.page-hit;
+
+    height: root.any ? column.preferred-height + 18px : 0px;
+    visible: root.any;
+
+    column := VerticalLayout {
+        y: 18px;
+        height: self.preferred-height;
+        spacing: 8px;
+        if root.title != "": Text {
+            x: 4px;
+            text: root.title.to-uppercase();
+            color: Style.text-dim;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        Rectangle {
+            height: rows.preferred-height - 1px;
+            border-radius: Style.radius;
+            background: Style.surface-high.with-alpha(0.55);
+            clip: true;
+            // one pixel up: the line above the first row lies outside
+            rows := VerticalLayout {
+                y: -1px;
+                height: self.preferred-height;
+                @children
+            }
+            Rectangle {
+                border-radius: Style.radius;
+                border-width: 1px;
+                border-color: Style.line;
+            }
+        }
+    }
+}
+
+// The cards of a category, with its name on top.
+component Page inherits Rectangle {
+    in property <string> key;
+    in property <string> title;
+    in property <string> open;
+    in property <bool> any;
+    out property <bool> title-hit: Search.hit(root.title);
+    out property <bool> showing: Search.searching ? root.any : root.open == root.key;
+
+    height: root.showing ? column.preferred-height + 18px : 0px;
+    visible: root.showing;
+
+    column := VerticalLayout {
+        height: self.preferred-height;
+        Text {
+            text: root.title;
+            color: Style.text;
+            font-size: 20px;
+            font-weight: 600;
+        }
+        @children
+    }
+}
+
+component Category inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> selected;
+    callback clicked();
+
+    height: 42px;
+    border-radius: Style.radius;
+    background: root.selected ? Style.accent.with-alpha(0.14) : touch.pressed ? Style.pressed : touch.has-hover ? Style.hover : transparent;
+    animate background { duration: Style.fast; }
+
+    Rectangle {
+        x: 0;
+        width: 3px;
+        height: root.selected ? 18px : 0px;
+        border-radius: 2px;
+        background: Style.accent;
+        animate height { duration: Style.normal; easing: ease-out-back; }
+    }
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 12px;
+        Image {
+            width: 22px;
+            height: 22px;
+            y: (parent.height - self.height) / 2;
+            source: root.icon;
+            colorize: root.selected ? Style.accent : Style.text;
+        }
+        Text {
+            text: root.text;
+            color: Style.text;
+            font-size: 14px;
+            font-weight: root.selected ? 600 : 400;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component SearchBox inherits Rectangle {
+    in-out property <string> text;
+
+    public function focus-search() {
+        input.focus();
+    }
+
+    height: 38px;
+    border-radius: self.height / 2;
+    background: input.has-focus ? Style.surface-high : Style.surface-high.with-alpha(0.7);
+    border-width: 1px;
+    border-color: input.has-focus ? Style.accent.with-alpha(0.6) : hover.has-hover ? #ffffff26 : Style.line;
+    animate background { duration: Style.fast; }
+
+    hover := TouchArea {
+        mouse-cursor: MouseCursor.text;
+        clicked => {
+            input.focus();
+        }
+    }
+    Image {
+        x: 13px;
+        width: 18px;
+        height: 18px;
+        source: Icons.search;
+        colorize: Style.text;
+        opacity: 0.6;
+    }
+    Text {
+        x: 38px;
+        visible: input.text == "";
+        text: @tr("Search settings");
+        color: Style.text-dim;
+        vertical-alignment: center;
+    }
+    input := TextInput {
+        x: 38px;
+        width: parent.width - 50px;
+        height: 100%;
+        text <=> root.text;
+        color: Style.text;
+        font-size: 14px;
+        selection-background-color: Style.accent.with-alpha(0.4);
+        vertical-alignment: center;
+        single-line: true;
+    }
+}
+
+export component SettingsDialog inherits DialogFrame {
+    // the open category; the layer keeps it while the dialog is closed
+    in-out property <string> page: "playback";
+    // the equalizer was asked for
+    callback equalizer-requested();
+
+    inset: 0;
+
+    private property <[{key: string, name: string, icon: image}]> pages: [
+        { key: "playback", name: @tr("Playback"), icon: Icons.play },
+        { key: "sound", name: @tr("Sound"), icon: Icons.volume },
+        { key: "lyrics", name: @tr("Lyrics"), icon: Icons.captions },
+        { key: "look", name: @tr("Look"), icon: Icons.palette },
+        { key: "desktop", name: @tr("Desktop"), icon: Icons.monitor },
+        { key: "discord", name: @tr("Discord"), icon: Icons.broadcast },
+        { key: "downloads", name: @tr("Downloads"), icon: Icons.download },
+    ];
+    private property <bool> linux: Platform.os == OperatingSystemType.linux;
+    private property <length> list-width: 200px;
+    // the page fades in when it changes
+    private property <duration> fade-start;
+    private property <bool> fading;
+
+    init => {
+        Search.query = "";
+        search.focus-search();
+    }
+    changed page => {
+        scroll.content-y = 0;
+        root.fade-start = animation-tick();
+        root.fading = true;
+        fade.running = true;
+    }
+
+    fade := Timer {
+        interval: Style.normal;
+        running: false;
+        triggered => {
+            root.fading = false;
+            self.running = false;
+        }
+    }
+
+    // the first Esc empties the search, the next one closes
+    FocusScope {
+        key-pressed(event) => {
+            if event.text == Key.Escape && search.text != "" {
+                search.text = "";
+                return accept;
+            }
+            reject
+        }
+
+        VerticalLayout {
+            HorizontalLayout {
+                height: 68px;
+                padding-left: 22px;
+                padding-right: 12px;
+                spacing: 12px;
+                Text {
+                    width: root.list-width - 34px;
+                    text: @tr("Settings");
+                    color: Style.text;
+                    font-size: 22px;
+                    font-weight: 600;
+                    vertical-alignment: center;
+                }
+                search := SearchBox {
+                    horizontal-stretch: 1;
+                    max-width: 380px;
+                    y: (parent.height - self.height) / 2;
+                    changed text => {
+                        Search.query = self.text.to-lowercase();
+                        scroll.content-y = 0;
+                    }
+                }
+                Rectangle {
+                    horizontal-stretch: 1;
+                }
+                ToolButton {
+                    y: (parent.height - self.height) / 2;
+                    icon: Icons.close;
+                    clicked => {
+                        root.close();
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                vertical-stretch: 1;
+
+                VerticalLayout {
+                    width: root.list-width;
+                    padding-top: 4px;
+                    padding-left: 10px;
+                    padding-right: 10px;
+                    spacing: 2px;
+                    alignment: start;
+                    opacity: Search.searching ? 0.45 : 1;
+                    animate opacity { duration: Style.fast; }
+
+                    for p in root.pages: Category {
+                        text: p.name;
+                        icon: p.icon;
+                        selected: !Search.searching && root.page == p.key;
+                        clicked => {
+                            search.text = "";
+                            root.page = p.key;
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    padding-bottom: 16px;
+                    Rectangle {
+                        width: 1px;
+                        background: Style.line;
+                    }
+                }
+
+                scroll := ScrollView {
+                    horizontal-stretch: 1;
+                    content-width: self.visible-width;
+                    content-height: column.preferred-height + 40px;
+
+                    column := VerticalLayout {
+                        x: 24px;
+                        y: 4px;
+                        width: scroll.visible-width - 48px;
+                        height: self.preferred-height;
+                        opacity: root.fading ? Math.clamp((animation-tick() - root.fade-start) / Style.normal, 0, 1) : 1;
+
+                        if Search.searching && !playback.showing && !sound.showing && !lyrics.showing && !look.showing && !desktop.showing && !discord.showing && !downloads.showing: Text {
+                            height: 80px;
+                            text: @tr("Nothing found");
+                            color: Style.text-dim;
+                            horizontal-alignment: center;
+                            vertical-alignment: bottom;
+                        }
+
+                        playback := Page {
+                            key: "playback";
+                            title: root.pages[0].name;
+                            open: root.page;
+                            any: volume.any || queue.any || sponsor.any;
+
+                            volume := Card {
+                                title: @tr("Volume");
+                                page-hit: playback.title-hit;
+                                any: exponential.showing || loudness.showing || step.showing || output.showing;
+                                exponential := SwitchRow {
+                                    match-all: volume.match-all;
+                                    title: @tr("Volume follows your hearing");
+                                    hint: @tr("The slider works exponentially, so its middle sounds half as loud");
+                                    checked: App.settings.exponential-volume;
+                                    toggled(on) => {
+                                        App.settings.exponential-volume = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                loudness := SwitchRow {
+                                    match-all: volume.match-all;
+                                    title: @tr("Even out loudness");
+                                    hint: @tr("Quiet and loud tracks play at the same level, like on YouTube");
+                                    checked: App.settings.normalize-loudness;
+                                    toggled(on) => {
+                                        App.settings.normalize-loudness = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                step := SpinRow {
+                                    match-all: volume.match-all;
+                                    title: @tr("Volume step");
+                                    hint: @tr("Percent per wheel turn or key press");
+                                    minimum: 1;
+                                    maximum: 10;
+                                    value: App.settings.volume-step;
+                                    modified(v) => {
+                                        App.settings.volume-step = v;
+                                        App.settings-edited();
+                                    }
+                                }
+                                output := ChoiceRow {
+                                    match-all: volume.match-all;
+                                    title: @tr("Output");
+                                    options: App.audio-devices;
+                                    value: App.audio-device;
+                                    chosen(id) => {
+                                        App.settings.audio-device = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            queue := Card {
+                                title: @tr("Queue");
+                                page-hit: playback.title-hit;
+                                any: resume.showing || skip-disliked.showing || start-paused.showing;
+                                resume := SwitchRow {
+                                    match-all: queue.match-all;
+                                    title: @tr("Continue the last queue at start");
+                                    checked: App.settings.resume-session;
+                                    toggled(on) => {
+                                        App.settings.resume-session = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                skip-disliked := SwitchRow {
+                                    match-all: queue.match-all;
+                                    title: @tr("Skip songs I disliked");
+                                    checked: App.settings.skip-disliked;
+                                    toggled(on) => {
+                                        App.settings.skip-disliked = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                start-paused := SwitchRow {
+                                    match-all: queue.match-all;
+                                    title: @tr("Songs I pick start paused");
+                                    checked: App.settings.start-paused;
+                                    toggled(on) => {
+                                        App.settings.start-paused = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            sponsor := Card {
+                                title: "SponsorBlock";
+                                page-hit: playback.title-hit;
+                                any: sponsor-block.showing || sponsor-parts.showing;
+                                sponsor-block := SwitchRow {
+                                    match-all: sponsor.match-all;
+                                    title: @tr("Skip the parts of music videos without music");
+                                    hint: @tr("Uses the segments SponsorBlock users marked");
+                                    checked: App.settings.sponsor-block;
+                                    toggled(on) => {
+                                        App.settings.sponsor-block = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                sponsor-parts := WideRow {
+                                    match-all: sponsor.match-all;
+                                    sub: true;
+                                    shown: App.settings.sponsor-block;
+                                    title: @tr("Parts to skip");
+                                    FlexboxLayout {
+                                        flex-wrap: wrap;
+                                        spacing: 8px;
+                                        for part in [
+                                            { id: "music_offtopic", name: @tr("Without music") },
+                                            { id: "sponsor", name: @tr("Sponsors") },
+                                            { id: "selfpromo", name: @tr("Self promotion") },
+                                            { id: "interaction", name: @tr("Subscribe reminders") },
+                                            { id: "intro", name: @tr("Intros") },
+                                            { id: "outro", name: @tr("Outros") },
+                                        ]: Chip {
+                                            property <string> mark: "," + part.id + ",";
+                                            property <string> list: App.settings.sponsor-block-categories;
+                                            text: part.name;
+                                            chosen: self.list.replace-all(self.mark, "") != self.list;
+                                            clicked => {
+                                                App.settings.sponsor-block-categories = self.chosen ? self.list.replace-all(self.mark, ",") : self.list + part.id + ",";
+                                                App.settings-edited();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        sound := Page {
+                            key: "sound";
+                            title: root.pages[1].name;
+                            open: root.page;
+                            any: effects.any || transitions.any;
+
+                            effects := Card {
+                                title: @tr("Effects");
+                                page-hit: sound.title-hit;
+                                any: equalizer.showing || compressor.showing || silences.showing || silences-start.showing;
+                                equalizer := SettingRow {
+                                    match-all: effects.match-all;
+                                    title: @tr("Equalizer");
+                                    tappable: true;
+                                    tapped => {
+                                        App.effects.equalizer = !App.effects.equalizer;
+                                        App.effects-edited();
+                                    }
+                                    Button {
+                                        text: App.equalizer.preset-name;
+                                        clicked => {
+                                            root.equalizer-requested();
+                                        }
+                                    }
+                                    Switch {
+                                        checked: App.effects.equalizer;
+                                        toggled(on) => {
+                                            App.effects.equalizer = on;
+                                            App.effects-edited();
+                                        }
+                                    }
+                                }
+                                compressor := SwitchRow {
+                                    match-all: effects.match-all;
+                                    title: @tr("Compressor");
+                                    hint: @tr("Quiet parts louder, loud parts quieter");
+                                    checked: App.effects.compressor;
+                                    toggled(on) => {
+                                        App.effects.compressor = on;
+                                        App.effects-edited();
+                                    }
+                                }
+                                silences := SwitchRow {
+                                    match-all: effects.match-all;
+                                    title: @tr("Skip silences");
+                                    checked: App.effects.skip-silences;
+                                    toggled(on) => {
+                                        App.effects.skip-silences = on;
+                                        App.effects-edited();
+                                    }
+                                }
+                                silences-start := SwitchRow {
+                                    match-all: effects.match-all;
+                                    sub: true;
+                                    shown: App.effects.skip-silences;
+                                    title: @tr("Only the silence at the start of a track");
+                                    checked: App.effects.skip-silences-at-start;
+                                    toggled(on) => {
+                                        App.effects.skip-silences-at-start = on;
+                                        App.effects-edited();
+                                    }
+                                }
+                            }
+                            transitions := Card {
+                                title: @tr("Transitions");
+                                page-hit: sound.title-hit;
+                                any: crossfade.showing || fade-in.showing || speed.showing;
+                                crossfade := SliderRow {
+                                    match-all: transitions.match-all;
+                                    title: @tr("Crossfade");
+                                    hint: @tr("Off plays albums gapless");
+                                    minimum: 0;
+                                    maximum: 12;
+                                    step: 1;
+                                    value: App.effects.crossfade;
+                                    label: self.current > 0 ? @tr("{} s", self.current) : @tr("Off");
+                                    moved(v) => {
+                                        App.effects.crossfade = v;
+                                        App.effects-edited();
+                                    }
+                                }
+                                fade-in := SliderRow {
+                                    match-all: transitions.match-all;
+                                    sub: true;
+                                    shown: App.effects.crossfade > 0;
+                                    title: @tr("Fade in");
+                                    hint: @tr("The next track comes up this fast");
+                                    minimum: 0;
+                                    maximum: App.effects.crossfade;
+                                    step: 0.5;
+                                    value: App.effects.crossfade-in;
+                                    label: self.current > 0 ? @tr("{} s", self.current) : @tr("As long");
+                                    moved(v) => {
+                                        App.effects.crossfade-in = v;
+                                        App.effects-edited();
+                                    }
+                                }
+                                speed := SliderRow {
+                                    match-all: transitions.match-all;
+                                    title: @tr("Speed");
+                                    minimum: 0.5;
+                                    maximum: 2;
+                                    step: 0.05;
+                                    value: App.effects.speed;
+                                    label: self.current.to-fixed(2) + "×";
+                                    moved(v) => {
+                                        App.effects.speed = v;
+                                        App.effects-edited();
+                                    }
+                                }
+                            }
+                        }
+
+                        lyrics := Page {
+                            key: "lyrics";
+                            title: root.pages[2].name;
+                            open: root.page;
+                            any: sources.any || display.any || scripts.any;
+
+                            sources := Card {
+                                title: @tr("Sources");
+                                page-hit: lyrics.title-hit;
+                                any: lrclib.showing || megalobiz.showing || genius.showing || preferred.showing || inexact.showing;
+                                lrclib := SwitchRow {
+                                    match-all: sources.match-all;
+                                    title: "LRCLIB";
+                                    hint: @tr("Time-synced lyrics");
+                                    checked: App.settings.lyrics-lrclib;
+                                    toggled(on) => {
+                                        App.settings.lyrics-lrclib = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                megalobiz := SwitchRow {
+                                    match-all: sources.match-all;
+                                    title: "Megalobiz";
+                                    hint: @tr("Time-synced lyrics");
+                                    checked: App.settings.lyrics-megalobiz;
+                                    toggled(on) => {
+                                        App.settings.lyrics-megalobiz = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                genius := SwitchRow {
+                                    match-all: sources.match-all;
+                                    title: "Genius";
+                                    hint: @tr("Plain lyrics, when no other source has any");
+                                    checked: App.settings.lyrics-genius;
+                                    toggled(on) => {
+                                        App.settings.lyrics-genius = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                preferred := ChoiceRow {
+                                    match-all: sources.match-all;
+                                    title: @tr("Ask first");
+                                    options: [
+                                        { id: "", name: @tr("No preference") },
+                                        { id: "lrclib", name: "LRCLIB" },
+                                        { id: "megalobiz", name: "Megalobiz" },
+                                        { id: "youtube", name: "YouTube Music" },
+                                        { id: "genius", name: "Genius" },
+                                    ];
+                                    value: App.settings.lyrics-preferred;
+                                    chosen(id) => {
+                                        App.settings.lyrics-preferred = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                                inexact := SwitchRow {
+                                    match-all: sources.match-all;
+                                    title: @tr("Inexact matches");
+                                    hint: @tr("Show lyrics even if title or length differ a little");
+                                    checked: App.settings.lyrics-inexact;
+                                    toggled(on) => {
+                                        App.settings.lyrics-inexact = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            display := Card {
+                                title: @tr("Display");
+                                page-hit: lyrics.title-hit;
+                                any: effect.showing || time-codes.showing || gap.showing;
+                                effect := ChoiceRow {
+                                    match-all: display.match-all;
+                                    title: @tr("The sung line");
+                                    options: [
+                                        { id: "fancy", name: @tr("Fancy: large, with a glow") },
+                                        { id: "scale", name: @tr("Scale: grows") },
+                                        { id: "offset", name: @tr("Offset: moves to the right") },
+                                        { id: "focus", name: @tr("Focus: only it is bright") },
+                                    ];
+                                    value: App.settings.lyrics-effect;
+                                    chosen(id) => {
+                                        App.settings.lyrics-effect = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                                time-codes := SwitchRow {
+                                    match-all: display.match-all;
+                                    title: @tr("Time codes next to the lines");
+                                    checked: App.settings.lyrics-time-codes;
+                                    toggled(on) => {
+                                        App.settings.lyrics-time-codes = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                gap := SettingRow {
+                                    match-all: display.match-all;
+                                    title: @tr("Mark for pauses");
+                                    hint: @tr("Shown between lines while nothing is sung");
+                                    TextField {
+                                        width: 80px;
+                                        alignment: center;
+                                        text: App.settings.lyrics-gap-text;
+                                        edited(text) => {
+                                            if text != App.settings.lyrics-gap-text {
+                                                App.settings.lyrics-gap-text = text;
+                                                App.settings-edited();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            scripts := Card {
+                                title: @tr("Other scripts");
+                                page-hit: lyrics.title-hit;
+                                any: romanize.showing || chinese.showing;
+                                romanize := SwitchRow {
+                                    match-all: scripts.match-all;
+                                    title: @tr("Latin letters under the lines");
+                                    hint: @tr("For Japanese, Korean and Chinese lyrics");
+                                    checked: App.settings.lyrics-romanize;
+                                    toggled(on) => {
+                                        App.settings.lyrics-romanize = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                chinese := ChoiceRow {
+                                    match-all: scripts.match-all;
+                                    title: @tr("Chinese characters");
+                                    options: [
+                                        { id: "", name: @tr("As they come") },
+                                        { id: "hant", name: @tr("Traditional") },
+                                        { id: "hans", name: @tr("Simplified") },
+                                    ];
+                                    value: App.settings.lyrics-chinese;
+                                    chosen(id) => {
+                                        App.settings.lyrics-chinese = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                        }
+
+                        look := Page {
+                            key: "look";
+                            title: root.pages[3].name;
+                            open: root.page;
+                            any: general.any || colors.any || clock.any || window.any || videos.any;
+
+                            general := Card {
+                                title: @tr("General");
+                                page-hit: look.title-hit;
+                                any: language.showing || start-page.showing || compact.showing;
+                                language := ChoiceRow {
+                                    match-all: general.match-all;
+                                    title: @tr("Language");
+                                    options: [
+                                        { id: "", name: @tr("As the system") },
+                                        { id: "en", name: "English" },
+                                        { id: "de", name: "Deutsch" },
+                                    ];
+                                    value: App.settings.language;
+                                    chosen(id) => {
+                                        App.settings.language = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                                start-page := ChoiceRow {
+                                    match-all: general.match-all;
+                                    title: @tr("Start page");
+                                    options: [
+                                        { id: "home", name: @tr("Home") },
+                                        { id: "explore", name: @tr("Explore") },
+                                        { id: "library", name: @tr("Library") },
+                                        { id: "liked", name: @tr("Liked songs") },
+                                    ];
+                                    value: App.settings.start-page;
+                                    chosen(id) => {
+                                        App.settings.start-page = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                                compact := SwitchRow {
+                                    match-all: general.match-all;
+                                    title: @tr("Compact sidebar");
+                                    hint: @tr("Icons only");
+                                    checked: App.settings.compact-sidebar;
+                                    toggled(on) => {
+                                        App.settings.compact-sidebar = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            colors := Card {
+                                title: @tr("Colors");
+                                page-hit: look.title-hit;
+                                any: album-colors.showing || glow.showing || colored-progress.showing;
+                                album-colors := SwitchRow {
+                                    match-all: colors.match-all;
+                                    title: @tr("Colors from the album cover");
+                                    checked: App.settings.album-colors;
+                                    toggled(on) => {
+                                        App.settings.album-colors = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                glow := SliderRow {
+                                    match-all: colors.match-all;
+                                    title: @tr("Strength of the glow");
+                                    minimum: 0;
+                                    maximum: 200;
+                                    step: 10;
+                                    value: App.settings.glow-strength;
+                                    moved(v) => {
+                                        App.settings.glow-strength = v;
+                                        App.settings-edited();
+                                    }
+                                }
+                                colored-progress := SwitchRow {
+                                    match-all: colors.match-all;
+                                    title: @tr("Progress bar in the album color");
+                                    checked: App.settings.colored-progress;
+                                    toggled(on) => {
+                                        App.settings.colored-progress = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            clock := Card {
+                                title: @tr("Clock");
+                                page-hit: look.title-hit;
+                                any: clock-on.showing || clock-format.showing;
+                                clock-on := SwitchRow {
+                                    match-all: clock.match-all;
+                                    title: @tr("Clock in the top bar");
+                                    checked: App.settings.clock;
+                                    toggled(on) => {
+                                        App.settings.clock = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                clock-format := SettingRow {
+                                    match-all: clock.match-all;
+                                    sub: true;
+                                    shown: App.settings.clock;
+                                    title: @tr("Format");
+                                    CheckBox {
+                                        text: @tr("Seconds");
+                                        checked: App.settings.clock-seconds;
+                                        toggled(on) => {
+                                            App.settings.clock-seconds = on;
+                                            App.settings-edited();
+                                        }
+                                    }
+                                    ComboBox {
+                                        width: 160px;
+                                        options: [
+                                            { id: "", name: @tr("As the system") },
+                                            { id: "24", name: @tr("24 hours") },
+                                            { id: "12", name: @tr("12 hours") },
+                                        ];
+                                        value: App.settings.clock-hours;
+                                        chosen(id) => {
+                                            App.settings.clock-hours = id;
+                                            App.settings-edited();
+                                        }
+                                    }
+                                }
+                            }
+                            window := Card {
+                                title: @tr("Window");
+                                page-hit: look.title-hit;
+                                any: transparent.showing || window-opacity.showing;
+                                transparent := SwitchRow {
+                                    match-all: window.match-all;
+                                    title: @tr("See-through window");
+                                    hint: @tr("For the desktop's blur, after a restart");
+                                    checked: App.settings.transparent-window;
+                                    toggled(on) => {
+                                        App.settings.transparent-window = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                window-opacity := SliderRow {
+                                    match-all: window.match-all;
+                                    sub: true;
+                                    shown: App.settings.transparent-window;
+                                    title: @tr("Window background");
+                                    minimum: 0;
+                                    maximum: 100;
+                                    step: 5;
+                                    value: App.settings.window-opacity;
+                                    moved(v) => {
+                                        App.settings.window-opacity = v;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            videos := Card {
+                                title: @tr("Videos");
+                                page-hit: look.title-hit;
+                                any: ambient.showing || ambient-size.showing;
+                                ambient := SliderRow {
+                                    match-all: videos.match-all;
+                                    title: @tr("Ambient light");
+                                    hint: @tr("The video's colors around it");
+                                    minimum: 0;
+                                    maximum: 100;
+                                    step: 5;
+                                    value: App.settings.ambient-strength;
+                                    moved(v) => {
+                                        App.settings.ambient-strength = v;
+                                        App.settings-edited();
+                                    }
+                                }
+                                ambient-size := SliderRow {
+                                    match-all: videos.match-all;
+                                    sub: true;
+                                    shown: App.settings.ambient-strength > 0;
+                                    title: @tr("Reach of the ambient light");
+                                    minimum: 50;
+                                    maximum: 200;
+                                    step: 10;
+                                    value: App.settings.ambient-size;
+                                    moved(v) => {
+                                        App.settings.ambient-size = v;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                        }
+
+                        desktop := Page {
+                            key: "desktop";
+                            title: root.pages[4].name;
+                            open: root.page;
+                            any: tray.any || notifications.any || shortcuts.any;
+
+                            tray := Card {
+                                title: @tr("Tray");
+                                page-hit: desktop.title-hit;
+                                any: tray-on.showing || tray-click.showing || close-to-tray.showing;
+                                tray-on := SwitchRow {
+                                    match-all: tray.match-all;
+                                    title: @tr("Icon in the system tray");
+                                    checked: App.settings.tray;
+                                    toggled(on) => {
+                                        App.settings.tray = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                tray-click := SwitchRow {
+                                    match-all: tray.match-all;
+                                    sub: true;
+                                    shown: App.settings.tray;
+                                    title: @tr("A click on the icon plays or pauses");
+                                    hint: @tr("Otherwise it opens the window");
+                                    checked: App.settings.tray-click-plays;
+                                    toggled(on) => {
+                                        App.settings.tray-click-plays = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                close-to-tray := SwitchRow {
+                                    match-all: tray.match-all;
+                                    sub: true;
+                                    shown: App.settings.tray;
+                                    title: @tr("Closing the window keeps playing");
+                                    hint: @tr("Quince stays in the tray");
+                                    checked: App.settings.close-to-tray;
+                                    toggled(on) => {
+                                        App.settings.close-to-tray = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            notifications := Card {
+                                title: @tr("Notifications");
+                                page-hit: desktop.title-hit;
+                                any: notify.showing || notify-resume.showing || urgency.showing;
+                                notify := SwitchRow {
+                                    match-all: notifications.match-all;
+                                    title: @tr("Notification when the track changes");
+                                    checked: App.settings.notifications;
+                                    toggled(on) => {
+                                        App.settings.notifications = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                notify-resume := SwitchRow {
+                                    match-all: notifications.match-all;
+                                    sub: true;
+                                    shown: App.settings.notifications;
+                                    title: @tr("Also when playback goes on after a pause");
+                                    checked: App.settings.notify-on-resume;
+                                    toggled(on) => {
+                                        App.settings.notify-on-resume = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                urgency := ChoiceRow {
+                                    match-all: notifications.match-all;
+                                    sub: true;
+                                    shown: App.settings.notifications && root.linux;
+                                    title: @tr("Urgency");
+                                    options: [
+                                        { id: "low", name: @tr("Low") },
+                                        { id: "normal", name: @tr("Normal") },
+                                        { id: "critical", name: @tr("Critical") },
+                                    ];
+                                    value: App.settings.notification-urgency;
+                                    chosen(id) => {
+                                        App.settings.notification-urgency = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            shortcuts := Card {
+                                title: @tr("Shortcuts");
+                                page-hit: desktop.title-hit;
+                                any: global-shortcuts.showing;
+                                global-shortcuts := SwitchRow {
+                                    match-all: shortcuts.match-all;
+                                    shown: root.linux;
+                                    title: @tr("System-wide shortcuts");
+                                    hint: @tr("Through the desktop portal, after a restart");
+                                    checked: App.settings.global-shortcuts;
+                                    toggled(on) => {
+                                        App.settings.global-shortcuts = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                        }
+
+                        discord := Page {
+                            key: "discord";
+                            title: root.pages[5].name;
+                            open: root.page;
+                            any: discord-main.any || status.any || application.any;
+
+                            discord-main := Card {
+                                page-hit: discord.title-hit;
+                                any: discord-on.showing;
+                                discord-on := SwitchRow {
+                                    match-all: discord-main.match-all;
+                                    title: @tr("Show what I listen to in Discord");
+                                    checked: App.settings.discord;
+                                    toggled(on) => {
+                                        App.settings.discord = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            status := Card {
+                                title: @tr("Status");
+                                page-hit: discord.title-hit;
+                                any: discord-shows.showing || time-left.showing || discord-button.showing || pause-minutes.showing;
+                                discord-shows := ChoiceRow {
+                                    match-all: status.match-all;
+                                    shown: App.settings.discord;
+                                    title: @tr("The member list shows");
+                                    options: [
+                                        { id: "app", name: @tr("The app's name") },
+                                        { id: "artist", name: @tr("The artist") },
+                                        { id: "title", name: @tr("The title") },
+                                    ];
+                                    value: App.settings.discord-shows;
+                                    chosen(id) => {
+                                        App.settings.discord-shows = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                                time-left := SwitchRow {
+                                    match-all: status.match-all;
+                                    shown: App.settings.discord;
+                                    title: @tr("Show the time left");
+                                    checked: !App.settings.discord-hide-time-left;
+                                    toggled(on) => {
+                                        App.settings.discord-hide-time-left = !on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                discord-button := SwitchRow {
+                                    match-all: status.match-all;
+                                    shown: App.settings.discord;
+                                    title: @tr("Button \"Listen on YouTube Music\"");
+                                    checked: App.settings.discord-button;
+                                    toggled(on) => {
+                                        App.settings.discord-button = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                pause-minutes := SpinRow {
+                                    match-all: status.match-all;
+                                    shown: App.settings.discord;
+                                    title: @tr("Clear the status after a pause");
+                                    hint: @tr("Minutes, 0 never");
+                                    minimum: 0;
+                                    maximum: 120;
+                                    value: App.settings.discord-pause-minutes;
+                                    modified(v) => {
+                                        App.settings.discord-pause-minutes = v;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                            application := Card {
+                                title: @tr("Application");
+                                page-hit: discord.title-hit;
+                                any: app-id.showing;
+                                app-id := WideRow {
+                                    match-all: application.match-all;
+                                    shown: App.settings.discord;
+                                    title: @tr("Application ID");
+                                    hint: @tr("Empty uses Pear Desktop's Discord application. For your own, create one at discord.com/developers/applications and paste its Application ID.");
+                                    TextField {
+                                        text: App.settings.discord-app-id;
+                                        edited(text) => {
+                                            if text != App.settings.discord-app-id {
+                                                App.settings.discord-app-id = text;
+                                                App.settings-edited();
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        downloads := Page {
+                            key: "downloads";
+                            title: root.pages[6].name;
+                            open: root.page;
+                            any: files.any;
+
+                            files := Card {
+                                title: @tr("Files");
+                                page-hit: downloads.title-hit;
+                                any: folder.showing || format.showing || mp3.showing || skip-existing.showing || playlist-max.showing;
+                                folder := WideRow {
+                                    match-all: files.match-all;
+                                    title: @tr("Folder");
+                                    HorizontalLayout {
+                                        spacing: 8px;
+                                        TextField {
+                                            horizontal-stretch: 1;
+                                            text: App.settings.download-folder;
+                                            edited(text) => {
+                                                if text != App.settings.download-folder {
+                                                    App.settings.download-folder = text;
+                                                    App.settings-edited();
+                                                }
+                                            }
+                                        }
+                                        Button {
+                                            text: @tr("Choose");
+                                            clicked => {
+                                                App.choose-download-folder();
+                                            }
+                                        }
+                                    }
+                                }
+                                format := ChoiceRow {
+                                    match-all: files.match-all;
+                                    title: @tr("Format");
+                                    options: [
+                                        { id: "opus", name: @tr("Opus (best quality)") },
+                                        { id: "m4a", name: @tr("M4A / AAC") },
+                                        { id: "mp3", name: @tr("MP3 (converted)") },
+                                    ];
+                                    hint: App.settings.download-format == "mp3" ? @tr("Converted from what YouTube sends") : @tr("As YouTube sends it, not converted");
+                                    value: App.settings.download-format;
+                                    chosen(id) => {
+                                        App.settings.download-format = id;
+                                        App.settings-edited();
+                                    }
+                                }
+                                mp3 := ChoiceRow {
+                                    match-all: files.match-all;
+                                    sub: true;
+                                    shown: App.settings.download-format == "mp3";
+                                    title: @tr("MP3 bit rate");
+                                    options: [
+                                        { id: "128", name: "128 kbit/s" },
+                                        { id: "192", name: "192 kbit/s" },
+                                        { id: "256", name: "256 kbit/s" },
+                                        { id: "320", name: "320 kbit/s" },
+                                    ];
+                                    value: App.settings.download-mp3-kbps;
+                                    chosen(id) => {
+                                        App.settings.download-mp3-kbps = id.to-float();
+                                        App.settings-edited();
+                                    }
+                                }
+                                skip-existing := SwitchRow {
+                                    match-all: files.match-all;
+                                    title: @tr("Skip tracks that are already in the folder");
+                                    checked: App.settings.download-skip-existing;
+                                    toggled(on) => {
+                                        App.settings.download-skip-existing = on;
+                                        App.settings-edited();
+                                    }
+                                }
+                                playlist-max := SpinRow {
+                                    match-all: files.match-all;
+                                    title: @tr("Tracks per playlist at most");
+                                    hint: @tr("0 downloads all");
+                                    minimum: 0;
+                                    maximum: 5000;
+                                    step: 10;
+                                    editable: true;
+                                    value: App.settings.download-playlist-max;
+                                    modified(v) => {
+                                        App.settings.download-playlist-max = v;
+                                        App.settings-edited();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,597 @@
+// Controls of the dialogs, close to the Material ones of the QML frontend:
+// switch, check box, buttons, choice box, slider, spin box, text field,
+// chips and the dialog's frame.
+
+import { ScrollView } from "std-widgets.slint";
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { Choice } from "dialogs-data.slint";
+
+// Material's ease for things that come in
+export global Motion {
+    out property <easing> out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+export component Switch inherits Rectangle {
+    in property <bool> checked;
+    in property <bool> enabled: true;
+    callback toggled(bool);
+
+    width: 52px;
+    height: 32px;
+    border-radius: self.height / 2;
+    background: root.checked ? Style.accent : #ffffff14;
+    border-width: root.checked ? 0px : 2px;
+    border-color: #ffffff59;
+    opacity: root.enabled ? 1 : 0.38;
+    animate background { duration: Style.fast; }
+
+    knob := Rectangle {
+        width: touch.pressed ? 28px : root.checked ? 24px : 16px;
+        height: self.width;
+        x: root.checked ? root.width - 4px - self.width : (root.height - self.height) / 2;
+        y: (root.height - self.height) / 2;
+        border-radius: self.width / 2;
+        background: root.checked ? Style.background : #ffffff99;
+        animate x, width { duration: Style.fast; easing: Motion.out-cubic; }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.toggled(!root.checked);
+        }
+    }
+}
+
+export component CheckBox inherits Rectangle {
+    in property <bool> checked;
+    in property <string> text;
+    callback toggled(bool);
+
+    height: 40px;
+    min-width: box.width + label.preferred-width + 20px;
+
+    HorizontalLayout {
+        spacing: 10px;
+        alignment: start;
+        Rectangle {
+            width: 40px;
+            Rectangle {
+                width: 40px;
+                height: 40px;
+                border-radius: 20px;
+                background: touch.pressed ? Style.pressed : touch.has-hover ? Style.hover : transparent;
+            }
+            box := Rectangle {
+                width: 18px;
+                height: 18px;
+                border-radius: 2px;
+                background: root.checked ? Style.accent : transparent;
+                border-width: root.checked ? 0px : 2px;
+                border-color: #ffffffa0;
+                animate background { duration: Style.fast; }
+                if root.checked: Path {
+                    width: 18px;
+                    height: 18px;
+                    viewbox-width: 18;
+                    viewbox-height: 18;
+                    commands: "M 4 9.5 L 7.5 13 L 14 5.5";
+                    stroke: Style.background;
+                    stroke-width: 2px;
+                }
+            }
+        }
+        label := Text {
+            text: root.text;
+            color: Style.text;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.toggled(!root.checked);
+        }
+    }
+}
+
+// A text button: flat, or filled with the accent (highlighted). The dialogs'
+// own buttons (Close, Cancel) have accent text.
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> enabled: true;
+    in property <bool> highlighted;
+    // a plain button with a surface of its own, not flat
+    in property <bool> raised;
+    in property <bool> accent-text;
+    callback clicked();
+
+    height: 40px;
+    min-width: Math.max(64px, row.preferred-width);
+    horizontal-stretch: 0;
+    border-radius: self.height / 2;
+    background: root.highlighted ? (touch.pressed ? Style.accent.darker(0.15) : touch.has-hover ? Style.accent.brighter(0.08) : Style.accent)
+        : root.raised ? (touch.pressed ? #ffffff38 : touch.has-hover && root.enabled ? #ffffff2a : #ffffff1e)
+        : touch.pressed ? Style.pressed : touch.has-hover && root.enabled ? Style.hover : transparent;
+    opacity: root.enabled ? 1 : 0.38;
+    animate background { duration: Style.fast; }
+
+    row := HorizontalLayout {
+        padding-left: root.icon.width > 0 ? 16px : 20px;
+        padding-right: 20px;
+        spacing: 8px;
+        alignment: center;
+        if root.icon.width > 0: Image {
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+            source: root.icon;
+            colorize: label.color;
+        }
+        label := Text {
+            text: root.text;
+            color: root.highlighted ? #111114 : root.accent-text ? Style.accent : Style.text;
+            font-size: 14px;
+            font-weight: 500;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// A round chip that is on or off (the SponsorBlock categories).
+export component Chip inherits Rectangle {
+    in property <string> text;
+    in property <bool> chosen;
+    callback clicked();
+
+    height: 32px;
+    width: label.preferred-width + 28px;
+    border-radius: self.height / 2;
+    background: root.chosen ? Style.accent : touch.pressed ? Style.pressed : touch.has-hover ? Style.hover : transparent;
+    border-width: root.chosen ? 0px : 1px;
+    border-color: Style.line;
+    animate background { duration: Style.fast; }
+
+    label := Text {
+        text: root.text;
+        color: root.chosen ? Style.background : Style.text;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// The box the choice box, spin box and text field draw in.
+component Field inherits Rectangle {
+    in property <bool> focused;
+    in property <bool> hovered;
+
+    height: 40px;
+    border-radius: 4px;
+    background: transparent;
+    border-width: root.focused ? 2px : 1px;
+    border-color: root.focused ? Style.accent : root.hovered ? #ffffff80 : #ffffff40;
+}
+
+// One of options; shows the name of the option whose id is value, or text.
+export component ComboBox inherits Field {
+    in property <[Choice]> options;
+    in property <string> value;
+    in property <string> text;
+    callback chosen(string);
+
+    width: 220px;
+    hovered: touch.has-hover;
+    private property <length> row-height: 40px;
+
+    if root.text != "": Text {
+        x: 12px;
+        width: root.width - 44px;
+        text: root.text;
+        color: Style.text;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    // only the chosen one shows (Slint cannot search the list)
+    for option in root.options: Text {
+        x: 12px;
+        width: root.width - 44px;
+        visible: root.text == "" && option.id == root.value;
+        text: option.name;
+        color: Style.text;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    Image {
+        x: root.width - 30px;
+        width: 18px;
+        height: 18px;
+        source: Icons.chevron-down;
+        colorize: Style.text-dim;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            popup.show();
+        }
+    }
+
+    popup := PopupWindow {
+        x: 0;
+        y: root.height + 2px;
+        width: root.width;
+        height: Math.min(root.options.length * root.row-height + 16px, 320px);
+        close-policy: close-on-click-outside;
+
+        Rectangle {
+            border-radius: 4px;
+            background: Style.surface-high;
+            border-width: 1px;
+            border-color: Style.line;
+            drop-shadow-blur: 12px;
+            drop-shadow-color: #00000080;
+        }
+        ScrollView {
+            VerticalLayout {
+                padding-top: 8px;
+                padding-bottom: 8px;
+                for option in root.options: Rectangle {
+                    height: root.row-height;
+                    background: item.has-hover ? Style.hover : option.id == root.value ? Style.accent.with-alpha(0.14) : transparent;
+                    Text {
+                        x: 12px;
+                        width: parent.width - 24px;
+                        text: option.name;
+                        color: option.id == root.value ? Style.accent : Style.text;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                    item := TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            root.chosen(option.id);
+                            popup.close();
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// A slider with a round knob; snaps to step. moved() while it is dragged or
+// the wheel turns; shown is the value under the knob.
+export component Slider inherits Rectangle {
+    in property <float> value;
+    in property <float> minimum: 0;
+    in property <float> maximum: 100;
+    in property <float> step: 1;
+    in property <bool> vertical;
+    in property <bool> enabled: true;
+    out property <float> shown: touch.pressed ? root.dragged : Math.clamp(root.value, root.minimum, root.maximum);
+    callback moved(float);
+
+    private property <float> dragged;
+    private property <float> span: Math.max(root.maximum - root.minimum, 0.0001);
+    private property <float> fraction: Math.clamp((root.shown - root.minimum) / root.span, 0, 1);
+    private property <length> knob: 20px;
+    // the length the knob's middle travels
+    private property <length> travel: (root.vertical ? root.height : root.width) - root.knob;
+
+    preferred-width: root.vertical ? 40px : 180px;
+    preferred-height: root.vertical ? 200px : 40px;
+    min-width: 40px;
+    min-height: 40px;
+    horizontal-stretch: 0;
+    vertical-stretch: root.vertical ? 1 : 0;
+    opacity: root.enabled ? 1 : 0.5;
+
+    function snap(v: float) -> float {
+        let snapped = root.step > 0 ? root.minimum + Math.round((v - root.minimum) / root.step) * root.step : v;
+        return Math.clamp(snapped, root.minimum, root.maximum);
+    }
+    function at(x: length, y: length) -> float {
+        let f = root.vertical ? 1 - (y - root.knob / 2) / root.travel : (x - root.knob / 2) / root.travel;
+        return root.snap(root.minimum + Math.clamp(f, 0, 1) * root.span);
+    }
+    function drag(x: length, y: length) {
+        let v = root.at(x, y);
+        if v != root.dragged {
+            root.dragged = v;
+            root.moved(v);
+        }
+    }
+
+    // the track: the part up to the knob in the accent
+    Rectangle {
+        x: root.vertical ? (root.width - self.width) / 2 : root.knob / 2;
+        y: root.vertical ? root.knob / 2 : (root.height - self.height) / 2;
+        width: root.vertical ? 4px : root.travel;
+        height: root.vertical ? root.travel : 4px;
+        border-radius: 2px;
+        background: Style.accent.with-alpha(0.3);
+    }
+    Rectangle {
+        x: root.vertical ? (root.width - self.width) / 2 : root.knob / 2;
+        y: root.vertical ? root.knob / 2 + root.travel * (1 - root.fraction) : (root.height - self.height) / 2;
+        width: root.vertical ? 4px : root.travel * root.fraction;
+        height: root.vertical ? root.travel * root.fraction : 4px;
+        border-radius: 2px;
+        background: Style.accent;
+    }
+    // the halo while hovered or pressed
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        x: root.vertical ? (root.width - self.width) / 2 : root.travel * root.fraction + root.knob / 2 - self.width / 2;
+        y: root.vertical ? root.travel * (1 - root.fraction) + root.knob / 2 - self.height / 2 : (root.height - self.height) / 2;
+        border-radius: self.width / 2;
+        background: touch.pressed ? Style.accent.with-alpha(0.2) : touch.has-hover ? Style.accent.with-alpha(0.1) : transparent;
+    }
+    Rectangle {
+        width: root.knob;
+        height: root.knob;
+        x: root.vertical ? (root.width - self.width) / 2 : root.travel * root.fraction;
+        y: root.vertical ? root.travel * (1 - root.fraction) : (root.height - self.height) / 2;
+        border-radius: self.width / 2;
+        background: Style.accent;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                root.dragged = root.shown;
+                root.drag(self.mouse-x, self.mouse-y);
+            }
+        }
+        moved => {
+            if self.pressed {
+                root.drag(self.mouse-x, self.mouse-y);
+            }
+        }
+        scroll-event(event) => {
+            if !root.enabled || root.step <= 0 {
+                return reject;
+            }
+            let delta = root.vertical || event.delta-x == 0 ? event.delta-y : -event.delta-x;
+            if delta == 0 {
+                return reject;
+            }
+            let next = root.snap(root.value + (delta > 0 ? root.step : -root.step));
+            if next != root.value {
+                root.moved(next);
+            }
+            accept
+        }
+    }
+}
+
+// A text field with a frame; edited() when Return is pressed or it loses the
+// keyboard.
+export component TextField inherits Field {
+    in-out property <string> text;
+    in property <string> placeholder;
+    in property <TextHorizontalAlignment> alignment: left;
+    out property <bool> has-focus: input.has-focus;
+    callback edited(string);
+    callback accepted(string);
+
+    public function focus-field() {
+        input.focus();
+    }
+
+    preferred-width: 200px;
+    min-width: 40px;
+    horizontal-stretch: 0;
+    hovered: hover.has-hover;
+    focused: input.has-focus;
+
+    hover := TouchArea {
+        mouse-cursor: MouseCursor.text;
+        clicked => {
+            input.focus();
+        }
+    }
+    Text {
+        x: 12px;
+        width: root.width - 24px;
+        visible: input.text == "";
+        text: root.placeholder;
+        color: Style.text-dim;
+        horizontal-alignment: root.alignment;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+    input := TextInput {
+        x: 12px;
+        width: root.width - 24px;
+        height: 100%;
+        text <=> root.text;
+        color: Style.text;
+        selection-background-color: Style.accent.with-alpha(0.4);
+        horizontal-alignment: root.alignment;
+        vertical-alignment: center;
+        single-line: true;
+        accepted => {
+            root.edited(self.text);
+            root.accepted(self.text);
+        }
+        changed has-focus => {
+            if !self.has-focus {
+                root.edited(self.text);
+            }
+        }
+    }
+}
+
+// A number with minus and plus; editable takes typed numbers too.
+export component SpinBox inherits Field {
+    in property <int> value;
+    in property <int> minimum: 0;
+    in property <int> maximum: 100;
+    in property <int> step: 1;
+    in property <bool> editable;
+    callback modified(int);
+
+    width: 148px;
+    hovered: area.has-hover;
+    focused: input.has-focus;
+
+    function set(v: int) {
+        let clamped = Math.clamp(v, root.minimum, root.maximum);
+        if clamped != root.value {
+            root.modified(clamped);
+        }
+    }
+
+    area := TouchArea {
+        scroll-event(event) => {
+            if event.delta-y == 0 {
+                return reject;
+            }
+            root.set(root.value + (event.delta-y > 0 ? root.step : -root.step));
+            accept
+        }
+    }
+    for sign[i] in ["−", "+"]: Rectangle {
+        property <bool> possible: i == 0 ? root.value > root.minimum : root.value < root.maximum;
+        x: i == 0 ? 4px : root.width - 36px;
+        width: 32px;
+        height: 32px;
+        border-radius: 16px;
+        background: button.pressed ? Style.pressed : button.has-hover ? Style.hover : transparent;
+        Text {
+            text: sign;
+            color: parent.possible ? Style.text : Style.text.with-alpha(0.38);
+            font-size: 18px;
+        }
+        button := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                root.set(root.value + (i == 0 ? -root.step : root.step));
+            }
+        }
+    }
+    input := TextInput {
+        x: 40px;
+        width: root.width - 80px;
+        height: 100%;
+        text: root.value;
+        read-only: !root.editable;
+        color: Style.text;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        single-line: true;
+        input-type: number;
+        accepted => {
+            root.set(self.text.to-float());
+            self.text = root.value;
+        }
+        changed has-focus => {
+            if !self.has-focus && root.editable {
+                root.set(self.text.to-float());
+                self.text = root.value;
+            }
+        }
+    }
+}
+
+// A turning arc while something takes time.
+export component BusyIndicator inherits Rectangle {
+    in property <bool> running;
+
+    width: 48px;
+    height: 48px;
+    visible: root.running;
+
+    Path {
+        width: 40px;
+        height: 40px;
+        viewbox-width: 40;
+        viewbox-height: 40;
+        commands: "M 20 4 A 16 16 0 1 1 4 20";
+        stroke: Style.accent;
+        stroke-width: 4px;
+        transform-rotation: root.running ? (animation-tick() / 1.2s) * 360deg : 0deg;
+    }
+}
+
+// A modal dialog's panel: glass with a title, the content and a button that
+// closes it at the bottom right. It comes in with a short fade and zoom.
+export component DialogFrame inherits Rectangle {
+    in property <string> title;
+    // the button at the bottom; empty for none
+    in property <string> button-text;
+    // the space around the content
+    in property <length> inset: 24px;
+    callback close();
+
+    private property <bool> shown;
+    init => {
+        root.shown = true;
+    }
+
+    border-radius: Style.radius-large;
+    background: Style.surface-high.with-alpha(0.97);
+    border-width: 1px;
+    border-color: #ffffff1c;
+    drop-shadow-blur: 32px;
+    drop-shadow-color: #00000066;
+    opacity: root.shown ? 1 : 0;
+    transform-scale: root.shown ? 1 : 0.95;
+    animate opacity { duration: Style.normal; }
+    animate transform-scale { duration: Style.slow; easing: Motion.out-cubic; }
+
+    // clicks on the panel stay on it
+    TouchArea {
+        scroll-event(event) => {
+            accept
+        }
+    }
+
+    VerticalLayout {
+        padding: root.inset;
+        padding-bottom: root.button-text != "" ? 8px : root.inset;
+        spacing: 16px;
+        if root.title != "": Text {
+            text: root.title;
+            color: Style.text;
+            font-size: 20px;
+            font-weight: 600;
+            wrap: word-wrap;
+        }
+        @children
+        if root.button-text != "": HorizontalLayout {
+            alignment: end;
+            Button {
+                text: root.button-text;
+                accent-text: true;
+                clicked => {
+                    root.close();
+                }
+            }
+        }
+    }
+}

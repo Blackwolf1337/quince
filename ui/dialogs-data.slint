@@ -1,0 +1,105 @@
+// Area D: what the dialogs and the downloads section get from the core
+// (src/slint/DialogsBindings.cpp). globals.slint holds the properties.
+
+// an entry of a choice box or a row of buttons
+export struct Choice {
+    id: string,
+    name: string,
+}
+
+// The settings the dialog edits (src/app/Settings.h). The dialog writes a
+// field and calls App.settings-edited(); the core writes back what changed.
+// The SponsorBlock categories come as ",a,b," (Slint has no list search).
+export struct SettingsValues {
+    exponential-volume: bool,
+    normalize-loudness: bool,
+    volume-step: int,
+    audio-device: string,
+    resume-session: bool,
+    skip-disliked: bool,
+    start-paused: bool,
+    sponsor-block: bool,
+    sponsor-block-categories: string,
+    lyrics-lrclib: bool,
+    lyrics-megalobiz: bool,
+    lyrics-genius: bool,
+    lyrics-preferred: string,
+    lyrics-inexact: bool,
+    lyrics-effect: string,
+    lyrics-time-codes: bool,
+    lyrics-gap-text: string,
+    lyrics-romanize: bool,
+    lyrics-chinese: string,
+    language: string,
+    start-page: string,
+    compact-sidebar: bool,
+    album-colors: bool,
+    glow-strength: int,
+    colored-progress: bool,
+    clock: bool,
+    clock-seconds: bool,
+    clock-hours: string,
+    transparent-window: bool,
+    window-opacity: int,
+    ambient-strength: int,
+    ambient-size: int,
+    tray: bool,
+    tray-click-plays: bool,
+    close-to-tray: bool,
+    notifications: bool,
+    notify-on-resume: bool,
+    notification-urgency: string,
+    global-shortcuts: bool,
+    discord: bool,
+    discord-shows: string,
+    discord-hide-time-left: bool,
+    discord-button: bool,
+    discord-pause-minutes: int,
+    discord-app-id: string,
+    download-folder: string,
+    download-format: string,
+    download-mp3-kbps: int,
+    download-skip-existing: bool,
+    download-playlist-max: int,
+}
+
+// The sound effects (src/player/AudioEffects.h), edited the same way with
+// App.effects-edited().
+export struct EffectsValues {
+    equalizer: bool,
+    compressor: bool,
+    skip-silences: bool,
+    skip-silences-at-start: bool,
+    crossfade: float,
+    crossfade-in: float,
+    speed: float,
+}
+
+export struct EqualizerBand {
+    // dB
+    gain: float,
+    // the frequency: 31 ... 16k
+    label: string,
+}
+
+export struct Equalizer {
+    bands: [EqualizerBand],
+    presets: [Choice],
+    // the id and name of the preset in use
+    preset: string,
+    preset-name: string,
+}
+
+// a row of the downloads section (src/download/Downloader.h)
+export struct DownloadRow {
+    title: string,
+    // artist and album
+    subtitle: string,
+    art-url: string,
+    art: image,
+    // waiting, resolving, downloading, writing, done, failed
+    state: string,
+    // 0..1
+    progress: float,
+    error: string,
+}

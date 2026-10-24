@@ -1,0 +1,65 @@
+// The ways to bring a Google session into Quince (qml/SignInDialog.qml).
+// The layer closes it once a session arrived.
+
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { Account } from "globals.slint";
+import { BusyIndicator, Button, DialogFrame } from "dialog-widgets.slint";
+
+export component SignInDialog inherits DialogFrame {
+    title: @tr("Sign in to YouTube Music");
+    button-text: @tr("Close");
+
+    VerticalLayout {
+        spacing: 14px;
+
+        Text {
+            text: @tr("Signing in brings your library, likes, playlists and Premium quality. Quince keeps only the session cookies, readable by your user alone.");
+            color: Style.text-dim;
+            wrap: word-wrap;
+        }
+
+        Button {
+            text: @tr("Sign in with Google");
+            icon: Icons.account;
+            highlighted: true;
+            enabled: !Account.busy;
+            clicked => {
+                Account.sign-in();
+            }
+        }
+
+        if Account.browsers.length > 0: Text {
+            text: @tr("Or take the session of a browser where you are signed in:");
+            color: Style.text-dim;
+            wrap: word-wrap;
+        }
+
+        if Account.browsers.length > 0: FlexboxLayout {
+            flex-wrap: wrap;
+            spacing: 8px;
+            for browser in Account.browsers: Button {
+                text: browser.name;
+                enabled: !Account.busy;
+                clicked => {
+                    Account.import-from-browser(browser.id);
+                }
+            }
+        }
+
+        Button {
+            text: @tr("Import a cookies.txt file");
+            enabled: !Account.busy;
+            clicked => {
+                Account.import-cookies(@tr("cookies.txt with a YouTube session"), @tr("Cookie files (*.txt)"));
+            }
+        }
+
+        if Account.busy: HorizontalLayout {
+            alignment: center;
+            BusyIndicator {
+                running: true;
+            }
+        }
+    }
+}

@@ -1,6 +1,8 @@
 // The core's state as the views see it. src/slint/Bindings.cpp keeps these in
 // step with the core and hands the callbacks to the core thread.
 
+import { Choice, DownloadRow, EffectsValues, Equalizer, SettingsValues } from "dialogs-data.slint";
+
 // a track, album, artist or playlist as a list row
 export struct ListItem {
     title: string,
@@ -139,6 +141,20 @@ export global Account {
 
     callback sign-in();
     callback sign-out();
+
+    // area D: the sign-in dialog and the playlist picker (DialogsBindings.cpp)
+    in property <bool> busy;
+    // the browsers whose session can be taken
+    in property <[Choice]> browsers;
+    // the playlists the account owns, the ones an item can go into
+    in property <[PlaylistEntry]> own-playlists;
+    callback import-from-browser(string);
+    // picks a cookies.txt file: the picker's title and filter name
+    callback import-cookies(string, string);
+    // the item the picker was opened for goes into a playlist (browse id,
+    // title), or into a new one (title)
+    callback add-to-playlist(string, string);
+    callback create-playlist(string);
 }
 
 // The window's own state and the settings it shows.
@@ -188,4 +204,27 @@ export global App {
     callback section-requested(string, string);
     callback set-video-mode(bool);
     callback request-dialog(string);
+
+    // area D (DialogsBindings.cpp): the settings and sound effects, edited in
+    // place; the edited callbacks hand them to the core
+    in-out property <SettingsValues> settings;
+    in-out property <EffectsValues> effects;
+    callback settings-edited();
+    callback effects-edited();
+    in property <Equalizer> equalizer;
+    callback set-band(int, float);
+    callback apply-preset(string);
+    // the outputs of the audio backend and the one in use
+    in property <[Choice]> audio-devices;
+    in property <string> audio-device;
+    // a folder picker for the downloads
+    callback choose-download-folder();
+
+    // the downloads of this session and their folder
+    in property <[DownloadRow]> downloads;
+    in property <string> download-folder;
+    // a row, or -1 for the folder itself
+    callback open-download-folder(int);
+    callback retry-download(int);
+    callback clear-finished-downloads();
 }

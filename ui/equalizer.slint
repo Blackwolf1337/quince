@@ -1,0 +1,84 @@
+// Ten bands from 31 Hz to 16 kHz, with presets (qml/EqualizerDialog.qml).
+
+import { Style } from "style.slint";
+import { App } from "globals.slint";
+import { ComboBox, DialogFrame, Slider, Switch } from "dialog-widgets.slint";
+
+export component EqualizerDialog inherits DialogFrame {
+    title: @tr("Equalizer");
+    button-text: @tr("Close");
+
+    HorizontalLayout {
+        spacing: 12px;
+        Switch {
+            y: (parent.height - self.height) / 2;
+            checked: App.effects.equalizer;
+            toggled(on) => {
+                App.effects.equalizer = on;
+                App.effects-edited();
+            }
+        }
+        Text {
+            text: @tr("On");
+            color: Style.text;
+            vertical-alignment: center;
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+        }
+        ComboBox {
+            options: App.equalizer.presets;
+            value: App.equalizer.preset;
+            text: App.equalizer.preset-name;
+            chosen(id) => {
+                App.apply-preset(id);
+            }
+        }
+    }
+
+    HorizontalLayout {
+        height: 240px;
+        opacity: App.effects.equalizer ? 1 : 0.5;
+
+        for band[i] in App.equalizer.bands: VerticalLayout {
+            // equal shares of the width
+            horizontal-stretch: 1;
+            min-width: 0;
+            spacing: 4px;
+            Text {
+                text: (band.gain > 0 ? "+" : "") + band.gain;
+                color: Style.text-dim;
+                font-size: 11px;
+                horizontal-alignment: center;
+            }
+            HorizontalLayout {
+                vertical-stretch: 1;
+                alignment: center;
+                Slider {
+                    vertical: true;
+                    enabled: App.effects.equalizer;
+                    minimum: -12;
+                    maximum: 12;
+                    step: 0.5;
+                    value: band.gain;
+                    moved(v) => {
+                        App.set-band(i, v);
+                    }
+                }
+            }
+            Text {
+                text: band.label;
+                color: Style.text-dim;
+                font-size: 12px;
+                horizontal-alignment: center;
+            }
+        }
+    }
+
+    Text {
+        text: @tr("Hz. Boosts are held below full scale by a limiter, so loud parts do not clip.");
+        color: Style.text-dim;
+        font-size: 12px;
+        wrap: word-wrap;
+    }
+}

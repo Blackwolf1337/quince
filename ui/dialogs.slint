@@ -1,16 +1,121 @@
-// Area D: the dialogs over the window (qml/SettingsDialog.qml,
-// EqualizerDialog.qml, SignInDialog.qml, PlaylistPicker.qml).
-// Stub until the port lands.
+// Area D: the dialogs over the window. App.dialog names the open one
+// (settings, equalizer, signin, addToPlaylist); src/slint/DialogsBindings.cpp
+// sets it when the core asks for a dialog.
 
-import { App } from "globals.slint";
+import { Style } from "style.slint";
+import { Account, App } from "globals.slint";
+import { SettingsDialog } from "settings-dialog.slint";
+import { EqualizerDialog } from "equalizer.slint";
+import { SignInDialog } from "sign-in.slint";
+import { PlaylistPicker } from "playlist-picker.slint";
 
 export component DialogLayer inherits Rectangle {
-    visible: App.dialog != "";
-    background: #00000080;
+    // the settings' open category, kept while they are closed
+    private property <string> settings-page: "playback";
+    // the equalizer came from the settings: closing it goes back there
+    private property <bool> back-to-settings;
+    private property <bool> signed-in: Account.signed-in;
+    private property <string> dialog: App.dialog;
 
-    TouchArea {
-        clicked => {
-            App.dialog = "";
+    // the sign-in dialog closes once a session arrived
+    changed signed-in => {
+        if root.signed-in && App.dialog == "signin" {
+            root.close();
+        }
+    }
+    // the settings put the keyboard into their search field themselves
+    changed dialog => {
+        if root.dialog == "" {
+            root.back-to-settings = false;
+            home.focus();
+        } else if root.dialog != "settings" {
+            keys.focus();
+        }
+    }
+
+    function close() {
+        App.dialog = App.dialog == "equalizer" && root.back-to-settings ? "settings" : "";
+        root.back-to-settings = false;
+    }
+
+    // Once a dialog is gone the keys must reach the window's shortcuts again:
+    // this scope takes the focus and leaves the keys to the window's scope
+    // around the layer.
+    home := FocusScope {
+        width: 0;
+        height: 0;
+    }
+
+    Rectangle {
+        visible: App.dialog != "";
+        background: Style.background.with-alpha(0.7);
+        opacity: self.visible ? 1 : 0;
+        animate opacity { duration: Style.normal; }
+
+        // modal: a click beside the dialog closes it, nothing goes through
+        TouchArea {
+            clicked => {
+                root.close();
+            }
+            scroll-event(event) => {
+                accept
+            }
+        }
+
+        keys := FocusScope {
+            key-pressed(event) => {
+                if event.text == Key.Escape {
+                    root.close();
+                    return accept;
+                }
+                // the window's shortcuts wait while a dialog is open
+                event.text == Key.Tab || event.text == Key.Backtab ? reject : accept
+            }
+
+            if App.dialog == "settings": SettingsDialog {
+                width: Math.min(880px, root.width - 48px);
+                height: Math.min(640px, root.height - 48px);
+                x: (root.width - self.width) / 2;
+                y: (root.height - self.height) / 2;
+                page <=> root.settings-page;
+                close => {
+                    root.close();
+                }
+                equalizer-requested => {
+                    root.back-to-settings = true;
+                    App.dialog = "equalizer";
+                }
+            }
+            if App.dialog == "equalizer": EqualizerDialog {
+                width: Math.min(640px, root.width - 48px);
+                height: self.preferred-height;
+                x: (root.width - self.width) / 2;
+                y: (root.height - self.height) / 2;
+                close => {
+                    root.close();
+                }
+            }
+            if App.dialog == "signin": SignInDialog {
+                width: Math.min(520px, root.width - 48px);
+                height: self.preferred-height;
+                x: (root.width - self.width) / 2;
+                y: (root.height - self.height) / 2;
+                close => {
+                    root.close();
+                }
+            }
+            if App.dialog == "addToPlaylist": PlaylistPicker {
+                width: 420px;
+                height: Math.min(560px, root.height - 80px);
+                x: (root.width - self.width) / 2;
+                y: (root.height - self.height) / 2;
+                close => {
+                    root.close();
+                }
+                picked => {
+                    root.close();
+                }
+            }
         }
     }
 }
