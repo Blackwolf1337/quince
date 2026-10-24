@@ -4,7 +4,7 @@ name: build
 
 on:
   push:
-    branches: [master, packaging]
+    branches: [master, packaging, package-size]
     tags: ['v*']
   workflow_dispatch:
 
