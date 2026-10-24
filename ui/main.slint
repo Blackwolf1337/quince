@@ -135,8 +135,9 @@ export component MainWindow inherits Window {
     min-width: 820px;
     min-height: 520px;
     // FemtoVG clears with this, mpv draws next, the items come on top: nothing
-    // opaque may lie over the video area
-    background: Style.background;
+    // opaque may lie over the video area. The window has an alpha channel
+    // (Slint's winit windows do on Linux and Windows), so it can be see-through.
+    background: App.settings.transparent-window ? transparent : Style.background;
     default-font-family: "Inter Variable";
     default-font-size: 14px;
 
@@ -227,6 +228,7 @@ export component MainWindow inherits Window {
             width: 100%;
             height: 100%;
             visible: !App.now-playing-open;
+            translucent: App.settings.transparent-window;
         }
 
         VerticalLayout {

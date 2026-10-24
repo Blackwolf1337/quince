@@ -48,12 +48,16 @@ export component GlassScrim inherits Glass {
 // The window background: dark, with slow drifting light in the album color
 // behind the header and the player bar.
 export component Backdrop inherits Rectangle {
+    // see-through window (Settings > Look): the desktop shows through, and
+    // the compositor may blur it
+    in property <bool> translucent;
+
     // 0..1 and back, for the drift of the top light (21 s each way) and the
     // breathing of the bottom one (9 s each way)
     private property <float> drift: Math.sin(animation-tick() / 42s * 360deg) * 0.5 + 0.5;
     private property <float> breath: Math.sin(animation-tick() / 18s * 360deg) * 0.5 + 0.5;
 
-    background: Style.background;
+    background: root.translucent ? Style.background.with-alpha(App.settings.window-opacity / 100) : Style.background;
     clip: true;
 
     Glow {
