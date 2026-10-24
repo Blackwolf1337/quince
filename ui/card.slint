@@ -1,0 +1,225 @@
+// Cards, buttons and the play buttons of the pages (qml/Card.qml,
+// qml/NavButton.qml, qml/PlayButtons.qml).
+
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { Art } from "widgets.slint";
+import { ItemMenuArea } from "item-menu.slint";
+import { Browse, PageCard, PageRow } from "page-state.slint";
+
+// A button with a text and an optional icon; highlighted in the accent color.
+export component PillButton inherits Rectangle {
+    in property <string> text;
+    in property <image> icon;
+    in property <bool> highlighted;
+    // without a background until the pointer is over it
+    in property <bool> flat;
+    callback clicked();
+
+    private property <color> fill: root.highlighted ? Style.accent : root.flat ? transparent : Style.surface-high;
+    private property <color> ink: root.highlighted ? #111114 : Style.text;
+
+    height: 36px;
+    min-width: 64px;
+    border-radius: self.height / 2;
+    background: touch.pressed ? root.fill.mix(#ffffff, 0.8) : touch.has-hover ? root.fill.mix(#ffffff, 0.9) : root.fill;
+    animate background { duration: Style.fast; }
+
+    HorizontalLayout {
+        padding-left: root.icon.width > 0 ? 16px : 20px;
+        padding-right: 20px;
+        spacing: 8px;
+        alignment: center;
+        if root.icon.width > 0: Image {
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+            source: root.icon;
+            colorize: root.ink;
+        }
+        Text {
+            text: root.text;
+            color: root.ink;
+            font-size: 14px;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// Play, Shuffle and Radio of a page header or the top search result.
+export component PlayButtons inherits HorizontalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    spacing: 10px;
+    alignment: start;
+
+    if root.entry.can-play: PillButton {
+        text: @tr("Play");
+        icon: Icons.play;
+        highlighted: true;
+        clicked => {
+            Browse.play(root.index, -1);
+        }
+    }
+    if root.entry.can-shuffle: PillButton {
+        text: @tr("Shuffle");
+        icon: Icons.shuffle;
+        clicked => {
+            Browse.shuffle(root.index, -1);
+        }
+    }
+    if root.entry.can-radio: PillButton {
+        text: @tr("Radio");
+        icon: Icons.radio;
+        clicked => {
+            Browse.radio(root.index, -1);
+        }
+    }
+}
+
+// A mood or genre button that opens its page.
+export component NavButton inherits Rectangle {
+    in property <PageCard> card;
+    in property <int> row-index;
+    in property <int> index;
+
+    width: 196px;
+    height: 48px;
+    border-radius: 6px;
+    background: touch.has-hover ? Style.surface-high.brighter(0.25) : Style.surface-high;
+
+    Rectangle {
+        x: 0;
+        width: 6px;
+        border-radius: 3px;
+        background: root.card.color.alpha > 0 ? root.card.color : Style.text-dim;
+    }
+    Text {
+        x: 18px;
+        width: parent.width - 26px;
+        text: root.card.entry.title;
+        color: Style.text;
+        font-size: 14px;
+        font-weight: 600;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            Browse.activate(root.row-index, root.index);
+        }
+    }
+}
+
+// An album, playlist, artist or video in a carousel or grid.
+export component Card inherits Rectangle {
+    in property <PageCard> card;
+    in property <int> row-index;
+    in property <int> index;
+
+    private property <bool> artist: root.card.entry.kind == "artist";
+    private property <bool> hovered: touch.has-hover || play.has-hover;
+    private property <length> cover-height: root.card.wide ? root.width * 9 / 16 : root.width;
+
+    width: root.card.wide ? Style.wide-card-width : Style.card-width;
+    height: root.cover-height + 8px + title.height + (subtitle.visible ? 8px + subtitle.height : 0px);
+
+    ItemMenuArea {
+        width: 100%;
+        height: 100%;
+        source: "page";
+        a: root.row-index;
+        b: root.index;
+
+        // lifts a little under the pointer, sinks when pressed
+        Rectangle {
+            y: touch.pressed ? 1px : root.hovered ? -3px : 0px;
+            height: root.cover-height;
+            animate y { duration: Style.fast; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+
+            cover := Art {
+                source: root.card.entry.art;
+                round: root.artist;
+                corner: Style.radius;
+                zoom: root.hovered ? 1.06 : 1;
+                animate zoom { duration: Style.slow; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+            }
+            Rectangle {
+                border-radius: cover.border-radius;
+                background: @linear-gradient(180deg, #00000000 40%, #00000099 100%);
+                opacity: root.hovered ? 1 : 0;
+                animate opacity { duration: Style.normal; }
+            }
+        }
+
+        title := Text {
+            y: root.cover-height + 8px;
+            width: parent.width;
+            height: min(self.preferred-height, 2 * 17px);
+            text: root.card.entry.title;
+            color: Style.text;
+            font-size: 14px;
+            font-weight: 600;
+            wrap: word-wrap;
+            overflow: elide;
+            horizontal-alignment: root.artist ? center : left;
+        }
+        subtitle := Text {
+            visible: self.text != "";
+            y: title.y + title.height + 8px;
+            width: parent.width;
+            height: min(self.preferred-height, 2 * 16px);
+            text: root.card.entry.subtitle;
+            color: Style.text-dim;
+            font-size: 13px;
+            wrap: word-wrap;
+            overflow: elide;
+            horizontal-alignment: root.artist ? center : left;
+        }
+
+        touch := TouchArea {
+            mouse-cursor: pointer;
+            clicked => {
+                Browse.activate(root.row-index, root.index);
+            }
+        }
+
+        Rectangle {
+            visible: root.card.playable;
+            x: parent.width - self.width - 8px;
+            y: root.cover-height - self.height - 8px;
+            width: 44px;
+            height: 44px;
+            border-radius: self.width / 2;
+            background: play.pressed ? Style.accent.darker(0.15) : Style.accent;
+            opacity: root.hovered ? 1 : 0;
+            transform-scale: root.hovered ? 1 : 0.8;
+            animate opacity { duration: Style.normal; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+            animate transform-scale { duration: Style.normal; easing: ease-out-back; }
+
+            Image {
+                width: 22px;
+                height: 22px;
+                source: Icons.play;
+                colorize: #111114;
+            }
+            play := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    Browse.play(root.row-index, root.index);
+                }
+            }
+        }
+    }
+}

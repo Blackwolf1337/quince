@@ -1,21 +1,191 @@
-// Area A: any YouTube Music page (qml/BrowseView.qml and its rows), and the
-// page stack behind back and forward. Stub until the port lands.
+// Area A: any YouTube Music page (qml/BrowseView.qml): home, explore, album,
+// artist, playlist or a search. The page stack behind back and forward lives
+// in src/slint/BrowseBindings.cpp; this shows the open page's rows.
 
+import { ListView } from "std-widgets.slint";
 import { Style } from "style.slint";
+import { Player } from "globals.slint";
+import { ItemRow } from "item-row.slint";
+import { ItemMenuArea } from "item-menu.slint";
+import { Browse, PageRow } from "page-state.slint";
+import { CardRow, CarouselRow, ChipsRow, GridRow, HeaderRow, PageFooter, Skeleton, TextRow, TitleRow } from "page-rows.slint";
 
-export global Browse {
-    in property <bool> can-back;
-    in property <bool> can-forward;
+export { Browse }
 
-    callback back();
-    callback forward();
-    // a search from the search field: a results page
-    callback search(string);
+// one row of the list, whatever its type
+component PageRowView inherits VerticalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    // a list row asks for its cover once it is made or shows another row
+    private property <string> art-key: root.entry.type == "item" && !root.entry.album-tracks && root.entry.art-url != ""
+        ? root.index + " " + root.entry.art-url : "";
+
+    function want-art() {
+        if root.art-key != "" && root.entry.item.art.width == 0 {
+            Browse.load-art(root.index);
+        }
+    }
+
+    init => {
+        root.want-art();
+    }
+    changed art-key => {
+        root.want-art();
+    }
+
+    if root.entry.type == "header": HeaderRow {
+        entry: root.entry;
+        index: root.index;
+    }
+    if root.entry.type == "chips": ChipsRow {
+        entry: root.entry;
+        index: root.index;
+    }
+    if root.entry.type == "title": TitleRow {
+        entry: root.entry;
+        index: root.index;
+    }
+    if root.entry.type == "item": Rectangle {
+        height: 60px;
+
+        ItemMenuArea {
+            x: Style.margin - 10px;
+            width: parent.width - 2 * self.x;
+            source: "page";
+            a: root.index;
+            b: -1;
+
+            ItemRow {
+                width: 100%;
+                height: 100%;
+                entry: root.entry.item;
+                show-index: root.entry.album-tracks;
+                playable: root.entry.playable;
+                current: root.entry.video-id != "" && root.entry.video-id == Player.video-id;
+                activated => {
+                    Browse.activate(root.index, -1);
+                }
+            }
+        }
+    }
+    if root.entry.type == "carousel": CarouselRow {
+        entry: root.entry;
+        index: root.index;
+    }
+    if root.entry.type == "grid": GridRow {
+        entry: root.entry;
+        index: root.index;
+    }
+    if root.entry.type == "card": CardRow {
+        entry: root.entry;
+        index: root.index;
+    }
+    if root.entry.type == "text": TextRow {
+        entry: root.entry;
+        index: root.index;
+    }
+    if root.entry.type == "footer": PageFooter { }
 }
 
 export component BrowseView inherits Rectangle {
-    Text {
-        text: "Pages";
-        color: Style.text-dim;
+    private property <int> page: Browse.page-id;
+    private property <bool> can-load-more: Browse.can-load-more;
+    // the footer is always there
+    private property <bool> empty: Browse.rows.length <= 1;
+    private property <int> restore-steps;
+
+    // more rows once the end is near
+    function load-more-if-needed() {
+        if Browse.can-load-more && list.content-height + list.content-y - list.visible-height < 800px {
+            Browse.load-more();
+        }
+    }
+
+    // Back to the row that was on top when the page was left. The list
+    // places rows it has not made by an estimated height, so it goes there in
+    // steps, each checked against the row then on top.
+    changed page => {
+        list.content-y = 0;
+        // not known until the new rows report
+        Browse.list-row = -1;
+        root.restore-steps = 0;
+        restore.running = Browse.restore-row > 0 || Browse.restore-offset > 0;
+    }
+    restore := Timer {
+        interval: 16ms;
+        running: false;
+        triggered => {
+            root.restore-steps += 1;
+            if Browse.list-row < 0 && root.restore-steps <= 40 {
+                return;
+            }
+            if Browse.list-row == Browse.restore-row || root.restore-steps > 40 {
+                if Browse.list-row == Browse.restore-row {
+                    list.content-y += Browse.list-offset - Browse.restore-offset;
+                }
+                self.running = false;
+                return;
+            }
+            let rows = Browse.restore-row - Browse.list-row;
+            let row-height = list.content-height / max(1, Browse.rows.length);
+            let step = min(list.visible-height, abs(rows) * row-height);
+            list.content-y += rows > 0 ? -step : step;
+        }
+    }
+    changed can-load-more => {
+        root.load-more-if-needed();
+    }
+
+    // the mouse's back and forward buttons, where no row takes them
+    TouchArea {
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.back {
+                Browse.back();
+            }
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.forward {
+                Browse.forward();
+            }
+        }
+
+        list := ListView {
+            changed content-y => {
+                root.load-more-if-needed();
+            }
+            changed content-height => {
+                root.load-more-if-needed();
+            }
+
+            for r[i] in Browse.rows: PageRowView {
+                // where the row is against the top of the list; the row on
+                // top says so (again with each page: rows are reused)
+                private property <length> top: self.y + list.content-y;
+                private property <string> on-top: self.top <= 0 && self.top + self.height > 0
+                    ? Browse.page-id + " " + i + " " + self.top / 1px : "";
+
+                entry: r;
+                index: i;
+
+                function report() {
+                    if self.on-top != "" {
+                        Browse.list-row = i;
+                        Browse.list-offset = -self.top;
+                    }
+                }
+                init => {
+                    self.report();
+                }
+                changed on-top => {
+                    self.report();
+                }
+            }
+        }
+    }
+
+    // the shape of a page while the first part of it loads
+    Skeleton {
+        opacity: Browse.loading && root.empty ? 1 : 0;
+        visible: self.opacity > 0;
+        animate opacity { duration: Style.normal; }
     }
 }

@@ -1,0 +1,111 @@
+// The open page as the views see it, and what they ask of the page stack.
+// src/slint/BrowseBindings.cpp keeps it in step with the core.
+
+import { ListItem } from "globals.slint";
+
+// an album, playlist, artist or video in a carousel or grid, a quick pick, a
+// mood or genre button
+export struct PageCard {
+    entry: ListItem,
+    video-id: string,
+    // a 16:9 cover
+    wide: bool,
+    // has a play button
+    playable: bool,
+    // the stripe of a mood or genre button, transparent for none
+    color: color,
+}
+
+export struct PageChip {
+    title: string,
+    // an icon chip (clear the filter): its tooltip
+    label: string,
+    icon-only: bool,
+    selected: bool,
+}
+
+export struct ArtistLink {
+    name: string,
+    linked: bool,
+}
+
+// One row of a page (src/ytm/BrowsePage.h), whatever its type.
+export struct PageRow {
+    // header, chips, title, item, carousel, grid, card, text; footer for the
+    // end of the list (loading, errors)
+    type: string,
+    // header: detail, artist or title
+    style: string,
+    title: string,
+    subtitle: string,
+    strapline: string,
+    description: string,
+    text: string,
+    art-url: string,
+    art: image,
+    // header: the artists of the strapline (clickable when linked)
+    artists: [ArtistLink],
+    // item and card rows
+    item: ListItem,
+    video-id: string,
+    playable: bool,
+    // carousel and grid
+    cards: [PageCard],
+    any-wide: bool,
+    compact: bool,
+    buttons: bool,
+    // title and carousel: a "More" link
+    more: bool,
+    // item: shows the track number instead of the cover
+    album-tracks: bool,
+    chips: [PageChip],
+    sort-title: string,
+    sort-options: [string],
+    sort-selected: int,
+    // header and card: the buttons it has
+    can-play: bool,
+    can-shuffle: bool,
+    can-radio: bool,
+    can-download: bool,
+    has-menu: bool,
+}
+
+export global Browse {
+    // the rows of the open page; page-id changes with the page
+    in property <[PageRow]> rows;
+    in property <int> page-id: -1;
+    in property <bool> loading;
+    in property <string> error;
+    in property <bool> can-load-more;
+    in property <bool> can-back;
+    in property <bool> can-forward;
+    // the row on top of the list now and how far it is scrolled past (the
+    // view keeps them up to date), and the same when the open page was left
+    in-out property <int> list-row;
+    in-out property <length> list-offset;
+    in property <int> restore-row;
+    in property <length> restore-offset;
+
+    callback back();
+    callback forward();
+    // a search from the search field: a results page
+    callback search(string);
+
+    // row and card (-1 for none) of the open page
+    callback activate(int, int);
+    callback play(int, int);
+    callback shuffle(int, int);
+    callback radio(int, int);
+    callback download(int);
+    callback copy-link(int);
+    // every track of the page: LIKE, DISLIKE or INDIFFERENT
+    callback rate-all(string);
+    callback chip(int, int);
+    callback sort(int, int);
+    callback more(int);
+    callback artist(int, int);
+    callback load-more();
+    callback retry();
+    // the row came into view: its cover is wanted
+    callback load-art(int);
+}

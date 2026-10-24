@@ -398,6 +398,8 @@ if(QUINCE_SLINT)
         src/slint/MiniPlayerWindow.h
         src/slint/MiniPlayerWindow.cpp
         src/slint/ModelMirror.h
+        src/slint/Pages.h
+        src/slint/Pages.cpp
         src/slint/SlintHost.h
         src/slint/SlintHost.cpp
         src/slint/TestDriver.h

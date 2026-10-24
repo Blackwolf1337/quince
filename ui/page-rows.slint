@@ -1,0 +1,833 @@
+// The rows of a page (qml/HeaderRow.qml, ChipsRow.qml, TitleRow.qml,
+// CarouselRow.qml, GridRow.qml, CardRow.qml, TextRow.qml, Skeleton.qml).
+// Every row knows its index in the page; clicks go to Browse with it.
+
+import { Spinner } from "std-widgets.slint";
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { Art, ToolButton } from "widgets.slint";
+import { ItemRow } from "item-row.slint";
+import { ItemMenuArea } from "item-menu.slint";
+import { Account, Player } from "globals.slint";
+import { Browse, PageRow } from "page-state.slint";
+import { Card, NavButton, PillButton, PlayButtons } from "card.slint";
+
+// about the line height of Inter at a size, for limits in lines
+global Lines {
+    out property <float> factor: 1.25;
+}
+
+// Top of an album, playlist or artist page.
+export component HeaderRow inherits VerticalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    if root.entry.style == "title": VerticalLayout {
+        padding-left: Style.margin;
+        padding-right: Style.margin;
+        padding-top: 16px;
+        padding-bottom: 8px;
+        Text {
+            text: root.entry.title;
+            color: Style.text;
+            font-size: 34px;
+            font-weight: 700;
+            overflow: elide;
+        }
+    }
+
+    if root.entry.style == "artist": Rectangle {
+        private property <length> banner: min(round(self.width * 0.36 / 1px) * 1px, 380px);
+
+        height: self.banner + 8px;
+
+        Art {
+            y: 0;
+            height: parent.banner;
+            source: root.entry.art;
+            corner: 0;
+        }
+        Rectangle {
+            y: 0;
+            height: parent.banner;
+            background: @linear-gradient(180deg, Style.background.with-alpha(0) 35%, Style.background 100%);
+        }
+        VerticalLayout {
+            x: Style.margin;
+            y: parent.banner - self.height;
+            width: parent.width - 2 * Style.margin;
+            height: self.preferred-height;
+            spacing: 6px;
+
+            Text {
+                text: root.entry.title;
+                color: Style.text;
+                font-size: 46px;
+                font-weight: 700;
+                overflow: elide;
+            }
+            Text {
+                text: root.entry.subtitle;
+                color: Style.text-dim;
+                font-size: 14px;
+            }
+            if root.entry.description != "": Text {
+                max-width: 720px;
+                height: min(self.preferred-height, 2 * 13px * Lines.factor);
+                text: root.entry.description;
+                color: Style.text-dim;
+                font-size: 13px;
+                wrap: word-wrap;
+                overflow: elide;
+            }
+            HorizontalLayout {
+                padding-top: 8px;
+                alignment: start;
+                PlayButtons {
+                    entry: root.entry;
+                    index: root.index;
+                }
+            }
+        }
+    }
+
+    if root.entry.style != "title" && root.entry.style != "artist": HorizontalLayout {
+        padding-left: Style.margin;
+        padding-right: Style.margin;
+        padding-top: 16px;
+        padding-bottom: 16px;
+        spacing: 28px;
+
+        VerticalLayout {
+            alignment: start;
+            Art {
+                width: 232px;
+                height: 232px;
+                source: root.entry.art;
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 6px;
+
+            Text {
+                height: min(self.preferred-height, 2 * 34px * Lines.factor);
+                text: root.entry.title;
+                color: Style.text;
+                font-size: 34px;
+                font-weight: 700;
+                wrap: word-wrap;
+                overflow: elide;
+            }
+            // the artists of the strapline, each opens its page
+            if root.entry.artists.length > 0: FlexboxLayout {
+                flex-wrap: wrap;
+                for artist[i] in root.entry.artists: Text {
+                    text: artist.name + (i < root.entry.artists.length - 1 ? ", " : "");
+                    color: Style.text;
+                    font-size: 16px;
+                    font-weight: 600;
+
+                    TouchArea {
+                        enabled: artist.linked;
+                        mouse-cursor: self.enabled ? pointer : default;
+                        clicked => {
+                            Browse.artist(root.index, i);
+                        }
+                    }
+                }
+            }
+            if root.entry.artists.length == 0 && root.entry.strapline != "": Text {
+                text: root.entry.strapline;
+                color: Style.text;
+                font-size: 16px;
+                font-weight: 600;
+                overflow: elide;
+            }
+            Text {
+                text: root.entry.subtitle;
+                color: Style.text-dim;
+                font-size: 14px;
+                overflow: elide;
+            }
+            if root.entry.description != "": VerticalLayout {
+                padding-top: 6px;
+                Text {
+                    height: min(self.preferred-height, 3 * 13px * Lines.factor);
+                    text: root.entry.description;
+                    color: Style.text-dim;
+                    font-size: 13px;
+                    wrap: word-wrap;
+                    overflow: elide;
+                }
+            }
+            HorizontalLayout {
+                padding-top: 12px;
+                spacing: 10px;
+                alignment: start;
+
+                PlayButtons {
+                    entry: root.entry;
+                    index: root.index;
+                }
+                if root.entry.can-download: ToolButton {
+                    y: (parent.height - self.height) / 2;
+                    icon: Icons.download;
+                    clicked => {
+                        Browse.download(root.index);
+                    }
+                }
+                if root.entry.has-menu: menu := ContextMenuArea {
+                    width: 40px;
+                    height: 40px;
+                    y: (parent.height - self.height) / 2;
+
+                    Menu {
+                        MenuItem {
+                            title: @tr("Copy link");
+                            activated => {
+                                Browse.copy-link(root.index);
+                            }
+                        }
+                        if Account.signed-in: MenuItem {
+                            title: @tr("Like all songs");
+                            icon: Icons.like;
+                            activated => {
+                                Browse.rate-all("LIKE");
+                            }
+                        }
+                        if Account.signed-in: MenuItem {
+                            title: @tr("Dislike all songs");
+                            icon: Icons.dislike;
+                            activated => {
+                                Browse.rate-all("DISLIKE");
+                            }
+                        }
+                        if Account.signed-in: MenuItem {
+                            title: @tr("Remove all ratings");
+                            activated => {
+                                Browse.rate-all("INDIFFERENT");
+                            }
+                        }
+                    }
+                    ToolButton {
+                        icon: Icons.more;
+                        clicked => {
+                            menu.show({ x: 0, y: self.height });
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// A mood chip, a search or library filter.
+component Chip inherits Rectangle {
+    in property <string> text;
+    in property <bool> icon-only;
+    in property <bool> chosen;
+    callback clicked();
+
+    height: 34px;
+    border-radius: self.height / 2;
+    border-width: root.chosen || root.icon-only ? 0 : 1px;
+    border-color: Style.line;
+    background: root.chosen ? Style.accent : touch.pressed ? Style.pressed : touch.has-hover ? Style.hover : transparent;
+    animate background { duration: Style.fast; }
+
+    HorizontalLayout {
+        padding-left: root.icon-only ? 8px : 16px;
+        padding-right: self.padding-left;
+        if root.icon-only: Image {
+            width: 18px;
+            height: 18px;
+            y: (parent.height - self.height) / 2;
+            source: Icons.close;
+            colorize: Style.text;
+        }
+        if !root.icon-only: Text {
+            text: root.text;
+            color: root.chosen ? Style.background : Style.text;
+            font-size: 14px;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// Mood chips on the home page, filters on the search and library pages, and
+// the library's sort menu on the right.
+export component ChipsRow inherits HorizontalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    padding-left: Style.margin;
+    padding-right: Style.margin;
+    padding-top: 8px;
+    padding-bottom: 8px;
+    spacing: 12px;
+
+    FlexboxLayout {
+        horizontal-stretch: 1;
+        flex-wrap: wrap;
+        spacing: 8px;
+        for chip[i] in root.entry.chips: Chip {
+            text: chip.title;
+            icon-only: chip.icon-only;
+            chosen: chip.selected && !chip.icon-only;
+            clicked => {
+                Browse.chip(root.index, i);
+            }
+        }
+    }
+
+    if root.entry.sort-options.length > 0: VerticalLayout {
+        alignment: start;
+        sort := ContextMenuArea {
+            Menu {
+                for option[i] in root.entry.sort-options: MenuItem {
+                    title: option;
+                    checkable: true;
+                    checked: i == root.entry.sort-selected;
+                    activated => {
+                        Browse.sort(root.index, i);
+                    }
+                }
+            }
+            Rectangle {
+                height: 34px;
+                border-radius: 8px;
+                background: sort-touch.pressed ? Style.pressed : sort-touch.has-hover ? Style.hover : transparent;
+
+                HorizontalLayout {
+                    padding-left: 12px;
+                    padding-right: 8px;
+                    spacing: 6px;
+                    Text {
+                        text: root.entry.sort-title;
+                        color: Style.text;
+                        font-size: 14px;
+                        font-weight: 600;
+                        vertical-alignment: center;
+                    }
+                    Image {
+                        width: 20px;
+                        height: 20px;
+                        y: (parent.height - self.height) / 2;
+                        source: Icons.chevron-down;
+                        colorize: Style.text;
+                    }
+                }
+                sort-touch := TouchArea {
+                    mouse-cursor: pointer;
+                    clicked => {
+                        sort.show({ x: 0, y: self.height });
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Title above a list shelf.
+export component TitleRow inherits HorizontalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    height: 64px;
+    padding-left: Style.margin;
+    padding-right: Style.margin;
+    padding-bottom: 8px;
+    spacing: 8px;
+
+    VerticalLayout {
+        horizontal-stretch: 1;
+        alignment: end;
+        Text {
+            text: root.entry.title;
+            color: Style.text;
+            font-size: 22px;
+            font-weight: 700;
+            overflow: elide;
+        }
+    }
+    if root.entry.more: VerticalLayout {
+        alignment: end;
+        PillButton {
+            text: @tr("More");
+            flat: true;
+            clicked => {
+                Browse.more(root.index);
+            }
+        }
+    }
+}
+
+// A titled shelf scrolled sideways: cards, columns of small rows (quick
+// picks) or columns of genre buttons.
+export component CarouselRow inherits VerticalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    // rows per column of a compact shelf or a shelf of genre buttons
+    private property <int> compact-rows: 4;
+    private property <length> compact-width: 380px;
+    private property <int> button-rows: 3;
+
+    private property <length> card-width: root.entry.any-wide ? Style.wide-card-width : Style.card-width;
+    private property <length> step: root.entry.compact ? root.compact-width + 12px : root.entry.buttons ? 196px + 18px
+        : root.card-width + 18px;
+    private property <int> columns: root.entry.compact ? Math.ceil(root.entry.cards.length / root.compact-rows)
+        : root.entry.buttons ? Math.ceil(root.entry.cards.length / root.button-rows) : root.entry.cards.length;
+    private property <length> content-width: 2 * Style.margin + root.columns * root.step
+        - (root.entry.compact ? 12px : 18px);
+    private property <length> max-offset: max(0px, root.content-width - root.width);
+    private property <length> offset;
+
+    function page(direction: int) {
+        root.offset = max(0px, min(root.max-offset, root.offset + direction * (root.width - 2 * Style.margin)));
+    }
+
+    padding-top: 28px;
+    spacing: 14px;
+
+    HorizontalLayout {
+        padding-left: Style.margin;
+        padding-right: Style.margin;
+        spacing: 2px;
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            spacing: 2px;
+            if root.entry.strapline != "": Text {
+                text: root.entry.strapline;
+                color: Style.text-dim;
+                font-size: 12px;
+                overflow: elide;
+            }
+            Text {
+                text: root.entry.title;
+                color: Style.text;
+                font-size: 22px;
+                font-weight: 700;
+                overflow: elide;
+            }
+        }
+        if root.entry.more: PillButton {
+            y: (parent.height - self.height) / 2;
+            text: @tr("More");
+            flat: true;
+            clicked => {
+                Browse.more(root.index);
+            }
+        }
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.chevron-left;
+            enabled: root.offset > 0;
+            clicked => {
+                root.page(-1);
+            }
+        }
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.chevron-right;
+            enabled: root.offset < root.max-offset;
+            clicked => {
+                root.page(1);
+            }
+        }
+    }
+
+    // sideways by the buttons or a sideways wheel; a plain wheel scrolls the page
+    TouchArea {
+        height: root.entry.compact ? root.compact-rows * 60px : root.entry.buttons ? root.button-rows * 60px
+            : (root.entry.any-wide ? Style.wide-card-width * 9 / 16 : Style.card-width) + 70px;
+
+        scroll-event(event) => {
+            if event.delta-x == 0 {
+                return reject;
+            }
+            root.offset = max(0px, min(root.max-offset, root.offset - event.delta-x));
+            accept
+        }
+
+        Rectangle {
+            clip: true;
+
+            Rectangle {
+                x: -root.offset;
+                width: root.content-width;
+                animate x { duration: 300ms; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+
+                if !root.entry.compact && !root.entry.buttons: Rectangle {
+                    for card[i] in root.entry.cards: Card {
+                        x: Style.margin + i * root.step;
+                        y: 0;
+                        width: root.card-width;
+                        card: card;
+                        row-index: root.index;
+                        index: i;
+                    }
+                }
+
+                if root.entry.compact: Rectangle {
+                    for column in root.columns: Rectangle {
+                        x: Style.margin + column * root.step;
+                        y: 0;
+                        width: root.compact-width;
+
+                        for slot in root.compact-rows: ItemMenuArea {
+                            private property <int> at: column * root.compact-rows + slot;
+
+                            visible: self.at < root.entry.cards.length;
+                            y: slot * 60px;
+                            height: 60px;
+                            source: "page";
+                            a: root.index;
+                            b: self.at;
+
+                            ItemRow {
+                                width: 100%;
+                                height: 100%;
+                                entry: root.entry.cards[parent.at].entry;
+                                current: root.entry.cards[parent.at].video-id != ""
+                                    && root.entry.cards[parent.at].video-id == Player.video-id;
+                                playable: root.entry.cards[parent.at].video-id != "";
+                                activated => {
+                                    Browse.activate(root.index, parent.at);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if root.entry.buttons: Rectangle {
+                    for column in root.columns: Rectangle {
+                        x: Style.margin + column * root.step;
+                        y: 0;
+                        width: 196px;
+
+                        for slot in root.button-rows: NavButton {
+                            private property <int> at: column * root.button-rows + slot;
+
+                            visible: self.at < root.entry.cards.length;
+                            y: slot * 60px;
+                            card: root.entry.cards[self.at];
+                            row-index: root.index;
+                            index: self.at;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// A shelf that wraps into lines: genre buttons or cards.
+export component GridRow inherits VerticalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    padding-left: Style.margin;
+    padding-right: Style.margin;
+    padding-top: 24px;
+    spacing: 14px;
+
+    if root.entry.title != "": Text {
+        text: root.entry.title;
+        color: Style.text;
+        font-size: 22px;
+        font-weight: 700;
+        overflow: elide;
+    }
+    // The cells are of one size, so the lines are laid out by hand (a
+    // FlexboxLayout reported a line too many). A card's cell has room for two
+    // lines of title and two of subtitle.
+    grid := Rectangle {
+        private property <length> cell-width: root.entry.buttons ? 196px
+            : root.entry.any-wide ? Style.wide-card-width : Style.card-width;
+        private property <length> cell-height: root.entry.buttons ? 48px
+            : (root.entry.any-wide ? Style.wide-card-width * 9 / 16 : Style.card-width) + 8px + 2 * 17px + 8px + 2 * 16px;
+        private property <length> gap: root.entry.buttons ? 12px : 18px;
+        private property <int> columns: max(1, floor((self.width + self.gap) / (self.cell-width + self.gap)));
+
+        height: max(0px, Math.ceil(root.entry.cards.length / self.columns) * (self.cell-height + self.gap) - self.gap);
+
+        if root.entry.buttons: Rectangle {
+            for card[i] in root.entry.cards: NavButton {
+                x: mod(i, grid.columns) * (grid.cell-width + grid.gap);
+                y: floor(i / grid.columns) * (grid.cell-height + grid.gap);
+                card: card;
+                row-index: root.index;
+                index: i;
+            }
+        }
+        if !root.entry.buttons: Rectangle {
+            for card[i] in root.entry.cards: Card {
+                x: mod(i, grid.columns) * (grid.cell-width + grid.gap);
+                y: floor(i / grid.columns) * (grid.cell-height + grid.gap);
+                width: grid.cell-width;
+                card: card;
+                row-index: root.index;
+                index: i;
+            }
+        }
+    }
+}
+
+// The top result of a search.
+export component CardRow inherits VerticalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    padding-left: Style.margin;
+    padding-top: 16px;
+    padding-bottom: 8px;
+    alignment: start;
+
+    HorizontalLayout {
+        alignment: start;
+
+        ItemMenuArea {
+            width: min(root.width - 2 * Style.margin, 760px);
+            height: 172px;
+            source: "page";
+            a: root.index;
+            b: -1;
+            border-radius: Style.radius;
+            background: Style.surface-high;
+
+            HorizontalLayout {
+                padding: 20px;
+                spacing: 22px;
+
+                Art {
+                    width: 132px;
+                    height: 132px;
+                    source: root.entry.item.art;
+                    round: root.entry.item.kind == "artist";
+
+                    TouchArea {
+                        mouse-cursor: pointer;
+                        clicked => {
+                            Browse.activate(root.index, -1);
+                        }
+                    }
+                }
+
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    spacing: 4px;
+
+                    Text {
+                        text: root.entry.item.title;
+                        color: Style.text;
+                        font-size: 26px;
+                        font-weight: 700;
+                        overflow: elide;
+
+                        TouchArea {
+                            mouse-cursor: pointer;
+                            clicked => {
+                                Browse.activate(root.index, -1);
+                            }
+                        }
+                    }
+                    Text {
+                        text: root.entry.item.subtitle;
+                        color: Style.text-dim;
+                        font-size: 14px;
+                        overflow: elide;
+                    }
+                    HorizontalLayout {
+                        padding-top: 10px;
+                        alignment: start;
+                        PlayButtons {
+                            entry: root.entry;
+                            index: root.index;
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// A text shelf, e.g. the artist's "About".
+export component TextRow inherits VerticalLayout {
+    in property <PageRow> entry;
+    in property <int> index;
+
+    private property <bool> expanded;
+    private property <length> folded: 4 * 14px * Lines.factor;
+
+    padding-left: Style.margin;
+    padding-right: max(Style.margin, self.width - Style.margin - 900px);
+    padding-top: 24px;
+    padding-bottom: 8px;
+    spacing: 8px;
+
+    if root.entry.title != "": Text {
+        text: root.entry.title;
+        color: Style.text;
+        font-size: 22px;
+        font-weight: 700;
+    }
+    body := Text {
+        height: root.expanded ? self.preferred-height : min(self.preferred-height, root.folded);
+        text: root.entry.text;
+        color: Style.text-dim;
+        font-size: 14px;
+        wrap: word-wrap;
+        overflow: elide;
+    }
+    if body.preferred-height > root.folded + 1px || root.expanded: HorizontalLayout {
+        alignment: start;
+        PillButton {
+            text: root.expanded ? @tr("Less") : @tr("More");
+            flat: true;
+            clicked => {
+                root.expanded = !root.expanded;
+            }
+        }
+    }
+}
+
+// The end of the list: loading more, or what went wrong.
+export component PageFooter inherits Rectangle {
+    height: Browse.loading || Browse.error != "" ? 96px : 24px;
+
+    if Browse.loading && Browse.rows.length > 1: Spinner {
+        width: 32px;
+        height: 32px;
+        indeterminate: true;
+    }
+    if !Browse.loading && Browse.error != "": VerticalLayout {
+        alignment: center;
+        spacing: 8px;
+        Text {
+            text: Browse.error;
+            color: #e57373;
+            horizontal-alignment: center;
+            wrap: word-wrap;
+        }
+        HorizontalLayout {
+            alignment: center;
+            PillButton {
+                text: @tr("Try again");
+                flat: true;
+                clicked => {
+                    Browse.retry();
+                }
+            }
+        }
+    }
+}
+
+component Bone inherits Rectangle {
+    background: Style.placeholder;
+    border-radius: 6px;
+}
+
+// Placeholder shapes while a page loads, with a light sweeping over them.
+export component Skeleton inherits Rectangle {
+    private property <int> cards: max(1, floor((self.width - 2 * Style.margin) / (Style.card-width + 18px)));
+
+    clip: true;
+
+    VerticalLayout {
+        x: Style.margin;
+        y: 24px;
+        width: root.width - 2 * Style.margin;
+        height: self.preferred-height;
+        spacing: 18px;
+        alignment: start;
+
+        HorizontalLayout {
+            alignment: start;
+            Bone {
+                width: 260px;
+                height: 28px;
+            }
+        }
+        HorizontalLayout {
+            alignment: start;
+            spacing: 18px;
+            for i in root.cards: VerticalLayout {
+                spacing: 10px;
+                Bone {
+                    width: Style.card-width;
+                    height: Style.card-width;
+                    border-radius: Style.radius;
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Bone {
+                        width: Style.card-width * 0.8;
+                        height: 14px;
+                    }
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Bone {
+                        width: Style.card-width * 0.5;
+                        height: 12px;
+                    }
+                }
+            }
+        }
+        HorizontalLayout {
+            alignment: start;
+            Bone {
+                width: 200px;
+                height: 28px;
+            }
+        }
+        for i in 5: HorizontalLayout {
+            alignment: start;
+            spacing: 14px;
+            Bone {
+                width: 44px;
+                height: 44px;
+            }
+            VerticalLayout {
+                alignment: center;
+                spacing: 8px;
+                HorizontalLayout {
+                    alignment: start;
+                    Bone {
+                        width: 280px;
+                        height: 14px;
+                    }
+                }
+                HorizontalLayout {
+                    alignment: start;
+                    Bone {
+                        width: 160px;
+                        height: 12px;
+                    }
+                }
+            }
+        }
+    }
+
+    // the sweep
+    Rectangle {
+        x: mod(animation-tick(), 1300ms) / 1300ms * (root.width + self.width) - self.width;
+        width: 260px;
+        background: @linear-gradient(90deg, #ffffff00 0%, #ffffff0a 50%, #ffffff00 100%);
+    }
+}
