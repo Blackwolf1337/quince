@@ -92,11 +92,6 @@ struct RowData
 using RowModel = slint::Model<ui::PageRow>;
 using RowVector = slint::VectorModel<ui::PageRow>;
 
-std::string text(const QVariantMap &map, const char *key)
-{
-    return utf8(map.value(QLatin1String(key)).toString());
-}
-
 bool has(const QVariantMap &map, const char *key)
 {
     return !map.value(QLatin1String(key)).toString().isEmpty();
@@ -467,11 +462,6 @@ void showState(const Window &window, const BrowsePage *page)
         browse.set_error(str(s.error));
         browse.set_can_load_more(s.canLoadMore);
     });
-}
-
-QString fromSlint(const slint::SharedString &s)
-{
-    return QString::fromUtf8(s.data(), qsizetype(s.size()));
 }
 
 // a new page: its rows into a model of their own, its state while it is open

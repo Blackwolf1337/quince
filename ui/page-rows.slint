@@ -606,10 +606,17 @@ export component CardRow inherits VerticalLayout {
             source: "page";
             a: root.index;
             b: -1;
-            border-radius: Style.radius;
-            background: Style.surface-high;
+
+            Rectangle {
+                width: 100%;
+                height: 100%;
+                border-radius: Style.radius;
+                background: Style.surface-high;
+            }
 
             HorizontalLayout {
+                width: 100%;
+                height: 100%;
                 padding: 20px;
                 spacing: 22px;
 
