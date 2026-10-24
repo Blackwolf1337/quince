@@ -70,10 +70,15 @@ export struct PageRow {
     has-menu: bool,
 }
 
+// how the open page came (src/slint/Pages.h)
+export enum PageMove { section, push, back }
+
 export global Browse {
-    // the rows of the open page; page-id changes with the page
+    // the rows of the open page; page-id changes with the page, after
+    // page-move
     in property <[PageRow]> rows;
     in property <int> page-id: -1;
+    in property <PageMove> page-move;
     in property <bool> loading;
     in property <string> error;
     in property <bool> can-load-more;

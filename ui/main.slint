@@ -9,7 +9,7 @@ import { PlayerBar } from "player-bar.slint";
 import { QueuePanel } from "queue-panel.slint";
 import { Account, App, Player, PlaylistEntry, ListItem } from "globals.slint";
 // the areas, each ported in its own files
-import { Browse, BrowseView } from "browse-view.slint";
+import { Browse, BrowseView, PageMove } from "browse-view.slint";
 import { SearchField } from "search-field.slint";
 import { NowPlaying } from "now-playing.slint";
 import { DialogLayer } from "dialogs.slint";
@@ -317,13 +317,58 @@ export component MainWindow inherits Window {
                     background: Style.surface.with-alpha(0.42);
                     clip: true;
 
-                    if App.section != "downloads": BrowseView {
-                        width: 100%;
-                        height: 100%;
-                    }
-                    if App.section == "downloads": DownloadsView {
-                        width: 100%;
-                        height: 100%;
+                    // a new page comes in as in qml/Main.qml's StackView: from the
+                    // right when opened, from the left when going back, rising
+                    // for a section
+                    page-area := Rectangle {
+                        property <int> page: Browse.page-id;
+                        // the entry's first step: straight to where it starts
+                        property <bool> jump;
+                        property <length> shift-x;
+                        property <length> shift-y;
+                        property <float> fade: 1;
+
+                        x: self.shift-x;
+                        y: self.shift-y;
+                        width: parent.width;
+                        height: parent.height;
+                        opacity: self.fade;
+                        animate shift-x, shift-y {
+                            duration: page-area.jump ? 0 : Style.slow;
+                            easing: cubic-bezier(0.33, 1, 0.68, 1);
+                        }
+                        animate fade {
+                            duration: page-area.jump ? 0 : Style.normal;
+                            easing: cubic-bezier(0.33, 1, 0.68, 1);
+                        }
+
+                        changed page => {
+                            self.jump = true;
+                            self.shift-x = Browse.page-move == PageMove.push ? 48px : Browse.page-move == PageMove.back ? -48px : 0;
+                            self.shift-y = Browse.page-move == PageMove.section ? 16px : 0;
+                            self.fade = 0;
+                            enter.start();
+                        }
+                        enter := Timer {
+                            interval: 1ms;
+                            running: false;
+                            triggered => {
+                                self.stop();
+                                page-area.jump = false;
+                                page-area.shift-x = 0;
+                                page-area.shift-y = 0;
+                                page-area.fade = 1;
+                            }
+                        }
+
+                        if App.section != "downloads": BrowseView {
+                            width: 100%;
+                            height: 100%;
+                        }
+                        if App.section == "downloads": DownloadsView {
+                            width: 100%;
+                            height: 100%;
+                        }
                     }
                 }
 

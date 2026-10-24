@@ -26,6 +26,7 @@ Pages::Pages(AppController &app, QObject *parent)
 void Pages::goSection(const QString &name, const QString &browseId)
 {
     m_section = name;
+    m_move = Move::Section;
     m_forward.clear();
     clear();
     if (name == kDownloads) {
@@ -39,6 +40,7 @@ void Pages::goSection(const QString &name, const QString &browseId)
 void Pages::openPage(const Request &request)
 {
     m_forward.clear();
+    m_move = Move::Push;
     push(request);
 }
 
@@ -46,6 +48,7 @@ void Pages::back()
 {
     if (m_stack.size() <= 1)
         return;
+    m_move = Move::Back;
     const Entry top = m_stack.takeLast();
     m_forward.append({top.page->browseId(), top.page->params(), top.page->query()});
     drop(top);
@@ -56,6 +59,7 @@ void Pages::forward()
 {
     if (m_forward.isEmpty())
         return;
+    m_move = Move::Push;
     push(m_forward.takeLast());
 }
 

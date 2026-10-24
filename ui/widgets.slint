@@ -2,11 +2,20 @@
 
 import { Style } from "style.slint";
 
-// The tooltip's look (QML's Material ToolTip). Slint shows a Tooltip below
-// the pointer, after half a second: Tooltip { Tip { text: ...; } }. It lies
-// on the style's own tooltip frame, so it is opaque and covers it all.
+// The tooltip's look (QML's Material ToolTip). Slint shows a Tooltip after
+// half a second, centered above its element (cmake/SlintPatch.cmake):
+// Tooltip { Tip { text: ...; } }. It lies on the style's own tooltip frame,
+// so it is opaque and covers it all.
 export component Tip inherits Rectangle {
     in property <string> text;
+    property <bool> shown;
+
+    // Material's enter transition (OutQuad)
+    opacity: root.shown ? 1 : 0;
+    animate opacity { duration: 500ms; easing: cubic-bezier(0.5, 1, 0.89, 1); }
+    init => {
+        root.shown = true;
+    }
 
     min-height: 32px;
     border-radius: 2px;

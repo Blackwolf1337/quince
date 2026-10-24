@@ -418,10 +418,24 @@ void rowMade(const Window &window, ImageCache *images, const std::shared_ptr<Row
 struct Shown
 {
     int id = -1;
+    ui::PageMove move = ui::PageMove::Section;
     std::string section;
     bool canBack = false;
     bool canForward = false;
 };
+
+ui::PageMove moveOf(Pages::Move move)
+{
+    switch (move) {
+    case Pages::Move::Push:
+        return ui::PageMove::Push;
+    case Pages::Move::Back:
+        return ui::PageMove::Back;
+    case Pages::Move::Section:
+        break;
+    }
+    return ui::PageMove::Section;
+}
 
 void show(ui::MainWindow &w, const Shown &s)
 {
@@ -436,6 +450,8 @@ void show(ui::MainWindow &w, const Shown &s)
     browse.set_rows(page ? std::shared_ptr<RowModel>(page->view) : std::make_shared<RowVector>());
     browse.set_restore_row(page ? page->topRow : 0);
     browse.set_restore_offset(page ? page->topOffset : 0);
+    // before page-id: the view reads it when the page changes
+    browse.set_page_move(s.move);
     browse.set_page_id(s.id);
     browse.set_can_back(s.canBack);
     browse.set_can_forward(s.canForward);
@@ -605,8 +621,8 @@ void bindBrowse(AppController &app, const Window &window, ImageCache *images)
         [pages, window, images](BrowsePage *page, int id) { mirrorPage(pages, page, id, window, images); },
         [window](int id) { toUi(window, [id](ui::MainWindow &) { uiPages().pages.erase(id); }); },
         [pages, window] {
-            toUi(window, [s = Shown{ pages->currentId(), utf8(pages->shownSection()), pages->canBack(),
-                                     pages->canForward() }](ui::MainWindow &w) { show(w, s); });
+            toUi(window, [s = Shown{ pages->currentId(), moveOf(pages->lastMove()),
+                                     utf8(pages->shownSection()), pages->canBack(), pages->canForward() }](ui::MainWindow &w) { show(w, s); });
             showState(window, pages->current());
         },
     });

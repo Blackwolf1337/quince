@@ -23,6 +23,9 @@ public:
         QString params;
         QString query;
     };
+    // how the open page came: a section, a page opened (or forward again),
+    // or going back; the view moves it in like that
+    enum class Move { Section, Push, Back };
     struct Hooks
     {
         // a page was made (before it starts loading), and went away
@@ -49,6 +52,7 @@ public:
     BrowsePage *current() const;
     // -1 while the downloads view shows
     int currentId() const;
+    Move lastMove() const { return m_move; }
     bool canBack() const { return m_stack.size() > 1; }
     bool canForward() const { return !m_forward.isEmpty(); }
     // what the sidebar marks: the section, "downloads" while that view shows,
@@ -80,6 +84,7 @@ private:
     AppController &m_app;
     Hooks m_hooks;
     QString m_section = QStringLiteral("home");
+    Move m_move = Move::Section;
     QList<Entry> m_stack;
     QList<Request> m_forward;
     int m_nextId = 0;
