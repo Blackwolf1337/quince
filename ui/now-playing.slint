@@ -252,15 +252,20 @@ export component NowPlaying inherits Rectangle {
         spacing: 56px;
         opacity: Math.max(0, root.progress * 1.4 - 0.4);
 
-        // both columns grow from their preferred widths by the same amount, as
-        // with QML's RowLayout; the cover keeps its size at the left
+        // both columns grow in proportion to their preferred widths, as with
+        // QML's RowLayout (Qt's layout engine without stretch factors); the
+        // cover keeps its size at the left
         VerticalLayout {
             min-width: root.slot-width;
             preferred-width: root.slot-width;
-            horizontal-stretch: 1;
-            // at the bottom, as in QML (a spacer above it all)
-            alignment: end;
+            horizontal-stretch: root.slot-width / 1px;
             spacing: 14px;
+
+            // centered between two spacers as in QML; when it does not fit, the
+            // top one is gone and the rest runs off the bottom
+            Rectangle {
+                vertical-stretch: 1;
+            }
 
             // the cover itself flies above
             HorizontalLayout {
@@ -285,25 +290,31 @@ export component NowPlaying inherits Rectangle {
                 font-size: 16px;
             }
 
-            // Material's slider is 48 px tall; the times sit 10 px into it
+            // the track 24 px down as in Material's Slider, the times 28 px under
+            // it (measured on the QML frontend)
             VerticalLayout {
                 padding-top: 8px;
                 spacing: 0;
 
-                seek := ThinSlider {
-                    height: 38px;
-                    minimum: 0;
-                    maximum: Math.max(Player.duration, 0.01);
-                    value: Player.position;
-                    enabled: Player.duration > 0;
-                    fill: Style.accent;
-                    track: Style.accent.with-alpha(0.3);
-                    thickness: 4px;
-                    active-thickness: 4px;
-                    knob-always: true;
-                    knob-color: Style.accent;
-                    released(value) => {
-                        Player.seek(value);
+                Rectangle {
+                    height: 52px;
+
+                    seek := ThinSlider {
+                        y: 0;
+                        height: 48px;
+                        minimum: 0;
+                        maximum: Math.max(Player.duration, 0.01);
+                        value: Player.position;
+                        enabled: Player.duration > 0;
+                        fill: Style.accent;
+                        track: Style.accent.with-alpha(0.3);
+                        thickness: 4px;
+                        active-thickness: 4px;
+                        knob-always: true;
+                        knob-color: Style.accent;
+                        released(value) => {
+                            Player.seek(value);
+                        }
                     }
                 }
                 HorizontalLayout {
@@ -425,12 +436,18 @@ export component NowPlaying inherits Rectangle {
                     }
                 }
             }
+
+            Rectangle {
+                vertical-stretch: 1;
+            }
         }
 
+        // QML's QueuePanel takes its preferred width from the lyrics (the
+        // widest line); this is about what it comes to
         QueuePanel {
-            horizontal-stretch: 1;
             min-width: 320px;
-            preferred-width: 320px;
+            preferred-width: 333px;
+            horizontal-stretch: 333;
         }
     }
 
