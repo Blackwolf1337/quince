@@ -54,8 +54,9 @@ jobs:
           dist="$PWD/dist/Quince"
           cmake --install build --prefix "$dist"
           deploy=$(command -v windeployqt6 || command -v windeployqt-qt6 || echo /ucrt64/share/qt6/bin/windeployqt.exe)
-          # the window is Slint's: no platform, style or icon plugins
-          "$deploy" --release --no-compiler-runtime --skip-plugin-types platforms,styles,iconengines,generic,platforminputcontexts \
+          # the window is Slint's: no style or icon plugins (windeployqt insists on
+          # the platform plugin of an app that links QtGui)
+          "$deploy" --release --no-compiler-runtime --skip-plugin-types styles,iconengines,generic,platforminputcontexts \
             "$dist/quince.exe"
           # MSYS2's Qt would look for plugins below share\qt6\
           cp packaging/windows/qt.conf "$dist/qt.conf"
