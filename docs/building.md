@@ -36,7 +36,9 @@ cmake --build build
 
 ## Slint frontend (work in progress)
 
-`-DQUINCE_SLINT=ON` also builds `quince-slint`, a frontend made with Slint instead of Qt Quick, on the same core. It needs a Rust toolchain (1.92 or newer); CMake downloads Slint 1.18.1 and builds it with cargo, which also downloads its crates. So far it has the player bar, the queue, video and the tray.
+`-DQUINCE_SLINT=ON` also builds `quince-slint`, a frontend made with Slint instead of Qt Quick, on the same core. It needs a Rust toolchain (1.92 or newer); CMake downloads Slint 1.18.1 and builds it with cargo, which also downloads its crates. It also downloads nativefiledialog-extended 1.4.1 (pinned by hash) for the file pickers.
+
+Its texts are the English source texts of the QML frontend, so its translations come from the same `i18n/quince_<lang>.ts` files. After a change to the texts or the translations, run `slint-tr-extractor -o strings.pot ui/*.slint` (built from Slint's `tools/tr-extractor`) and `tools/slint-po.py strings.pot`; it writes `i18n/slint/<lang>/LC_MESSAGES/quince-slint.po`, which the build bundles into the binary.
 
 ## Install
 

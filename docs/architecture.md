@@ -41,7 +41,7 @@ cmake              Mecab.cmake (builds MeCab and the dictionary)
 login              quince-login
 tools              quince-parsedump, quince-romanize
 third_party/ejs    yt-dlp's challenge solver
-i18n               translations
+i18n               translations (the .ts files; i18n/slint made from them for the Slint frontend)
 packaging          desktop file
 ```
 

@@ -6,6 +6,7 @@
 #include "VideoRenderer.h"
 #include "app/AppController.h"
 #include "app/ColorTheme.h"
+#include "app/Language.h"
 #include "app/Settings.h"
 #include "download/Downloader.h"
 #include "integrations/Notifications.h"
@@ -272,6 +273,14 @@ void bindApp(AppController &app, const Window &window)
     });
 }
 
+// the .slint texts in the language the core chose (Slint bundles the .po
+// files of i18n/slint at build time); English has none and keeps the sources
+void bindLanguage(Language *language, const Window &window)
+{
+    bind(window, language, &Language::changed, [](Language *l) { return utf8(l->code()); },
+         [](ui::MainWindow &, const std::string &code) { slint::select_bundled_translation(code); });
+}
+
 void bindTheme(ColorTheme *theme, const Window &window)
 {
     struct Colors
@@ -406,6 +415,7 @@ void bindCore(AppController &app, const Window &window, const Tray &tray, ImageC
     registerQueueItems(app.playback()->queue());
     bindAccount(app.account(), window, images);
     bindApp(app, window);
+    bindLanguage(app.language(), window);
     bindTheme(app.theme(), window);
     bindTray(app.player(), app.playback(), tray);
     bindVideo(app.player(), window, video);

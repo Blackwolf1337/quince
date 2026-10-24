@@ -16,6 +16,7 @@ class Lyrics;
 class Mpris;
 class InnerTube;
 class JsSolver;
+class Language;
 class MpvPlayer;
 class Playback;
 class Settings;
@@ -72,6 +73,8 @@ public:
     SponsorBlock *sponsorBlock() const { return m_sponsorBlock; }
 
     InnerTube *innerTube() const { return m_innerTube; }
+    // the language of the texts; changed() follows the settings
+    Language *language() const { return m_language; }
 
     // A click on an item: plays it or opens its page.
     Q_INVOKABLE void open(const QVariantMap &item);
@@ -108,6 +111,7 @@ private:
     StreamResolver *m_resolver = nullptr;
     Playback *m_playback = nullptr;
     Settings *m_settings = nullptr;
+    Language *m_language = nullptr;
     AccountCookies *m_cookies = nullptr;
     Account *m_account = nullptr;
     ColorTheme *m_theme = nullptr;

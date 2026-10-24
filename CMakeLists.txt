@@ -411,6 +411,8 @@ if(QUINCE_SLINT)
     # the mini player's window, with globals of its own
     slint_target_sources(quince-slint ui/mini-player.slint NAMESPACE mini)
     set_property(TARGET quince-slint PROPERTY SLINT_EMBED_RESOURCES embed-files)
+    # i18n/slint/<lang>/LC_MESSAGES/quince-slint.po, made by tools/slint-po.py from the .ts files
+    set_property(TARGET quince-slint PROPERTY SLINT_BUNDLE_TRANSLATIONS ${CMAKE_CURRENT_SOURCE_DIR}/i18n/slint)
     target_include_directories(quince-slint PRIVATE src/slint)
     if(NOT MSVC)
         target_compile_options(quince-slint PRIVATE -Wall -Wextra)

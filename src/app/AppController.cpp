@@ -66,7 +66,7 @@ AppController::AppController(const AppOptions &options, UiHost *host, QObject *p
 
     m_settings = new Settings(this);
     // before anything keeps a translated text
-    auto *language = new Language(m_settings, this);
+    auto *language = m_language = new Language(m_settings, this);
     m_innerTube->setLanguage(language->code());
     applySettings();
     connect(m_settings, &Settings::changed, this, &AppController::applySettings);

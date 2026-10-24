@@ -1,0 +1,1202 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+"Language: de\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: ui/card.slint:66
+msgctxt "PlayButtons"
+msgid "Play"
+msgstr "Wiedergeben"
+
+#: ui/card.slint:74
+msgctxt "PlayButtons"
+msgid "Shuffle"
+msgstr "Zufallsmix"
+
+#: ui/card.slint:81
+msgctxt "PlayButtons"
+msgid "Radio"
+msgstr "Radio"
+
+#: ui/downloads-view.slint:22
+msgctxt "DownloadItem"
+msgid "Waiting"
+msgstr "Wartet"
+
+#: ui/downloads-view.slint:25
+msgctxt "DownloadItem"
+msgid "Starting"
+msgstr "Startet"
+
+#: ui/downloads-view.slint:28
+msgctxt "DownloadItem"
+msgid "Downloading"
+msgstr "Lädt herunter"
+
+#: ui/downloads-view.slint:31
+msgctxt "DownloadItem"
+msgid "Writing the file"
+msgstr "Schreibt die Datei"
+
+#: ui/downloads-view.slint:34
+msgctxt "DownloadItem"
+msgid "Done"
+msgstr "Fertig"
+
+#: ui/downloads-view.slint:37
+msgctxt "DownloadItem"
+msgid "Failed: {}"
+msgstr "Fehlgeschlagen: {}"
+
+#: ui/downloads-view.slint:96
+msgctxt "DownloadItem"
+msgid "Retry"
+msgstr "Nochmal"
+
+#: ui/downloads-view.slint:122
+msgctxt "DownloadsView"
+msgid "Downloads"
+msgstr "Downloads"
+
+#: ui/downloads-view.slint:130
+msgctxt "DownloadsView"
+msgid "Open folder"
+msgstr "Ordner öffnen"
+
+#: ui/downloads-view.slint:137
+msgctxt "DownloadsView"
+msgid "Clear finished"
+msgstr "Fertige entfernen"
+
+#: ui/downloads-view.slint:145
+msgctxt "DownloadsView"
+msgid "Into {}. Right-click a song, album or playlist and choose Download."
+msgstr "Nach {}. Rechtsklick auf einen Song, ein Album oder eine Playlist und Herunterladen wählen."
+
+#: ui/downloads-view.slint:162
+msgctxt "DownloadsView"
+msgid "Nothing downloaded yet."
+msgstr "Noch nichts heruntergeladen."
+
+#: ui/equalizer.slint:8
+msgctxt "EqualizerDialog"
+msgid "Equalizer"
+msgstr "Equalizer"
+
+#: ui/equalizer.slint:9
+msgctxt "EqualizerDialog"
+msgid "Close"
+msgstr "Schließen"
+
+#: ui/equalizer.slint:22
+msgctxt "EqualizerDialog"
+msgid "On"
+msgstr "An"
+
+#: ui/equalizer.slint:79
+msgctxt "EqualizerDialog"
+msgid "Hz. Boosts are held below full scale by a limiter, so loud parts do not clip."
+msgstr "Hz. Ein Limiter hält Anhebungen unter der Vollaussteuerung, damit laute Stellen nicht verzerren."
+
+#: ui/item-menu.slint:79
+msgctxt "ItemMenuArea"
+msgid "Play next"
+msgstr "Als Nächstes abspielen"
+
+#: ui/item-menu.slint:86
+msgctxt "ItemMenuArea"
+msgid "Add to queue"
+msgstr "Zur Wiedergabeliste hinzufügen"
+
+#: ui/item-menu.slint:93
+msgctxt "ItemMenuArea"
+msgid "Start radio"
+msgstr "Radio starten"
+
+#: ui/item-menu.slint:100
+msgctxt "ItemMenuArea"
+msgid "Add to playlist"
+msgstr "Zu Playlist hinzufügen"
+
+#: ui/item-menu.slint:107
+msgctxt "ItemMenuArea"
+msgid "Download"
+msgstr "Herunterladen"
+
+#: ui/item-menu.slint:114
+msgctxt "ItemMenuArea"
+msgid "Remove from queue"
+msgstr "Aus Wiedergabeliste entfernen"
+
+#: ui/item-menu.slint:122
+msgctxt "ItemMenuArea"
+msgid "Copy link"
+msgstr "Link kopieren"
+
+#: ui/item-menu.slint:129
+msgctxt "ItemMenuArea"
+msgid "Go to album"
+msgstr "Zum Album"
+
+#: ui/item-menu.slint:136
+msgctxt "ItemMenuArea"
+msgid "Go to {}"
+msgstr "Zu {}"
+
+#: ui/item-menu.slint:136
+msgctxt "ItemMenuArea"
+msgid "Go to artist"
+msgstr "Zum Künstler"
+
+#: ui/lyrics-view.slint:169
+msgctxt "LyricsView"
+msgid "Lyrics: {}"
+msgstr "Songtext: {}"
+
+#: ui/lyrics-view.slint:193
+msgctxt "LyricsView"
+msgid "No lyrics found for this track."
+msgstr "Für diesen Titel wurde kein Songtext gefunden."
+
+#: ui/lyrics-view.slint:193
+msgctxt "LyricsView"
+msgid "Play something to see its lyrics."
+msgstr "Spiel etwas ab, um den Songtext zu sehen."
+
+#: ui/main.slint:247
+msgctxt "MainWindow"
+msgid "Back"
+msgstr "Zurück"
+
+#: ui/main.slint:257
+msgctxt "MainWindow"
+msgid "Forward"
+msgstr "Vorwärts"
+
+#: ui/main.slint:370
+msgctxt "TrayIcon"
+msgid "Nothing playing"
+msgstr "Keine Wiedergabe"
+
+#: ui/main.slint:388
+msgctxt "TrayIcon"
+msgid "Pause"
+msgstr "Pause"
+
+#: ui/main.slint:388
+msgctxt "TrayIcon"
+msgid "Play"
+msgstr "Wiedergeben"
+
+#: ui/main.slint:394
+msgctxt "TrayIcon"
+msgid "Next"
+msgstr "Weiter"
+
+#: ui/main.slint:400
+msgctxt "TrayIcon"
+msgid "Previous"
+msgstr "Zurück"
+
+#: ui/main.slint:407
+msgctxt "TrayIcon"
+msgid "Show or hide Quince"
+msgstr "Quince anzeigen oder ausblenden"
+
+#: ui/main.slint:413
+msgctxt "TrayIcon"
+msgid "Quit"
+msgstr "Beenden"
+
+#: ui/mini-player.slint:138
+msgctxt "MiniPlayer"
+msgid "Back to the full window"
+msgstr "Zurück zum großen Fenster"
+
+#: ui/now-playing.slint:200 ui/now-playing.slint:446
+msgctxt "NowPlaying"
+msgid "Off"
+msgstr "Aus"
+
+#: ui/now-playing.slint:200
+msgctxt "NowPlaying"
+msgid "Spectrum"
+msgstr "Spektrum"
+
+#: ui/now-playing.slint:200
+msgctxt "NowPlaying"
+msgid "Bars"
+msgstr "Balken"
+
+#: ui/now-playing.slint:200
+msgctxt "NowPlaying"
+msgid "Wave"
+msgstr "Welle"
+
+#: ui/now-playing.slint:200
+msgctxt "NowPlaying"
+msgid "Stereo scope"
+msgstr "Stereo-Oszilloskop"
+
+#: ui/now-playing.slint:281
+msgctxt "NowPlaying"
+msgid "Close"
+msgstr "Schließen"
+
+#: ui/now-playing.slint:411
+msgctxt "NowPlaying"
+msgid "Visualizer"
+msgstr "Visualisierung"
+
+#: ui/now-playing.slint:422
+msgctxt "NowPlaying"
+msgid "Video"
+msgstr "Video"
+
+#: ui/now-playing.slint:422
+msgctxt "NowPlaying"
+msgid "Song"
+msgstr "Song"
+
+#: ui/now-playing.slint:425
+msgctxt "NowPlaying"
+msgid "Switch between song and music video"
+msgstr "Zwischen Song und Musikvideo wechseln"
+
+#: ui/now-playing.slint:432
+msgctxt "NowPlaying"
+msgid "Video quality"
+msgstr "Videoqualität"
+
+#: ui/now-playing.slint:444
+msgctxt "NowPlaying"
+msgid "Captions"
+msgstr "Untertitel"
+
+#: ui/now-playing.slint:453
+msgctxt "NowPlaying"
+msgid "(generated)"
+msgstr "(automatisch)"
+
+#: ui/page-rows.slint:189
+msgctxt "HeaderRow"
+msgid "Copy link"
+msgstr "Link kopieren"
+
+#: ui/page-rows.slint:195
+msgctxt "HeaderRow"
+msgid "Like all songs"
+msgstr "Alle Songs mögen"
+
+#: ui/page-rows.slint:202
+msgctxt "HeaderRow"
+msgid "Dislike all songs"
+msgstr "Alle Songs nicht mögen"
+
+#: ui/page-rows.slint:209
+msgctxt "HeaderRow"
+msgid "Remove all ratings"
+msgstr "Alle Bewertungen entfernen"
+
+#: ui/page-rows.slint:367
+msgctxt "TitleRow"
+msgid "More"
+msgstr "Mehr"
+
+#: ui/page-rows.slint:429
+msgctxt "CarouselRow"
+msgid "More"
+msgstr "Mehr"
+
+#: ui/page-rows.slint:707
+msgctxt "TextRow"
+msgid "Less"
+msgstr "Weniger"
+
+#: ui/page-rows.slint:707
+msgctxt "TextRow"
+msgid "More"
+msgstr "Mehr"
+
+#: ui/page-rows.slint:737
+msgctxt "PageFooter"
+msgid "Try again"
+msgstr "Erneut versuchen"
+
+#: ui/player-bar.slint:132
+msgctxt "PlayerBar"
+msgid "Like"
+msgstr "Mag ich"
+
+#: ui/player-bar.slint:141
+msgctxt "PlayerBar"
+msgid "Dislike"
+msgstr "Mag ich nicht"
+
+#: ui/player-bar.slint:151
+msgctxt "PlayerBar"
+msgid "Switch between song and music video"
+msgstr "Zwischen Song und Musikvideo wechseln"
+
+#: ui/player-bar.slint:174
+msgctxt "PlayerBar"
+msgid "Speed"
+msgstr "Tempo"
+
+#: ui/player-bar.slint:214
+msgctxt "PlayerBar"
+msgid "Up next"
+msgstr "Als Nächstes"
+
+#: ui/player-bar.slint:223
+msgctxt "PlayerBar"
+msgid "Mini player"
+msgstr "Miniplayer"
+
+#: ui/player-bar.slint:233
+msgctxt "PlayerBar"
+msgid "Now playing"
+msgstr "Läuft gerade"
+
+#: ui/playlist-picker.slint:13
+msgctxt "PlaylistPicker"
+msgid "Add to playlist"
+msgstr "Zu Playlist hinzufügen"
+
+#: ui/playlist-picker.slint:14
+msgctxt "PlaylistPicker"
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: ui/playlist-picker.slint:27
+msgctxt "PlaylistPicker"
+msgid "New playlist"
+msgstr "Neue Playlist"
+
+#: ui/playlist-picker.slint:33
+msgctxt "PlaylistPicker"
+msgid "Create"
+msgstr "Erstellen"
+
+#: ui/queue-panel.slint:56
+msgctxt "QueuePanel"
+msgid "Up next"
+msgstr "Als Nächstes"
+
+#: ui/queue-panel.slint:63
+msgctxt "QueuePanel"
+msgid "Lyrics"
+msgstr "Songtext"
+
+#: ui/queue-panel.slint:85
+msgctxt "QueuePanel"
+msgid "{n} track"
+msgid_plural "{n} tracks"
+msgstr[0] "{n} Titel"
+msgstr[1] "{n} Titel"
+
+#: ui/queue-panel.slint:92
+msgctxt "QueuePanel"
+msgid "Shuffle the rest"
+msgstr "Den Rest mischen"
+
+#: ui/queue-panel.slint:99
+msgctxt "QueuePanel"
+msgid "Clear"
+msgstr "Leeren"
+
+#: ui/queue-panel.slint:127
+msgctxt "QueuePanel"
+msgid "Nothing queued. Play a song, album or playlist."
+msgstr "Nichts in der Wiedergabeliste. Spiel einen Song, ein Album oder eine Playlist ab."
+
+#: ui/search-field.slint:138
+msgctxt "SearchField"
+msgid "Search songs, albums, artists"
+msgstr "Songs, Alben, Künstler suchen"
+
+#: ui/settings-dialog.slint:354
+msgctxt "SearchBox"
+msgid "Search settings"
+msgstr "Einstellungen durchsuchen"
+
+#: ui/settings-dialog.slint:380
+msgctxt "SettingsDialog"
+msgid "Playback"
+msgstr "Wiedergabe"
+
+#: ui/settings-dialog.slint:381
+msgctxt "SettingsDialog"
+msgid "Sound"
+msgstr "Klang"
+
+#: ui/settings-dialog.slint:382
+msgctxt "SettingsDialog"
+msgid "Lyrics"
+msgstr "Songtext"
+
+#: ui/settings-dialog.slint:383
+msgctxt "SettingsDialog"
+msgid "Look"
+msgstr "Aussehen"
+
+#: ui/settings-dialog.slint:384
+msgctxt "SettingsDialog"
+msgid "Desktop"
+msgstr "Desktop"
+
+#: ui/settings-dialog.slint:385
+msgctxt "SettingsDialog"
+msgid "Discord"
+msgstr "Discord"
+
+#: ui/settings-dialog.slint:386
+msgctxt "SettingsDialog"
+msgid "Downloads"
+msgstr "Downloads"
+
+#: ui/settings-dialog.slint:432
+msgctxt "SettingsDialog"
+msgid "Settings"
+msgstr "Einstellungen"
+
+#: ui/settings-dialog.slint:505
+msgctxt "SettingsDialog"
+msgid "Nothing found"
+msgstr "Nichts gefunden"
+
+#: ui/settings-dialog.slint:518
+msgctxt "SettingsDialog"
+msgid "Volume"
+msgstr "Lautstärke"
+
+#: ui/settings-dialog.slint:523
+msgctxt "SettingsDialog"
+msgid "Volume follows your hearing"
+msgstr "Lautstärke folgt dem Gehör"
+
+#: ui/settings-dialog.slint:524
+msgctxt "SettingsDialog"
+msgid "The slider works exponentially, so its middle sounds half as loud"
+msgstr "Der Regler arbeitet exponentiell, seine Mitte klingt also halb so laut"
+
+#: ui/settings-dialog.slint:533
+msgctxt "SettingsDialog"
+msgid "Even out loudness"
+msgstr "Lautheit angleichen"
+
+#: ui/settings-dialog.slint:534
+msgctxt "SettingsDialog"
+msgid "Quiet and loud tracks play at the same level, like on YouTube"
+msgstr "Leise und laute Titel spielen gleich laut, wie bei YouTube"
+
+#: ui/settings-dialog.slint:543
+msgctxt "SettingsDialog"
+msgid "Volume step"
+msgstr "Lautstärkeschritt"
+
+#: ui/settings-dialog.slint:544
+msgctxt "SettingsDialog"
+msgid "Percent per wheel turn or key press"
+msgstr "Prozent pro Mausrad-Raste oder Tastendruck"
+
+#: ui/settings-dialog.slint:555
+msgctxt "SettingsDialog"
+msgid "Output"
+msgstr "Ausgabe"
+
+#: ui/settings-dialog.slint:565
+msgctxt "SettingsDialog"
+msgid "Queue"
+msgstr "Warteschlange"
+
+#: ui/settings-dialog.slint:570
+msgctxt "SettingsDialog"
+msgid "Continue the last queue at start"
+msgstr "Beim Start die letzte Warteschlange fortsetzen"
+
+#: ui/settings-dialog.slint:579
+msgctxt "SettingsDialog"
+msgid "Skip songs I disliked"
+msgstr "Songs überspringen, die ich nicht mag"
+
+#: ui/settings-dialog.slint:588
+msgctxt "SettingsDialog"
+msgid "Songs I pick start paused"
+msgstr "Ausgewählte Songs starten pausiert"
+
+#: ui/settings-dialog.slint:602
+msgctxt "SettingsDialog"
+msgid "Skip the parts of music videos without music"
+msgstr "Teile von Musikvideos ohne Musik überspringen"
+
+#: ui/settings-dialog.slint:603
+msgctxt "SettingsDialog"
+msgid "Uses the segments SponsorBlock users marked"
+msgstr "Nutzt die Abschnitte, die SponsorBlock-Nutzer markiert haben"
+
+#: ui/settings-dialog.slint:614
+msgctxt "SettingsDialog"
+msgid "Parts to skip"
+msgstr "Zu überspringende Teile"
+
+#: ui/settings-dialog.slint:619
+msgctxt "SettingsDialog"
+msgid "Without music"
+msgstr "Ohne Musik"
+
+#: ui/settings-dialog.slint:620
+msgctxt "SettingsDialog"
+msgid "Sponsors"
+msgstr "Sponsoren"
+
+#: ui/settings-dialog.slint:621
+msgctxt "SettingsDialog"
+msgid "Self promotion"
+msgstr "Eigenwerbung"
+
+#: ui/settings-dialog.slint:622
+msgctxt "SettingsDialog"
+msgid "Subscribe reminders"
+msgstr "Abo-Erinnerungen"
+
+#: ui/settings-dialog.slint:623
+msgctxt "SettingsDialog"
+msgid "Intros"
+msgstr "Intros"
+
+#: ui/settings-dialog.slint:624
+msgctxt "SettingsDialog"
+msgid "Outros"
+msgstr "Outros"
+
+#: ui/settings-dialog.slint:647
+msgctxt "SettingsDialog"
+msgid "Effects"
+msgstr "Effekte"
+
+#: ui/settings-dialog.slint:652
+msgctxt "SettingsDialog"
+msgid "Equalizer"
+msgstr "Equalizer"
+
+#: ui/settings-dialog.slint:674
+msgctxt "SettingsDialog"
+msgid "Compressor"
+msgstr "Kompressor"
+
+#: ui/settings-dialog.slint:675
+msgctxt "SettingsDialog"
+msgid "Quiet parts louder, loud parts quieter"
+msgstr "Leise Stellen lauter, laute leiser"
+
+#: ui/settings-dialog.slint:684
+msgctxt "SettingsDialog"
+msgid "Skip silences"
+msgstr "Stille überspringen"
+
+#: ui/settings-dialog.slint:695
+msgctxt "SettingsDialog"
+msgid "Only the silence at the start of a track"
+msgstr "Nur die Stille am Anfang eines Titels"
+
+#: ui/settings-dialog.slint:704
+msgctxt "SettingsDialog"
+msgid "Transitions"
+msgstr "Übergänge"
+
+#: ui/settings-dialog.slint:709
+msgctxt "SettingsDialog"
+msgid "Crossfade"
+msgstr "Überblenden"
+
+#: ui/settings-dialog.slint:710
+msgctxt "SettingsDialog"
+msgid "Off plays albums gapless"
+msgstr "Aus spielt Alben ohne Lücke"
+
+#: ui/settings-dialog.slint:715 ui/settings-dialog.slint:731
+msgctxt "SettingsDialog"
+msgid "{} s"
+msgstr "{} s"
+
+#: ui/settings-dialog.slint:715
+msgctxt "SettingsDialog"
+msgid "Off"
+msgstr "Aus"
+
+#: ui/settings-dialog.slint:725
+msgctxt "SettingsDialog"
+msgid "Fade in"
+msgstr "Einblenden"
+
+#: ui/settings-dialog.slint:726
+msgctxt "SettingsDialog"
+msgid "The next track comes up this fast"
+msgstr "So schnell wird der nächste Titel laut"
+
+#: ui/settings-dialog.slint:731
+msgctxt "SettingsDialog"
+msgid "As long"
+msgstr "Gleich lang"
+
+#: ui/settings-dialog.slint:739
+msgctxt "SettingsDialog"
+msgid "Speed"
+msgstr "Tempo"
+
+#: ui/settings-dialog.slint:760
+msgctxt "SettingsDialog"
+msgid "Sources"
+msgstr "Quellen"
+
+#: ui/settings-dialog.slint:766 ui/settings-dialog.slint:776
+msgctxt "SettingsDialog"
+msgid "Time-synced lyrics"
+msgstr "Zeitlich abgestimmte Songtexte"
+
+#: ui/settings-dialog.slint:786
+msgctxt "SettingsDialog"
+msgid "Plain lyrics, when no other source has any"
+msgstr "Einfache Songtexte, wenn keine andere Quelle welche hat"
+
+#: ui/settings-dialog.slint:795
+msgctxt "SettingsDialog"
+msgid "Ask first"
+msgstr "Zuerst fragen"
+
+#: ui/settings-dialog.slint:797
+msgctxt "SettingsDialog"
+msgid "No preference"
+msgstr "Keine Vorliebe"
+
+#: ui/settings-dialog.slint:811
+msgctxt "SettingsDialog"
+msgid "Inexact matches"
+msgstr "Ungenaue Treffer"
+
+#: ui/settings-dialog.slint:812
+msgctxt "SettingsDialog"
+msgid "Show lyrics even if title or length differ a little"
+msgstr "Songtext auch zeigen, wenn Titel oder Länge etwas abweichen"
+
+#: ui/settings-dialog.slint:821
+msgctxt "SettingsDialog"
+msgid "Display"
+msgstr "Anzeige"
+
+#: ui/settings-dialog.slint:826
+msgctxt "SettingsDialog"
+msgid "The sung line"
+msgstr "Die gesungene Zeile"
+
+#: ui/settings-dialog.slint:828
+msgctxt "SettingsDialog"
+msgid "Fancy: large, with a glow"
+msgstr "Schick: groß, mit Leuchten"
+
+#: ui/settings-dialog.slint:829
+msgctxt "SettingsDialog"
+msgid "Scale: grows"
+msgstr "Größer: wächst"
+
+#: ui/settings-dialog.slint:830
+msgctxt "SettingsDialog"
+msgid "Offset: moves to the right"
+msgstr "Versetzt: rückt nach rechts"
+
+#: ui/settings-dialog.slint:831
+msgctxt "SettingsDialog"
+msgid "Focus: only it is bright"
+msgstr "Fokus: nur sie ist hell"
+
+#: ui/settings-dialog.slint:841
+msgctxt "SettingsDialog"
+msgid "Time codes next to the lines"
+msgstr "Zeitangaben neben den Zeilen"
+
+#: ui/settings-dialog.slint:850
+msgctxt "SettingsDialog"
+msgid "Mark for pauses"
+msgstr "Zeichen für Pausen"
+
+#: ui/settings-dialog.slint:851
+msgctxt "SettingsDialog"
+msgid "Shown between lines while nothing is sung"
+msgstr "Steht zwischen den Zeilen, solange nicht gesungen wird"
+
+#: ui/settings-dialog.slint:866
+msgctxt "SettingsDialog"
+msgid "Other scripts"
+msgstr "Andere Schriften"
+
+#: ui/settings-dialog.slint:871
+msgctxt "SettingsDialog"
+msgid "Latin letters under the lines"
+msgstr "Lateinische Buchstaben unter den Zeilen"
+
+#: ui/settings-dialog.slint:872
+msgctxt "SettingsDialog"
+msgid "For Japanese, Korean and Chinese lyrics"
+msgstr "Für japanische, koreanische und chinesische Songtexte"
+
+#: ui/settings-dialog.slint:881
+msgctxt "SettingsDialog"
+msgid "Chinese characters"
+msgstr "Chinesische Schriftzeichen"
+
+#: ui/settings-dialog.slint:883
+msgctxt "SettingsDialog"
+msgid "As they come"
+msgstr "Wie geliefert"
+
+#: ui/settings-dialog.slint:884
+msgctxt "SettingsDialog"
+msgid "Traditional"
+msgstr "Traditionell"
+
+#: ui/settings-dialog.slint:885
+msgctxt "SettingsDialog"
+msgid "Simplified"
+msgstr "Vereinfacht"
+
+#: ui/settings-dialog.slint:903
+msgctxt "SettingsDialog"
+msgid "General"
+msgstr "Allgemein"
+
+#: ui/settings-dialog.slint:908
+msgctxt "SettingsDialog"
+msgid "Language"
+msgstr "Sprache"
+
+#: ui/settings-dialog.slint:910 ui/settings-dialog.slint:1010
+msgctxt "SettingsDialog"
+msgid "As the system"
+msgstr "Wie das System"
+
+#: ui/settings-dialog.slint:922
+msgctxt "SettingsDialog"
+msgid "Start page"
+msgstr "Startseite"
+
+#: ui/settings-dialog.slint:924
+msgctxt "SettingsDialog"
+msgid "Home"
+msgstr "Startseite"
+
+#: ui/settings-dialog.slint:925
+msgctxt "SettingsDialog"
+msgid "Explore"
+msgstr "Erkunden"
+
+#: ui/settings-dialog.slint:926
+msgctxt "SettingsDialog"
+msgid "Library"
+msgstr "Bibliothek"
+
+#: ui/settings-dialog.slint:927
+msgctxt "SettingsDialog"
+msgid "Liked songs"
+msgstr "Mag ich"
+
+#: ui/settings-dialog.slint:937
+msgctxt "SettingsDialog"
+msgid "Compact sidebar"
+msgstr "Schmale Seitenleiste"
+
+#: ui/settings-dialog.slint:938
+msgctxt "SettingsDialog"
+msgid "Icons only"
+msgstr "Nur Symbole"
+
+#: ui/settings-dialog.slint:947
+msgctxt "SettingsDialog"
+msgid "Colors"
+msgstr "Farben"
+
+#: ui/settings-dialog.slint:952
+msgctxt "SettingsDialog"
+msgid "Colors from the album cover"
+msgstr "Farben aus dem Albumcover"
+
+#: ui/settings-dialog.slint:961
+msgctxt "SettingsDialog"
+msgid "Strength of the glow"
+msgstr "Stärke des Leuchtens"
+
+#: ui/settings-dialog.slint:973
+msgctxt "SettingsDialog"
+msgid "Progress bar in the album color"
+msgstr "Fortschrittsbalken in der Albumfarbe"
+
+#: ui/settings-dialog.slint:982
+msgctxt "SettingsDialog"
+msgid "Clock"
+msgstr "Uhr"
+
+#: ui/settings-dialog.slint:987
+msgctxt "SettingsDialog"
+msgid "Clock in the top bar"
+msgstr "Uhr in der oberen Leiste"
+
+#: ui/settings-dialog.slint:998 ui/settings-dialog.slint:1317
+msgctxt "SettingsDialog"
+msgid "Format"
+msgstr "Format"
+
+#: ui/settings-dialog.slint:1000
+msgctxt "SettingsDialog"
+msgid "Seconds"
+msgstr "Sekunden"
+
+#: ui/settings-dialog.slint:1011
+msgctxt "SettingsDialog"
+msgid "24 hours"
+msgstr "24 Stunden"
+
+#: ui/settings-dialog.slint:1012
+msgctxt "SettingsDialog"
+msgid "12 hours"
+msgstr "12 Stunden"
+
+#: ui/settings-dialog.slint:1023
+msgctxt "SettingsDialog"
+msgid "Window"
+msgstr "Fenster"
+
+#: ui/settings-dialog.slint:1028
+msgctxt "SettingsDialog"
+msgid "See-through window"
+msgstr "Durchsichtiges Fenster"
+
+#: ui/settings-dialog.slint:1029
+msgctxt "SettingsDialog"
+msgid "For the desktop's blur, after a restart"
+msgstr "Für die Unschärfe des Desktops, nach einem Neustart"
+
+#: ui/settings-dialog.slint:1040
+msgctxt "SettingsDialog"
+msgid "Window background"
+msgstr "Fensterhintergrund"
+
+#: ui/settings-dialog.slint:1052
+msgctxt "SettingsDialog"
+msgid "Videos"
+msgstr "Videos"
+
+#: ui/settings-dialog.slint:1057
+msgctxt "SettingsDialog"
+msgid "Ambient light"
+msgstr "Umgebungslicht"
+
+#: ui/settings-dialog.slint:1058
+msgctxt "SettingsDialog"
+msgid "The video's colors around it"
+msgstr "Die Farben des Videos rundherum"
+
+#: ui/settings-dialog.slint:1072
+msgctxt "SettingsDialog"
+msgid "Reach of the ambient light"
+msgstr "Reichweite des Umgebungslichts"
+
+#: ui/settings-dialog.slint:1092
+msgctxt "SettingsDialog"
+msgid "Tray"
+msgstr "Infobereich"
+
+#: ui/settings-dialog.slint:1097
+msgctxt "SettingsDialog"
+msgid "Icon in the system tray"
+msgstr "Symbol im Infobereich"
+
+#: ui/settings-dialog.slint:1108
+msgctxt "SettingsDialog"
+msgid "A click on the icon plays or pauses"
+msgstr "Ein Klick auf das Symbol spielt oder pausiert"
+
+#: ui/settings-dialog.slint:1109
+msgctxt "SettingsDialog"
+msgid "Otherwise it opens the window"
+msgstr "Sonst öffnet er das Fenster"
+
+#: ui/settings-dialog.slint:1120
+msgctxt "SettingsDialog"
+msgid "Closing the window keeps playing"
+msgstr "Schließen des Fensters spielt weiter"
+
+#: ui/settings-dialog.slint:1121
+msgctxt "SettingsDialog"
+msgid "Quince stays in the tray"
+msgstr "Quince bleibt im Infobereich"
+
+#: ui/settings-dialog.slint:1130
+msgctxt "SettingsDialog"
+msgid "Notifications"
+msgstr "Benachrichtigungen"
+
+#: ui/settings-dialog.slint:1135
+msgctxt "SettingsDialog"
+msgid "Notification when the track changes"
+msgstr "Benachrichtigung beim Titelwechsel"
+
+#: ui/settings-dialog.slint:1146
+msgctxt "SettingsDialog"
+msgid "Also when playback goes on after a pause"
+msgstr "Auch wenn es nach einer Pause weitergeht"
+
+#: ui/settings-dialog.slint:1157
+msgctxt "SettingsDialog"
+msgid "Urgency"
+msgstr "Dringlichkeit"
+
+#: ui/settings-dialog.slint:1159
+msgctxt "SettingsDialog"
+msgid "Low"
+msgstr "Niedrig"
+
+#: ui/settings-dialog.slint:1160
+msgctxt "SettingsDialog"
+msgid "Normal"
+msgstr "Normal"
+
+#: ui/settings-dialog.slint:1161
+msgctxt "SettingsDialog"
+msgid "Critical"
+msgstr "Kritisch"
+
+#: ui/settings-dialog.slint:1171
+msgctxt "SettingsDialog"
+msgid "Shortcuts"
+msgstr "Tastenkürzel"
+
+#: ui/settings-dialog.slint:1177
+msgctxt "SettingsDialog"
+msgid "System-wide shortcuts"
+msgstr "Systemweite Tastenkürzel"
+
+#: ui/settings-dialog.slint:1178
+msgctxt "SettingsDialog"
+msgid "Through the desktop portal, after a restart"
+msgstr "Über das Desktop-Portal, nach einem Neustart"
+
+#: ui/settings-dialog.slint:1199
+msgctxt "SettingsDialog"
+msgid "Show what I listen to in Discord"
+msgstr "In Discord zeigen, was ich höre"
+
+#: ui/settings-dialog.slint:1208
+msgctxt "SettingsDialog"
+msgid "Status"
+msgstr "Status"
+
+#: ui/settings-dialog.slint:1214
+msgctxt "SettingsDialog"
+msgid "The member list shows"
+msgstr "Die Mitgliederliste zeigt"
+
+#: ui/settings-dialog.slint:1216
+msgctxt "SettingsDialog"
+msgid "The app's name"
+msgstr "Den Namen der App"
+
+#: ui/settings-dialog.slint:1217
+msgctxt "SettingsDialog"
+msgid "The artist"
+msgstr "Den Interpreten"
+
+#: ui/settings-dialog.slint:1218
+msgctxt "SettingsDialog"
+msgid "The title"
+msgstr "Den Titel"
+
+#: ui/settings-dialog.slint:1229
+msgctxt "SettingsDialog"
+msgid "Show the time left"
+msgstr "Restzeit zeigen"
+
+#: ui/settings-dialog.slint:1239
+msgctxt "SettingsDialog"
+msgid "Button \"Listen on YouTube Music\""
+msgstr "Schaltfläche „Listen on YouTube Music“"
+
+#: ui/settings-dialog.slint:1249
+msgctxt "SettingsDialog"
+msgid "Clear the status after a pause"
+msgstr "Status nach einer Pause löschen"
+
+#: ui/settings-dialog.slint:1250
+msgctxt "SettingsDialog"
+msgid "Minutes, 0 never"
+msgstr "Minuten, 0 nie"
+
+#: ui/settings-dialog.slint:1261
+msgctxt "SettingsDialog"
+msgid "Application"
+msgstr "Anwendung"
+
+#: ui/settings-dialog.slint:1267
+msgctxt "SettingsDialog"
+msgid "Application ID"
+msgstr "Application ID"
+
+#: ui/settings-dialog.slint:1268
+msgctxt "SettingsDialog"
+msgid "Empty uses Pear Desktop's Discord application. For your own, create one at discord.com/developers/applications and paste its Application ID."
+msgstr "Leer nutzt die Discord-Anwendung von Pear Desktop. Für eine eigene legst du eine unter discord.com/developers/applications an und fügst ihre Application ID ein."
+
+#: ui/settings-dialog.slint:1289
+msgctxt "SettingsDialog"
+msgid "Files"
+msgstr "Dateien"
+
+#: ui/settings-dialog.slint:1294
+msgctxt "SettingsDialog"
+msgid "Folder"
+msgstr "Ordner"
+
+#: ui/settings-dialog.slint:1308
+msgctxt "SettingsDialog"
+msgid "Choose"
+msgstr "Wählen"
+
+#: ui/settings-dialog.slint:1319
+msgctxt "SettingsDialog"
+msgid "Opus (best quality)"
+msgstr "Opus (beste Qualität)"
+
+#: ui/settings-dialog.slint:1320
+msgctxt "SettingsDialog"
+msgid "M4A / AAC"
+msgstr "M4A / AAC"
+
+#: ui/settings-dialog.slint:1321
+msgctxt "SettingsDialog"
+msgid "MP3 (converted)"
+msgstr "MP3 (umgewandelt)"
+
+#: ui/settings-dialog.slint:1323
+msgctxt "SettingsDialog"
+msgid "Converted from what YouTube sends"
+msgstr "Umgewandelt aus dem, was YouTube schickt"
+
+#: ui/settings-dialog.slint:1323
+msgctxt "SettingsDialog"
+msgid "As YouTube sends it, not converted"
+msgstr "Wie YouTube es schickt, nicht umgewandelt"
+
+#: ui/settings-dialog.slint:1334
+msgctxt "SettingsDialog"
+msgid "MP3 bit rate"
+msgstr "MP3-Bitrate"
+
+#: ui/settings-dialog.slint:1349
+msgctxt "SettingsDialog"
+msgid "Skip tracks that are already in the folder"
+msgstr "Titel überspringen, die schon im Ordner sind"
+
+#: ui/settings-dialog.slint:1358
+msgctxt "SettingsDialog"
+msgid "Tracks per playlist at most"
+msgstr "Höchstens so viele Titel pro Playlist"
+
+#: ui/settings-dialog.slint:1359
+msgctxt "SettingsDialog"
+msgid "0 downloads all"
+msgstr "0 lädt alle"
+
+#: ui/sidebar.slint:101
+msgctxt "Sidebar"
+msgid "Home"
+msgstr "Startseite"
+
+#: ui/sidebar.slint:108
+msgctxt "Sidebar"
+msgid "Explore"
+msgstr "Erkunden"
+
+#: ui/sidebar.slint:115
+msgctxt "Sidebar"
+msgid "Library"
+msgstr "Bibliothek"
+
+#: ui/sidebar.slint:123
+msgctxt "Sidebar"
+msgid "Liked songs"
+msgstr "Mag ich"
+
+#: ui/sidebar.slint:131
+msgctxt "Sidebar"
+msgid "History"
+msgstr "Verlauf"
+
+#: ui/sidebar.slint:138
+msgctxt "Sidebar"
+msgid "Downloads ({})"
+msgstr "Downloads ({})"
+
+#: ui/sidebar.slint:138
+msgctxt "Sidebar"
+msgid "Downloads"
+msgstr "Downloads"
+
+#: ui/sidebar.slint:170
+msgctxt "Sidebar"
+msgid "Settings"
+msgstr "Einstellungen"
+
+#: ui/sidebar.slint:181
+msgctxt "Sidebar"
+msgid "Signed in"
+msgstr "Angemeldet"
+
+#: ui/sidebar.slint:181
+msgctxt "Sidebar"
+msgid "Sign in"
+msgstr "Anmelden"
+
+#: ui/sidebar.slint:200
+msgctxt "Sidebar"
+msgid "Sign out"
+msgstr "Abmelden"
+
+#: ui/sign-in.slint:10
+msgctxt "SignInDialog"
+msgid "Sign in to YouTube Music"
+msgstr "Bei YouTube Music anmelden"
+
+#: ui/sign-in.slint:11
+msgctxt "SignInDialog"
+msgid "Close"
+msgstr "Schließen"
+
+#: ui/sign-in.slint:17
+msgctxt "SignInDialog"
+msgid "Signing in brings your library, likes, playlists and Premium quality. Quince keeps only the session cookies, readable by your user alone."
+msgstr "Mit der Anmeldung kommen deine Bibliothek, deine Likes, Playlists und die Premium-Qualität. Quince speichert nur die Sitzungscookies, lesbar nur für deinen Benutzer."
+
+#: ui/sign-in.slint:23
+msgctxt "SignInDialog"
+msgid "Sign in with Google"
+msgstr "Mit Google anmelden"
+
+#: ui/sign-in.slint:33
+msgctxt "SignInDialog"
+msgid "Or take the session of a browser where you are signed in:"
+msgstr "Oder übernimm die Sitzung eines Browsers, in dem du angemeldet bist:"
+
+#: ui/sign-in.slint:51
+msgctxt "SignInDialog"
+msgid "Import a cookies.txt file"
+msgstr "Eine cookies.txt importieren"
+
+#: ui/sign-in.slint:54
+msgctxt "SignInDialog"
+msgid "cookies.txt with a YouTube session"
+msgstr "cookies.txt mit einer YouTube-Sitzung"
+
+#: ui/sign-in.slint:54
+msgctxt "SignInDialog"
+msgid "Cookie files (*.txt)"
+msgstr "Cookie-Dateien (*.txt)"
