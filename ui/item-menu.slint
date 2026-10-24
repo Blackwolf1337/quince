@@ -1,14 +1,144 @@
-// Area B: the menu of a track, album, artist or playlist (qml/ItemMenu.qml),
-// opened by a right click on what it wraps. Stub until the port lands: it
-// only shows its children.
+// The menu of a track, album, artist or playlist (qml/ItemMenu.qml), opened
+// by a right click on what ItemMenuArea wraps.
 //
 // source and a, b name the item for the core (src/slint/Areas.h,
-// lookupItem): "queue" with the row, "page" with row and card (-1 for none).
+// lookupItem): "queue" with the row, "page" with row and card (-1 for none),
+// "suggestions" with the row. The entries depend on the item: the core looks
+// it up while the pointer is over the area, so the facts are there when the
+// menu opens (src/slint/SearchBindings.cpp).
 
-export component ItemMenuArea inherits Rectangle {
+import { Account, Player } from "globals.slint";
+
+export struct ItemFacts {
+    // the look-up this answers
+    serial: int,
+    // has a videoId
+    track: bool,
+    queueable: bool,
+    radio: bool,
+    download: bool,
+    link: bool,
+    album: bool,
+    // the first artist with a page
+    artist: bool,
+    artist-name: string,
+}
+
+export global ItemMenu {
+    in property <ItemFacts> facts;
+    // the last look-up asked for
+    in-out property <int> serial;
+
+    callback look-up(serial: int, source: string, a: int, b: int);
+    // playNext, addToQueue, startRadio, addToPlaylist, download, remove,
+    // copyLink, album, artist
+    callback act(action: string, source: string, a: int, b: int);
+}
+
+// A TouchArea only to see the pointer above the children; the right click
+// goes to the ContextMenuArea on top, which lets all other events through.
+export component ItemMenuArea inherits TouchArea {
     in property <string> source;
     in property <int> a: -1;
     in property <int> b: -1;
 
+    private property <int> asked: -1;
+    private property <bool> known: ItemMenu.facts.serial == root.asked;
+
+    function look-up() {
+        ItemMenu.serial += 1;
+        root.asked = ItemMenu.serial;
+        ItemMenu.look-up(root.asked, root.source, root.a, root.b);
+    }
+    function act(action: string) {
+        ItemMenu.act(action, root.source, root.a, root.b);
+    }
+
+    changed has-hover => {
+        if self.has-hover {
+            root.look-up();
+        }
+    }
+    // a repeater reuses the area for another row
+    changed a => {
+        if self.has-hover {
+            root.look-up();
+        }
+    }
+    changed b => {
+        if self.has-hover {
+            root.look-up();
+        }
+    }
+
     @children
+
+    ContextMenuArea {
+        Menu {
+            MenuItem {
+                title: @tr("Play next");
+                enabled: root.known && ItemMenu.facts.queueable;
+                activated => {
+                    root.act("playNext");
+                }
+            }
+            MenuItem {
+                title: @tr("Add to queue");
+                enabled: root.known && ItemMenu.facts.queueable;
+                activated => {
+                    root.act("addToQueue");
+                }
+            }
+            MenuItem {
+                title: @tr("Start radio");
+                enabled: root.known && ItemMenu.facts.radio;
+                activated => {
+                    root.act("startRadio");
+                }
+            }
+            MenuItem {
+                title: @tr("Add to playlist");
+                enabled: root.known && Account.signed-in && ItemMenu.facts.track;
+                activated => {
+                    root.act("addToPlaylist");
+                }
+            }
+            MenuItem {
+                title: @tr("Download");
+                enabled: root.known && ItemMenu.facts.download;
+                activated => {
+                    root.act("download");
+                }
+            }
+            if root.source == "queue": MenuItem {
+                title: @tr("Remove from queue");
+                enabled: root.a != Player.queue-current;
+                activated => {
+                    root.act("remove");
+                }
+            }
+            MenuSeparator { }
+            MenuItem {
+                title: @tr("Copy link");
+                enabled: root.known && ItemMenu.facts.link;
+                activated => {
+                    root.act("copyLink");
+                }
+            }
+            MenuItem {
+                title: @tr("Go to album");
+                enabled: root.known && ItemMenu.facts.album;
+                activated => {
+                    root.act("album");
+                }
+            }
+            MenuItem {
+                title: root.known && ItemMenu.facts.artist ? @tr("Go to {}", ItemMenu.facts.artist-name) : @tr("Go to artist");
+                enabled: root.known && ItemMenu.facts.artist;
+                activated => {
+                    root.act("artist");
+                }
+            }
+        }
+    }
 }

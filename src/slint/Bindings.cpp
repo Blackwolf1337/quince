@@ -61,11 +61,6 @@ struct PlaylistData
     std::string browseId;
 };
 
-std::string text(const QVariantMap &map, const char *key)
-{
-    return utf8(map.value(QLatin1String(key)).toString());
-}
-
 TrackData trackOf(const QVariantMap &track)
 {
     return { text(track, "title"), utf8(Notifications::artistsOf(track)), text(track, "thumbnail"),
@@ -75,11 +70,6 @@ TrackData trackOf(const QVariantMap &track)
 slint::Color color(const QColor &c)
 {
     return slint::Color::from_argb_uint8(uint8_t(c.alpha()), uint8_t(c.red()), uint8_t(c.green()), uint8_t(c.blue()));
-}
-
-QString fromSlint(const slint::SharedString &s)
-{
-    return QString::fromUtf8(s.data(), qsizetype(s.size()));
 }
 
 // the clock's text in the format the settings ask for; empty while it is off

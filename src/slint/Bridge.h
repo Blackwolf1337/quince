@@ -9,6 +9,7 @@
 #include <QMetaObject>
 #include <QObject>
 #include <QString>
+#include <QVariantMap>
 
 #include <functional>
 #include <string>
@@ -63,6 +64,17 @@ inline std::string utf8(const QString &text)
 inline slint::SharedString str(const std::string &text)
 {
     return slint::SharedString(std::string_view(text));
+}
+
+inline QString fromSlint(const slint::SharedString &s)
+{
+    return QString::fromUtf8(s.data(), qsizetype(s.size()));
+}
+
+// map[key] as text
+inline std::string text(const QVariantMap &map, const char *key)
+{
+    return utf8(map.value(QLatin1String(key)).toString());
 }
 
 } // namespace bridge

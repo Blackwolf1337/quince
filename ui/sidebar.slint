@@ -4,7 +4,7 @@
 import { ListView } from "std-widgets.slint";
 import { Style } from "style.slint";
 import { Icons } from "icons.slint";
-import { Art, Separator } from "widgets.slint";
+import { Art, Separator, Tip } from "widgets.slint";
 import { Account, App } from "globals.slint";
 
 component SideButton inherits Rectangle {
@@ -67,6 +67,12 @@ component SideButton inherits Rectangle {
         mouse-cursor: pointer;
         clicked => {
             root.clicked();
+        }
+    }
+
+    if root.compact: Tooltip {
+        Tip {
+            text: root.text;
         }
     }
 }

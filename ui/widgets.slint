@@ -2,6 +2,31 @@
 
 import { Style } from "style.slint";
 
+// The tooltip's look (QML's Material ToolTip). Slint shows a Tooltip below
+// the pointer, after half a second: Tooltip { Tip { text: ...; } }. It lies
+// on the style's own tooltip frame, so it is opaque and covers it all.
+export component Tip inherits Rectangle {
+    in property <string> text;
+
+    min-height: 32px;
+    border-radius: 2px;
+    // #616161 at 90 % over the dark window
+    background: #5a5a5b;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        Text {
+            text: root.text;
+            color: white;
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+    }
+}
+
 // An icon (or a short text) that reacts to the pointer; checked shows it lit.
 export component ToolButton inherits Rectangle {
     in property <image> icon;
@@ -10,6 +35,7 @@ export component ToolButton inherits Rectangle {
     in property <bool> enabled: true;
     in property <bool> checked;
     in property <float> rotation;
+    in property <string> tooltip;
     out property <bool> hovered: touch.has-hover;
     callback clicked();
 
@@ -40,6 +66,12 @@ export component ToolButton inherits Rectangle {
         mouse-cursor: pointer;
         clicked => {
             root.clicked();
+        }
+    }
+
+    if root.tooltip != "" && root.enabled: Tooltip {
+        Tip {
+            text: root.tooltip;
         }
     }
 }
@@ -127,6 +159,7 @@ export component ThinSlider inherits Rectangle {
     in property <color> fill: Style.text;
     in property <length> thickness: 3px;
     in property <length> active-thickness: 6px;
+    in property <string> tooltip;
     out property <bool> pressed: touch.pressed;
     out property <bool> active: touch.has-hover || touch.pressed;
     // the value under the knob while dragging, else the model's
@@ -196,6 +229,12 @@ export component ThinSlider inherits Rectangle {
             root.moved(next);
             root.released(next);
             return accept;
+        }
+    }
+
+    if root.tooltip != "": Tooltip {
+        Tip {
+            text: root.tooltip;
         }
     }
 }

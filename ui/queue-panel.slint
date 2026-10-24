@@ -5,6 +5,7 @@ import { Style } from "style.slint";
 import { Icons } from "icons.slint";
 import { ToolButton } from "widgets.slint";
 import { ItemRow } from "item-row.slint";
+import { ItemMenuArea } from "item-menu.slint";
 import { App, Player } from "globals.slint";
 
 component Tab inherits Rectangle {
@@ -87,6 +88,7 @@ export component QueuePanel inherits VerticalLayout {
                 }
                 ToolButton {
                     icon: Icons.shuffle;
+                    tooltip: @tr("Shuffle the rest");
                     enabled: Player.queue.length > Player.queue-current + 2;
                     clicked => {
                         Player.shuffle-rest();
@@ -103,8 +105,10 @@ export component QueuePanel inherits VerticalLayout {
 
             list := ListView {
                 vertical-stretch: 1;
-                for entry[index] in Player.queue: Rectangle {
+                for entry[index] in Player.queue: ItemMenuArea {
                     height: root.row-height;
+                    source: "queue";
+                    a: index;
                     ItemRow {
                         x: 6px;
                         width: parent.width - 12px;

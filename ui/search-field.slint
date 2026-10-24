@@ -1,18 +1,267 @@
-// Area B: the search field with its suggestions (qml/SearchField.qml).
-// Stub until the port lands.
+// The search box with suggestions while typing (qml/SearchField.qml). The
+// core fetches the suggestions (src/slint/SearchBindings.cpp).
 
-import { LineEdit } from "std-widgets.slint";
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { ItemRow } from "item-row.slint";
+import { ItemMenuArea } from "item-menu.slint";
+import { App, ListItem } from "globals.slint";
 import { Browse } from "browse-view.slint";
 
-export component SearchField inherits LineEdit {
-    // the field takes the keyboard (Ctrl+F, /)
-    public function focus-search() {
-        self.focus();
+export struct SearchQuery {
+    // as shown
+    text: string,
+    // what is searched for
+    query: string,
+}
+
+export global Search {
+    in property <[SearchQuery]> queries;
+    in property <[ListItem]> items;
+
+    // the field's text changed
+    callback input(string);
+    // a suggested item: plays it or opens its page
+    callback open-item(int);
+    // the text without spaces around it
+    pure callback trimmed(string) -> string;
+}
+
+// a suggested search
+component QueryRow inherits Rectangle {
+    in property <string> text;
+    in property <bool> highlighted;
+    callback clicked();
+
+    height: 48px;
+    border-radius: 4px;
+    background: touch.pressed ? Style.pressed : touch.has-hover || root.highlighted ? Style.hover : transparent;
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 16px;
+        spacing: 16px;
+        Image {
+            width: 24px;
+            height: 24px;
+            y: (parent.height - self.height) / 2;
+            source: Icons.search;
+            colorize: Style.text;
+        }
+        Text {
+            text: root.text;
+            color: Style.text;
+            font-size: 14px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
     }
 
-    placeholder-text: @tr("Search songs, albums, artists");
-    accepted(text) => {
-        Browse.search(text);
-        self.text = "";
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component SearchField inherits Rectangle {
+    // the row the arrow keys moved to: queries first, then items; -1 for none
+    private property <int> highlight: -1;
+    private property <int> query-count: Search.queries.length;
+    private property <int> count: Search.queries.length + Search.items.length;
+
+    changed count => {
+        root.highlight = -1;
+    }
+
+    // the field takes the keyboard (Ctrl+F, /)
+    public function focus-search() {
+        input.focus();
+    }
+
+    function submit(text: string) {
+        popup.close();
+        let query = Search.trimmed(text);
+        if query != "" {
+            App.now-playing-open = false;
+            Browse.search(query);
+        }
+    }
+
+    function search-for(query: SearchQuery) {
+        input.text = query.query;
+        // the cursor to the end (offsets past the text are clamped)
+        input.set-selection-offsets(2147483647, 2147483647);
+        root.submit(query.query);
+    }
+
+    function open-item(index: int) {
+        popup.close();
+        Search.open-item(index);
+    }
+
+    function open-popup() {
+        if !popup.is-open {
+            popup.show();
+            // showing takes the focus; typing goes on in the field
+            input.focus();
+        }
+    }
+
+    height: 42px;
+    border-radius: self.height / 2;
+    background: input.has-focus ? Style.surface-high : Style.surface-high.with-alpha(0.7);
+    border-width: 1px;
+    border-color: input.has-focus ? Style.accent.with-alpha(0.6) : touch.has-hover ? #ffffff26 : Style.line;
+    animate background, border-color { duration: Style.fast; }
+
+    touch := TouchArea {
+        mouse-cursor: text;
+        clicked => {
+            input.focus();
+        }
+
+        Image {
+            x: 16px;
+            width: 20px;
+            height: 20px;
+            source: Icons.search;
+            colorize: Style.text;
+            opacity: 0.6;
+        }
+
+        // the placeholder
+        Text {
+            x: input.x;
+            visible: input.text == "";
+            text: @tr("Search songs, albums, artists");
+            color: Style.text-dim;
+            font-size: 14px;
+            vertical-alignment: center;
+        }
+
+        input := TextInput {
+            x: 44px;
+            width: parent.width - self.x - 16px;
+            color: Style.text;
+            font-size: 14px;
+            vertical-alignment: center;
+            single-line: true;
+            selection-background-color: Style.accent.with-alpha(0.4);
+
+            edited => {
+                Search.input(self.text);
+                root.highlight = -1;
+                if Search.trimmed(self.text) != "" {
+                    root.open-popup();
+                } else {
+                    popup.close();
+                }
+            }
+            key-pressed(event) => {
+                if event.text == Key.Escape && popup.is-open {
+                    popup.close();
+                    return accept;
+                }
+                if event.text == Key.Return {
+                    if root.highlight >= 0 && root.highlight < root.query-count {
+                        root.search-for(Search.queries[root.highlight]);
+                    } else if root.highlight >= root.query-count {
+                        root.open-item(root.highlight - root.query-count);
+                    } else {
+                        root.submit(self.text);
+                    }
+                    return accept;
+                }
+                if event.text == Key.DownArrow && root.count > 0 {
+                    root.open-popup();
+                    root.highlight = Math.min(root.highlight + 1, root.count - 1);
+                    return accept;
+                }
+                if event.text == Key.UpArrow && popup.is-open {
+                    root.highlight = Math.max(root.highlight - 1, -1);
+                    return accept;
+                }
+                reject
+            }
+        }
+    }
+
+    popup := PopupWindow {
+        x: 0;
+        y: root.height + 4px;
+        width: root.width;
+        height: Math.min(column.preferred-height + 16px, 520px);
+        close-policy: close-on-click-outside;
+
+        // the highlighted row stays in view
+        property <int> shown: root.highlight;
+        changed shown => {
+            if self.shown < 0 {
+                return;
+            }
+            let top = self.shown < root.query-count ? self.shown * 48px
+                : root.query-count * 48px + (root.query-count > 0 ? 1px : 0px) + (self.shown - root.query-count) * 60px;
+            let bottom = top + (self.shown < root.query-count ? 48px : 60px);
+            if top < -flick.content-y {
+                flick.content-y = -top;
+            } else if bottom > -flick.content-y + flick.height {
+                flick.content-y = flick.height - bottom;
+            }
+        }
+
+        // Glass without the blur
+        Rectangle {
+            border-radius: 14px;
+            background: Style.surface-high.with-alpha(0.97);
+            border-width: 1px;
+            border-color: #ffffff1c;
+        }
+
+        flick := Flickable {
+            x: 8px;
+            y: 8px;
+            width: parent.width - 16px;
+            height: parent.height - 16px;
+            content-height: column.preferred-height;
+
+            column := VerticalLayout {
+                width: parent.width;
+                alignment: start;
+
+                for query[i] in Search.queries: QueryRow {
+                    text: query.text;
+                    highlighted: root.highlight == i;
+                    clicked => {
+                        root.search-for(query);
+                    }
+                }
+
+                if Search.queries.length > 0 && Search.items.length > 0: Rectangle {
+                    height: 1px;
+                    background: #ffffff1a;
+                }
+
+                for item[i] in Search.items: ItemMenuArea {
+                    source: "suggestions";
+                    a: i;
+                    height: 60px;
+                    Rectangle {
+                        visible: root.highlight == root.query-count + i;
+                        border-radius: Style.radius;
+                        background: Style.hover;
+                    }
+                    ItemRow {
+                        width: 100%;
+                        height: 100%;
+                        entry: item;
+                        activated => {
+                            root.open-item(i);
+                        }
+                    }
+                }
+            }
+        }
     }
 }
