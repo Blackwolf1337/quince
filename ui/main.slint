@@ -139,8 +139,12 @@ component VolumeHud inherits Frosted {
 export component MainWindow inherits Window {
     title: Player.title != "" ? Player.title + " - Quince" : "Quince";
     icon: Icons.quince;
-    preferred-width: 1280px;
-    preferred-height: 800px;
+    // the last size (main.cpp reads it before the window exists); the
+    // compositor may still choose another
+    in property <length> start-width: 1280px;
+    in property <length> start-height: 800px;
+    preferred-width: root.start-width;
+    preferred-height: root.start-height;
     min-width: 820px;
     min-height: 520px;
     // FemtoVG clears with this, mpv draws next, the items come on top: nothing

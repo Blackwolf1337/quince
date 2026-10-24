@@ -7,7 +7,11 @@
 #include <cstdio>
 #include <cstdlib>
 
-#if !defined(_WIN32) && !defined(__APPLE__)
+#if defined(_WIN32)
+#include <windows.h>
+#elif defined(__APPLE__)
+#include <OpenGL/OpenGL.h>
+#else
 #include <EGL/egl.h>
 #define QUINCE_OWN_EGL 1
 #endif
@@ -116,12 +120,75 @@ struct VideoRenderer::OwnContext
     }
     void leave() { eglMakeCurrent(dpy, slintDraw, slintRead, slintCtx); }
 };
-#else
+#elif defined(_WIN32)
+// mpv's WGL context on the window's device context, sharing objects with
+// Slint's, of the same version and profile
 struct VideoRenderer::OwnContext
 {
-    static OwnContext *create() { return nullptr; }
-    void enter() {}
-    void leave() {}
+    HDC dc = nullptr;
+    HGLRC ctx = nullptr, slintCtx = nullptr;
+
+    static OwnContext *create()
+    {
+        using CreateContextAttribs = HGLRC(WINAPI *)(HDC, HGLRC, const int *);
+        constexpr int kMajor = 0x2091, kMinor = 0x2092, kProfile = 0x9126;      // WGL_CONTEXT_*_ARB
+        constexpr int kGlMajor = 0x821B, kGlMinor = 0x821C, kGlProfile = 0x9126; // GL_MAJOR_VERSION ...
+        auto createAttribs = reinterpret_cast<CreateContextAttribs>(
+            reinterpret_cast<void *>(wglGetProcAddress("wglCreateContextAttribsARB")));
+        auto getInteger = reinterpret_cast<void(WINAPI *)(unsigned, int *)>(procAddress("glGetIntegerv"));
+        auto *own = new OwnContext;
+        own->dc = wglGetCurrentDC();
+        own->slintCtx = wglGetCurrentContext();
+        int major = 0, minor = 0, profile = 0;
+        if (getInteger) {
+            getInteger(kGlMajor, &major);
+            getInteger(kGlMinor, &minor);
+            if (major >= 3)
+                getInteger(kGlProfile, &profile);
+        }
+        if (createAttribs && major > 0) {
+            const int attribs[] = { kMajor, major, kMinor, minor, profile ? kProfile : 0, profile, 0 };
+            own->ctx = createAttribs(own->dc, own->slintCtx, attribs);
+        }
+        if (!own->ctx) {
+            std::fprintf(stderr, "quince: no WGL context for mpv, it shares Slint's\n");
+            delete own;
+            return nullptr;
+        }
+        return own;
+    }
+    ~OwnContext()
+    {
+        if (ctx)
+            wglDeleteContext(ctx);
+    }
+    void enter() { wglMakeCurrent(dc, ctx); }
+    void leave() { wglMakeCurrent(dc, slintCtx); }
+};
+#elif defined(__APPLE__)
+// mpv's CGL context, of Slint's pixel format and sharing objects with it
+struct VideoRenderer::OwnContext
+{
+    CGLContextObj ctx = nullptr, slintCtx = nullptr;
+
+    static OwnContext *create()
+    {
+        auto *own = new OwnContext;
+        own->slintCtx = CGLGetCurrentContext();
+        if (!own->slintCtx || CGLCreateContext(CGLGetPixelFormat(own->slintCtx), own->slintCtx, &own->ctx) != kCGLNoError) {
+            std::fprintf(stderr, "quince: no CGL context for mpv, it shares Slint's\n");
+            delete own;
+            return nullptr;
+        }
+        return own;
+    }
+    ~OwnContext()
+    {
+        if (ctx)
+            CGLDestroyContext(ctx);
+    }
+    void enter() { CGLSetCurrentContext(ctx); }
+    void leave() { CGLSetCurrentContext(slintCtx); }
 };
 #endif
 

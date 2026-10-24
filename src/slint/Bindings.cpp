@@ -261,11 +261,6 @@ void bindApp(AppController &app, const Window &window)
          [](ui::MainWindow &w, bool v) { w.global<ui::App>().set_video_mode(v); });
     bind(window, settings, &Settings::changed, [](Settings *s) { return s->tray() && s->closeToTray(); },
          [](ui::MainWindow &w, bool v) { w.global<ui::App>().set_close_to_tray(v); });
-    // the last window size (logical pixels); the compositor may still choose another
-    toUi(window, [size = settings->savedWindowSize()](ui::MainWindow &w) {
-        if (size.width() > 0 && size.height() > 0)
-            w.window().set_size(slint::LogicalSize({ float(size.width()), float(size.height()) }));
-    });
     bind(window, app.downloads(), &Downloader::runningChanged, [](Downloader *d) { return d->running(); },
          [](ui::MainWindow &w, int v) { w.global<ui::App>().set_downloads_running(v); });
 

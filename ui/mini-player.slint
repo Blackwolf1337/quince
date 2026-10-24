@@ -44,6 +44,12 @@ export component MiniPlayer inherits Window {
     always-on-top: true;
     resize-border-width: 6px;
     min-width: 220px;
+    // the size it opens with the first time (MiniPlayerWindow.cpp sets it
+    // before the window exists; later openings resize the window itself)
+    in property <length> start-width: 340px;
+    in property <length> start-height: 240px;
+    preferred-width: root.start-width;
+    preferred-height: root.start-height;
     min-height: 160px;
     background: root.state.background;
     default-font-family: "Inter Variable";

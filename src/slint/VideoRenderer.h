@@ -18,10 +18,10 @@ struct mpv_render_context;
 // a time, so a window that takes the video over waits for release() of the
 // other's.
 //
-// On Linux mpv renders in an EGL context of its own that shares objects with
-// Slint's: FemtoVG's GL state breaks mpv's rendering of hardware decoded
-// frames (broken rows with nvdec and vaapi). Elsewhere it still renders in
-// Slint's context (WGL/CGL sharing is not written yet).
+// mpv renders in a GL context of its own (EGL, WGL or CGL) that shares
+// objects with Slint's: FemtoVG's GL state broke mpv's rendering of hardware
+// decoded frames (broken rows with nvdec and vaapi). Where that context cannot
+// be made, mpv renders in Slint's with its GL state saved around it.
 class VideoRenderer
 {
 public:

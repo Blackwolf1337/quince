@@ -58,6 +58,7 @@ void MiniPlayerWindow::show()
     auto main = m_main.lock();
     if (!main || !m_open)
         return;
+    const bool fresh = !m_window;
     if (!m_window) {
         m_window = mini::MiniPlayer::create();
         auto &w = **m_window;
@@ -101,7 +102,14 @@ void MiniPlayerWindow::show()
     }
     apply();
     const float width = float(std::max(m_width, kMinWidth));
-    (*m_window)->window().set_size(slint::LogicalSize({ width, heightFor(width) }));
+    // a set_size before winit made the window crashed it on Windows: the first
+    // time the size goes in as the preferred one
+    if (fresh) {
+        (*m_window)->set_start_width(width);
+        (*m_window)->set_start_height(heightFor(width));
+    } else {
+        (*m_window)->window().set_size(slint::LogicalSize({ width, heightFor(width) }));
+    }
     m_video->resume();
     (*m_window)->show();
     (*main)->hide();

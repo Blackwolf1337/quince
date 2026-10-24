@@ -10,6 +10,7 @@
 #include "VideoRenderer.h"
 #include "app/AppController.h"
 #include "app/CommandLine.h"
+#include "app/Settings.h"
 #include "player/MpvPlayer.h"
 
 #include <QCoreApplication>
@@ -78,8 +79,16 @@ private:
 
 int main(int argc, char *argv[])
 {
-    // the window first: it shows while the core starts
+    // the window first: it shows while the core starts. Its last size comes
+    // from the settings now, before it exists (a set_size before winit made
+    // the window crashed it on Windows); the core thread does not run yet
+    QCoreApplication::setApplicationName(QStringLiteral("quince"));
+    const QSize startSize = Settings().savedWindowSize();
     std::optional<slint::ComponentHandle<ui::MainWindow>> window(ui::MainWindow::create());
+    if (startSize.width() > 0 && startSize.height() > 0) {
+        (*window)->set_start_width(float(startSize.width()));
+        (*window)->set_start_height(float(startSize.height()));
+    }
     std::optional<slint::ComponentHandle<ui::TrayIcon>> tray(ui::TrayIcon::create());
     const bridge::Window weakWindow(*window);
     const bridge::Tray weakTray(*tray);
