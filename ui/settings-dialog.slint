@@ -435,8 +435,9 @@ export component SettingsDialog inherits DialogFrame {
                     font-weight: 600;
                     vertical-alignment: center;
                 }
+                // grows to its 380 px before the spacer gets any room (QML's fillWidth)
                 search := SearchBox {
-                    horizontal-stretch: 1;
+                    horizontal-stretch: 1000;
                     max-width: 380px;
                     y: (parent.height - self.height) / 2;
                     changed text => {

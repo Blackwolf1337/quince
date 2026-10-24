@@ -11,10 +11,10 @@
 
 namespace {
 
-// QML's glass: blurMax 48 at full blur, saturation 0.2. An eighth of the
-// window blurred by 3 is about as soft once Slint scales it back up.
-constexpr int kScaleDown = 8;
-constexpr int kRadius = 3;
+// QML's glass: blurMax 48 at full blur, saturation 0.2. A sixth of the
+// window blurred by 2 is about as soft once Slint scales it back up.
+constexpr int kScaleDown = 6;
+constexpr int kRadius = 2;
 constexpr float kSaturation = 0.2f;
 
 void capture(const slint::ComponentWeakHandle<ui::MainWindow> &weak)

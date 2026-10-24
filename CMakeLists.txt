@@ -496,7 +496,13 @@ set(QUINCE_TRANSLATED quince)
 if(TARGET quince-login)
     list(APPEND QUINCE_TRANSLATED quince-login)
 endif()
-qt_add_translations(TARGETS ${QUINCE_TRANSLATED}
+# the Slint frontend needs the .qm for the core's texts (its own .slint texts
+# come from i18n/slint)
+set(QUINCE_QM_TARGETS ${QUINCE_TRANSLATED})
+if(TARGET quince-slint)
+    list(APPEND QUINCE_QM_TARGETS quince-slint)
+endif()
+qt_add_translations(TARGETS ${QUINCE_QM_TARGETS}
     # the core's tr() texts land in quince's .qm
     SOURCE_TARGETS ${QUINCE_TRANSLATED} quince_core
     TS_FILES i18n/quince_de.ts
