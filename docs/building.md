@@ -18,7 +18,7 @@ sudo pacman -S --needed cmake ninja rust qt6-base qt6-tools qt6-webengine icu mp
 
 ## Downloads during the build
 
-The first CMake run downloads QuickJS-ng v0.17.0 (pinned by hash), so it needs internet once. It also downloads Slint 1.18.1 (patched by `cmake/SlintPatch.cmake`), which cargo builds together with its crates, and nativefiledialog-extended 1.4.1 (pinned by hash) for the file pickers. The build also downloads MeCab 0.996.13 and mecab-ipadic-2.7.0-20070801 from the shogo82148/mecab GitHub releases (pinned by SHA256, like QuickJS-ng) and compiles the dictionary at build time.
+The first CMake run downloads QuickJS-ng v0.17.0 (pinned by hash), so it needs internet once. It also downloads Slint 1.18.1 (patched by `cmake/SlintPatch.cmake`) and Corrosion 0.6.1, which builds Slint and its crates with cargo, and nativefiledialog-extended 1.4.1 (pinned by hash) for the file pickers. The build also downloads MeCab 0.996.13 and mecab-ipadic-2.7.0-20070801 from the shogo82148/mecab GitHub releases (pinned by SHA256, like QuickJS-ng) and compiles the dictionary at build time.
 
 The dictionary is installed to `share/quince/mecab/ipadic`. In the build tree it sits next to the binary at `build/mecab/ipadic`. The environment variable `QUINCE_MECAB_DIC` can point to another compiled dictionary.
 

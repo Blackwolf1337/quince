@@ -214,6 +214,8 @@ FetchContent_Declare(Slint
     SOURCE_SUBDIR api/cpp
     PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/SlintPatch.cmake
     UPDATE_DISCONNECTED TRUE
+    # also keeps Slint's own install rules (compiler, headers) out of the package
+    EXCLUDE_FROM_ALL
 )
 FetchContent_MakeAvailable(Slint)
 # the rest of the project builds its own libraries statically

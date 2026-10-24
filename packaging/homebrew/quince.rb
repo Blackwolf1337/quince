@@ -39,13 +39,19 @@ class Quince < Formula
     sha256 "fe485305ed303215e76c04918ee9aefbffbe229f18f979098ec36c7fa1dab28b"
   end
 
+  # Slint's CMake glue for cargo
+  resource "corrosion" do
+    url "https://github.com/corrosion-rs/corrosion/archive/refs/tags/v0.6.1.tar.gz"
+    sha256 "e9e95b1ee2bad52681f347993fb1a5af5cce458c5ce8a2636c9e476e4babf8e3"
+  end
+
   resource "nfd" do
     url "https://github.com/btzy/nativefiledialog-extended/archive/refs/tags/v1.4.1.tar.gz"
     sha256 "4a01eafa921169f009f3e83bea8e287d9e5d0b94ca9064cf7f0a546652d7c884"
   end
 
   def install
-    %w[mecab mecab-ipadic quickjs slint nfd].each { |name| (buildpath/"deps"/name).install resource(name) }
+    %w[mecab mecab-ipadic quickjs slint corrosion nfd].each { |name| (buildpath/"deps"/name).install resource(name) }
     # Quince's changes to Slint: FetchContent applies them only to a Slint it downloads itself
     cd buildpath/"deps/slint" do
       system "cmake", "-P", buildpath/"cmake/SlintPatch.cmake"
@@ -56,6 +62,7 @@ class Quince < Formula
       -DFETCHCONTENT_SOURCE_DIR_MECAB_IPADIC=#{buildpath}/deps/mecab-ipadic
       -DFETCHCONTENT_SOURCE_DIR_QUICKJS=#{buildpath}/deps/quickjs
       -DFETCHCONTENT_SOURCE_DIR_SLINT=#{buildpath}/deps/slint
+      -DFETCHCONTENT_SOURCE_DIR_CORROSION=#{buildpath}/deps/corrosion
       -DFETCHCONTENT_SOURCE_DIR_NFD=#{buildpath}/deps/nfd
     ]
     system "cmake", "-S", ".", "-B", "build", "-G", "Ninja", *args, *std_cmake_args
