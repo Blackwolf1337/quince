@@ -60,7 +60,7 @@ sudo cmake --install build --prefix /usr
 
 The Windows build can be made on Linux with Docker: `packaging/windows/cross-build.sh`. It uses MSYS2's Windows libraries, keeps a cache of about 3 GB in `~/.cache/quince-windows` and puts the zip in the repo folder.
 
-On Windows, Slint is a shared library (`slint_cpp.dll`), shipped next to `quince.exe`. The Windows build has no sign-in window, because quince-login needs QtWebEngine, which it lacks. The Windows and macOS downloads contain GPL builds of mpv and FFmpeg.
+On Windows, Slint is a shared library (`slint_cpp.dll`), shipped next to `quince.exe`. The Windows build has no sign-in window, because quince-login needs QtWebEngine, which it lacks. The Windows build makes its own mpv and FFmpeg with only what Quince uses (`packaging/windows/build-media.sh`), with MSYS2's libraries below them. The macOS download contains Homebrew's GPL builds of mpv and FFmpeg.
 
 ## macOS build
 

@@ -13,64 +13,17 @@ permissions:
 
 jobs:
   windows:
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: msys2 {0}
+    # the Docker cross-build of packaging/windows (MinGW, MSYS2's libraries, our
+    # own small mpv and FFmpeg), as on a developer's Linux machine
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: UCRT64
-          update: true
-          install: >-
-            zip
-            git
-            mingw-w64-ucrt-x86_64-gcc
-            mingw-w64-ucrt-x86_64-cmake
-            mingw-w64-ucrt-x86_64-ninja
-            mingw-w64-ucrt-x86_64-pkgconf
-            mingw-w64-ucrt-x86_64-ntldd
-            mingw-w64-ucrt-x86_64-rust
-            mingw-w64-ucrt-x86_64-qt6-base
-            mingw-w64-ucrt-x86_64-qt6-tools
-            mingw-w64-ucrt-x86_64-qt6-imageformats
-            mingw-w64-ucrt-x86_64-qt6-translations
-            mingw-w64-ucrt-x86_64-mpv
-            mingw-w64-ucrt-x86_64-ffmpeg
-            mingw-w64-ucrt-x86_64-icu
-            mingw-w64-ucrt-x86_64-libiconv
       - name: Build
         run: |
           set -o pipefail
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF 2>&1 | tee ci.log
-          cmake --build build 2>&1 | tee -a ci.log
-      - name: Package
-        run: |
-          set -o pipefail
-          exec > >(tee -a ci.log) 2>&1
-          dist="$PWD/dist/Quince"
-          cmake --install build --prefix "$dist"
-          deploy=$(command -v windeployqt6 || command -v windeployqt-qt6 || echo /ucrt64/share/qt6/bin/windeployqt.exe)
-          # the window is Slint's: no style or icon plugins (windeployqt insists on
-          # the platform plugin of an app that links QtGui)
-          # Qt's own texts only in the languages Quince has
-          langs=$(ls i18n/quince_*.ts | sed 's/.*quince_\(.*\)\.ts/\1/' | paste -sd,)
-          "$deploy" --release --no-compiler-runtime --skip-plugin-types styles,iconengines,generic,platforminputcontexts \
-            --translations "$langs" "$dist/quince.exe"
-          # what the build made (MSYS2's DLLs come stripped)
-          strip --strip-unneeded "$dist/quince.exe" "$dist/slint_cpp.dll"
-          # MSYS2's Qt would look for plugins below share\qt6\
-          cp packaging/windows/qt.conf "$dist/qt.conf"
-          # every DLL of the MSYS2 prefix that the exe and the Qt plugins load
-          find "$dist" -name '*.exe' -o -name '*.dll' | while read -r f; do ntldd -R "$f"; done \
-            | sed -n 's/.*=> \(.*\.dll\) (0x.*/\1/p' | tr '\\' '/' | grep -i '/ucrt64/' | sort -u \
-            | while read -r dll; do cp -n "$(cygpath -u "$dll")" "$dist/"; done
-          ver=$(git describe --tags --always)
-          (cd dist && zip -qr9 "../Quince-$ver-windows-x64.zip" Quince)
-          ls -la Quince-*.zip
+          packaging/windows/cross-build.sh "$HOME/.cache/quince-windows" 2>&1 | tee ci.log
       - name: Errors as annotations
         if: failure()
         shell: bash

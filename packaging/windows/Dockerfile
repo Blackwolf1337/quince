@@ -7,7 +7,7 @@ ARG MIRROR=https://geo.mirror.pkgbuild.com/\$repo/os/\$arch
 RUN echo "Server = $MIRROR" > /etc/pacman.d/mirrorlist \
     && sed -i 's/^#\?ParallelDownloads.*/ParallelDownloads = 8/' /etc/pacman.conf \
     && pacman -Syu --noconfirm --needed \
-        mingw-w64-gcc cmake ninja pkgconf python libarchive curl zip git \
+        mingw-w64-gcc cmake ninja meson nasm make pkgconf python libarchive curl zip git \
         qt6-base qt6-tools wine \
         xorg-server-xvfb xorg-xauth mesa \
     && pacman -Scc --noconfirm
