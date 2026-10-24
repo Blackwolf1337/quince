@@ -107,3 +107,19 @@ slint_patch(internal/compiler/widgets/fluent/scrollview.slint
     }
 ]=]
     "the hiding scroll bar")
+
+# no OLE drag and drop on Windows: Slint takes no file drops, and winit asserts
+# on RegisterDragDrop's result, so a failing call (it fails under Wine) ends the
+# program as it opens its window
+slint_patch(internal/backends/winit/winitwindowadapter.rs
+[=[        // Never show the window right away, as we
+        //  a) need to compute the correct size based on the scale factor before it's shown on the screen (handled by set_visible)]=]
+[=[        #[cfg(target_os = "windows")]
+        {
+            use winit::platform::windows::WindowAttributesExtWindows;
+            window_attributes = window_attributes.with_drag_and_drop(false);
+        }
+
+        // Never show the window right away, as we
+        //  a) need to compute the correct size based on the scale factor before it's shown on the screen (handled by set_visible)]=]
+    "OLE drag and drop")
