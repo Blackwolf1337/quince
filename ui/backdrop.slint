@@ -3,6 +3,7 @@
 // blurred the cover use Player.art-blurred, made small and blurred on the
 // core thread.
 
+import { Frosted } from "frost.slint";
 import { Style } from "style.slint";
 import { App } from "globals.slint";
 
@@ -27,22 +28,15 @@ export component Glow inherits Rectangle {
         root.light.with-alpha(0) 100%);
 }
 
-// Frosted glass without the blur: a tinted surface with a light edge.
-export component Glass inherits Rectangle {
-    in property <color> tint: Style.surface-high.with-alpha(0.94);
-    in property <bool> edge: true;
-
-    border-radius: Style.radius;
-    background: root.tint;
-    border-width: root.edge ? 1px : 0;
-    border-color: #ffffff1c;
-}
+// Frosted glass (ui/frost.slint) under its old name.
+export component Glass inherits Frosted { }
 
 // Behind modal dialogs: the window, darkened.
 export component GlassScrim inherits Glass {
     border-radius: 0;
     edge: false;
-    tint: Style.background.with-alpha(0.7);
+    tint: Style.background.with-alpha(0.45);
+    plain-tint: Style.background.with-alpha(0.7);
 }
 
 // The window background: dark, with slow drifting light in the album color

@@ -388,6 +388,10 @@ if(QUINCE_SLINT)
         src/slint/FilePicker.h
         src/slint/FilePicker.cpp
         src/slint/PropertyTable.h
+        src/slint/Blur.h
+        src/slint/Blur.cpp
+        src/slint/Frost.h
+        src/slint/Frost.cpp
         src/slint/Bindings.h
         src/slint/Bindings.cpp
         src/slint/Bridge.h

@@ -1,6 +1,7 @@
 // The search box with suggestions while typing (qml/SearchField.qml). The
 // core fetches the suggestions (src/slint/SearchBindings.cpp).
 
+import { Frost, Frosted } from "frost.slint";
 import { Style } from "style.slint";
 import { Icons } from "icons.slint";
 import { ItemRow } from "item-row.slint";
@@ -103,6 +104,7 @@ export component SearchField inherits Rectangle {
 
     function open-popup() {
         if !popup.is-open {
+            Frost.refresh();
             popup.show();
             // showing takes the focus; typing goes on in the field
             input.focus();
@@ -211,12 +213,10 @@ export component SearchField inherits Rectangle {
             }
         }
 
-        // Glass without the blur
-        Rectangle {
+        Frosted {
+            width: 100%;
+            height: 100%;
             border-radius: 14px;
-            background: Style.surface-high.with-alpha(0.97);
-            border-width: 1px;
-            border-color: #ffffff1c;
         }
 
         flick := Flickable {

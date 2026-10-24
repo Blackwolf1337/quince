@@ -1,4 +1,5 @@
 #include "ImageCache.h"
+#include "Blur.h"
 #include "app/ArtCache.h"
 #include "ytm/Parser.h"
 
@@ -17,70 +18,14 @@ namespace {
 // covers kept as images; the disk cache holds the rest
 constexpr size_t kMaxImages = 400;
 
-// blurred covers: downloaded this large, blurred at kBlurSize (Slint scales
-// them up smoothly), with three box blurs, nearly a Gaussian
+// blurred covers: downloaded this large, blurred small; the look of the QML
+// backdrop's MultiEffect (a quarter more saturation, darker)
 constexpr int kBlurSource = 120;
-constexpr int kBlurSize = 64;
-constexpr int kBlurRadius = 5;
-constexpr int kBlurPasses = 3;
-// the look of the QML backdrop's MultiEffect: a quarter more saturation, darker
-constexpr float kBlurSaturation = 1.25f;
-constexpr float kBlurBrightness = -0.35f;
+const BlurLook kCoverBlur { 64, 64, 5, 1.25f, -0.35f, false };
 
 std::string keyOf(const std::string &url, int pixels)
 {
     return url + '#' + std::to_string(pixels);
-}
-
-// one box blur of the RGB planes along x (step 1) or y (step w), edges clamped
-void boxBlur(const std::vector<float> &src, std::vector<float> &dst, int w, int h, bool alongX)
-{
-    const int len = alongX ? w : h, lines = alongX ? h : w;
-    const int step = alongX ? 3 : w * 3;
-    for (int line = 0; line < lines; line++) {
-        const int base = alongX ? line * w * 3 : line * 3;
-        for (int c = 0; c < 3; c++) {
-            const auto at = [&](int i) { return src[size_t(base + std::clamp(i, 0, len - 1) * step + c)]; };
-            float sum = 0;
-            for (int i = -kBlurRadius; i <= kBlurRadius; i++)
-                sum += at(i);
-            for (int i = 0; i < len; i++) {
-                dst[size_t(base + i * step + c)] = sum / float(2 * kBlurRadius + 1);
-                sum += at(i + kBlurRadius + 1) - at(i - kBlurRadius);
-            }
-        }
-    }
-}
-
-QImage blurredCover(const QImage &cover)
-{
-    QImage image = cover.scaled(kBlurSize, kBlurSize, Qt::IgnoreAspectRatio, Qt::SmoothTransformation)
-                       .convertToFormat(QImage::Format_RGBA8888);
-    const int w = image.width(), h = image.height();
-    std::vector<float> plane(size_t(w) * size_t(h) * 3), tmp(plane.size());
-    for (int y = 0; y < h; y++) {
-        const uchar *line = image.constScanLine(y);
-        for (int x = 0; x < w; x++)
-            for (int c = 0; c < 3; c++)
-                plane[size_t((y * w + x) * 3 + c)] = line[x * 4 + c] / 255.0f;
-    }
-    for (int i = 0; i < kBlurPasses; i++) {
-        boxBlur(plane, tmp, w, h, true);
-        boxBlur(tmp, plane, w, h, false);
-    }
-    for (int y = 0; y < h; y++) {
-        uchar *line = image.scanLine(y);
-        for (int x = 0; x < w; x++) {
-            const float *p = &plane[size_t((y * w + x) * 3)];
-            const float gray = 0.299f * p[0] + 0.587f * p[1] + 0.114f * p[2];
-            for (int c = 0; c < 3; c++) {
-                const float v = gray + (p[c] - gray) * kBlurSaturation + kBlurBrightness;
-                line[x * 4 + c] = uchar(std::clamp(v, 0.0f, 1.0f) * 255.0f + 0.5f);
-            }
-            line[x * 4 + 3] = 255;
-        }
-    }
-    return image;
 }
 
 } // namespace
@@ -108,7 +53,7 @@ public:
                 if (!data.isEmpty())
                     image.loadFromData(data);
                 if (!image.isNull() && blurred)
-                    image = blurredCover(image);
+                    image = ::blurred(image, kCoverBlur);
                 else if (!image.isNull() && (image.width() > pixels * 2 || image.height() > pixels * 2))
                     image = image.scaled(pixels, pixels, Qt::KeepAspectRatioByExpanding, Qt::SmoothTransformation);
                 image = image.convertToFormat(QImage::Format_RGBA8888);

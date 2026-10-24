@@ -3,6 +3,7 @@
 // thread of its own. Bridge.h has the rules for crossing between the two.
 
 #include "Bindings.h"
+#include "Frost.h"
 #include "ImageCache.h"
 #include "SlintHost.h"
 #include "TestDriver.h"
@@ -87,6 +88,7 @@ int main(int argc, char *argv[])
     if ((*window)->window().set_rendering_notifier(std::ref(video)))
         std::fprintf(stderr, "quince: Slint renders without OpenGL here, no video\n");
     SlintHost host(weakWindow);
+    startFrost(*window);
     ImageCache images;
 
     CoreThread core;

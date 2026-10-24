@@ -15,20 +15,24 @@ import { NowPlaying } from "now-playing.slint";
 import { DialogLayer } from "dialogs.slint";
 import { DownloadsView } from "downloads-view.slint";
 import { Backdrop } from "backdrop.slint";
+import { Frost, Frosted } from "frost.slint";
 
 import "../qml/fonts/InterVariable.ttf";
 
-export { Style, Account, App, Player, PlaylistEntry, ListItem, Browse }
+export { Style, Account, App, Player, PlaylistEntry, ListItem, Browse, Frost }
 export { Search } from "search-field.slint";
 export { ItemMenu } from "item-menu.slint";
 
 // errors and short messages, for a while above the player bar
-component Toast inherits Rectangle {
+component Toast inherits Frosted {
     private property <int> serial: App.toast-serial;
     private property <bool> shown;
 
     changed serial => {
         root.shown = App.toast != "";
+        if root.shown {
+            Frost.refresh();
+        }
         hide.running = false;
         hide.running = root.shown;
     }
@@ -36,7 +40,9 @@ component Toast inherits Rectangle {
     width: Math.min(label.preferred-width + 40px, 640px);
     height: label.preferred-height + 24px;
     border-radius: self.height / 2;
-    background: App.toast-error ? #5a2028f8 : Style.surface-high.with-alpha(0.97);
+    tint: App.toast-error ? #5a2028bf : Style.surface-high.with-alpha(0.7);
+    plain-tint: App.toast-error ? #5a2028f8 : Style.surface-high.with-alpha(0.97);
+    visible: !Frost.capturing;
     opacity: root.shown ? 1 : 0;
     animate opacity { duration: Style.normal; easing: cubic-bezier(0.33, 1, 0.68, 1); }
 
@@ -59,7 +65,7 @@ component Toast inherits Rectangle {
 }
 
 // the volume, for a moment after it changed by wheel or keys
-component VolumeHud inherits Rectangle {
+component VolumeHud inherits Frosted {
     private property <float> volume: Player.volume;
     // the first value is the start-up one, not a change
     private property <bool> armed;
@@ -67,6 +73,9 @@ component VolumeHud inherits Rectangle {
 
     changed volume => {
         if root.armed {
+            if !root.shown {
+                Frost.refresh();
+            }
             root.shown = true;
             hide.running = false;
             hide.running = true;
@@ -77,7 +86,7 @@ component VolumeHud inherits Rectangle {
     width: 220px;
     height: 64px;
     border-radius: self.height / 2;
-    background: Style.surface-high.with-alpha(0.97);
+    visible: !Frost.capturing;
     opacity: root.shown ? 1 : 0;
     animate opacity { duration: Style.normal; }
 

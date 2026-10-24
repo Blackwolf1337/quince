@@ -2,6 +2,7 @@
 // (settings, equalizer, signin, addToPlaylist); src/slint/DialogsBindings.cpp
 // sets it when the core asks for a dialog.
 
+import { Frost, Frosted } from "frost.slint";
 import { Style } from "style.slint";
 import { Account, App } from "globals.slint";
 import { SettingsDialog } from "settings-dialog.slint";
@@ -25,6 +26,9 @@ export component DialogLayer inherits Rectangle {
     }
     // the settings put the keyboard into their search field themselves
     changed dialog => {
+        if root.dialog != "" {
+            Frost.refresh();
+        }
         if root.dialog == "" {
             root.back-to-settings = false;
             home.focus();
@@ -46,9 +50,13 @@ export component DialogLayer inherits Rectangle {
         height: 0;
     }
 
-    Rectangle {
-        visible: App.dialog != "";
-        background: Style.background.with-alpha(0.7);
+    // behind modal dialogs: the window, blurred and darkened (qml/GlassScrim.qml)
+    Frosted {
+        visible: App.dialog != "" && !Frost.capturing;
+        border-radius: 0;
+        edge: false;
+        tint: Style.background.with-alpha(0.45);
+        plain-tint: Style.background.with-alpha(0.7);
         opacity: self.visible ? 1 : 0;
         animate opacity { duration: Style.normal; }
 

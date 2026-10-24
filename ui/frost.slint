@@ -1,0 +1,43 @@
+// Frosted glass (qml/Glass.qml). Slint has no live blur: src/slint/Frost.cpp
+// takes a picture of the window without its overlays when one opens, blurs
+// it, and every frosted surface shows its part of that picture under a tint.
+
+import { Style } from "style.slint";
+
+export global Frost {
+    // the blurred window and the logical size it was taken at; empty at first
+    in property <image> picture;
+    in property <length> width;
+    in property <length> height;
+    // true while the picture is taken: the overlays (dialogs, popups, toast) hide
+    in property <bool> capturing;
+    // an overlay opened, or what lies behind it changed
+    callback refresh();
+}
+
+export component Frosted inherits Rectangle {
+    // over the blurred window; without a picture yet, the plain surface
+    in property <color> tint: Style.surface-high.with-alpha(0.62);
+    in property <color> plain-tint: Style.surface-high.with-alpha(0.97);
+    in property <bool> edge: true;
+
+    border-radius: Style.radius;
+    clip: true;
+
+    if Frost.picture.width > 0: Image {
+        x: -root.absolute-position.x;
+        y: -root.absolute-position.y;
+        width: Frost.width;
+        height: Frost.height;
+        source: Frost.picture;
+        image-fit: fill;
+    }
+    Rectangle {
+        width: 100%;
+        height: 100%;
+        border-radius: root.border-radius;
+        background: Frost.picture.width > 0 ? root.tint : root.plain-tint;
+        border-width: root.edge ? 1px : 0;
+        border-color: #ffffff1c;
+    }
+}

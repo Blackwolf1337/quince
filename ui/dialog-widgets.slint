@@ -2,6 +2,7 @@
 // switch, check box, buttons, choice box, slider, spin box, text field,
 // chips and the dialog's frame.
 
+import { Frosted } from "frost.slint";
 import { ScrollView } from "std-widgets.slint";
 import { Style } from "style.slint";
 import { Icons } from "icons.slint";
@@ -540,7 +541,7 @@ export component BusyIndicator inherits Rectangle {
 
 // A modal dialog's panel: glass with a title, the content and a button that
 // closes it at the bottom right. It comes in with a short fade and zoom.
-export component DialogFrame inherits Rectangle {
+export component DialogFrame inherits Frosted {
     in property <string> title;
     // the button at the bottom; empty for none
     in property <string> button-text;
@@ -554,9 +555,6 @@ export component DialogFrame inherits Rectangle {
     }
 
     border-radius: Style.radius-large;
-    background: Style.surface-high.with-alpha(0.97);
-    border-width: 1px;
-    border-color: #ffffff1c;
     drop-shadow-blur: 32px;
     drop-shadow-color: #00000066;
     opacity: root.shown ? 1 : 0;
