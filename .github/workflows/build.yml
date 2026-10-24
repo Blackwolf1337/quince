@@ -4,7 +4,7 @@ name: build
 
 on:
   push:
-    branches: [master, packaging, slint-frontend]
+    branches: [master, packaging]
     tags: ['v*']
   workflow_dispatch:
 
