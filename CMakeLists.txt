@@ -376,6 +376,8 @@ if(QUINCE_SLINT)
         src/slint/Gl.cpp
         src/slint/ImageCache.h
         src/slint/ImageCache.cpp
+        src/slint/MiniPlayerWindow.h
+        src/slint/MiniPlayerWindow.cpp
         src/slint/ModelMirror.h
         src/slint/SlintHost.h
         src/slint/SlintHost.cpp
@@ -385,6 +387,8 @@ if(QUINCE_SLINT)
         src/slint/VideoRenderer.cpp
     )
     slint_target_sources(quince-slint ui/main.slint NAMESPACE ui)
+    # the mini player's window, with globals of its own
+    slint_target_sources(quince-slint ui/mini-player.slint NAMESPACE mini)
     set_property(TARGET quince-slint PROPERTY SLINT_EMBED_RESOURCES embed-files)
     target_include_directories(quince-slint PRIVATE src/slint)
     if(NOT MSVC)

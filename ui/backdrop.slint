@@ -1,0 +1,80 @@
+// The decoration (qml/Glow.qml, Glass.qml, GlassScrim.qml, Backdrop.qml).
+// Slint has no live blur: glass is a tinted surface, and backdrops that
+// blurred the cover use Player.art-blurred, made small and blurred on the
+// core thread.
+
+import { Style } from "style.slint";
+import { App } from "globals.slint";
+
+// A soft round light in the album color that fades to nothing at its edge.
+export component Glow inherits Rectangle {
+    in property <color> light: App.glow;
+    in property <float> strength: 0.5;
+    private property <float> alpha: Math.min(1, root.strength * App.glow-scale);
+    private property <length> radius: Math.min(self.width, self.height) / 2;
+
+    width: 600px;
+    height: 600px;
+    // a smooth falloff (1 - r)^2.5; few stops show as rings
+    background: @radial-gradient(circle root.radius,
+        root.light.with-alpha(root.alpha) 0%,
+        root.light.with-alpha(root.alpha * 0.666) 15%,
+        root.light.with-alpha(root.alpha * 0.41) 30%,
+        root.light.with-alpha(root.alpha * 0.226) 45%,
+        root.light.with-alpha(root.alpha * 0.101) 60%,
+        root.light.with-alpha(root.alpha * 0.031) 75%,
+        root.light.with-alpha(root.alpha * 0.003) 90%,
+        root.light.with-alpha(0) 100%);
+}
+
+// Frosted glass without the blur: a tinted surface with a light edge.
+export component Glass inherits Rectangle {
+    in property <color> tint: Style.surface-high.with-alpha(0.94);
+    in property <bool> edge: true;
+
+    border-radius: Style.radius;
+    background: root.tint;
+    border-width: root.edge ? 1px : 0;
+    border-color: #ffffff1c;
+}
+
+// Behind modal dialogs: the window, darkened.
+export component GlassScrim inherits Glass {
+    border-radius: 0;
+    edge: false;
+    tint: Style.background.with-alpha(0.7);
+}
+
+// The window background: dark, with slow drifting light in the album color
+// behind the header and the player bar.
+export component Backdrop inherits Rectangle {
+    // 0..1 and back, for the drift of the top light (21 s each way) and the
+    // breathing of the bottom one (9 s each way)
+    private property <float> drift: Math.sin(animation-tick() / 42s * 360deg) * 0.5 + 0.5;
+    private property <float> breath: Math.sin(animation-tick() / 18s * 360deg) * 0.5 + 0.5;
+
+    background: Style.background;
+    clip: true;
+
+    Glow {
+        width: Math.max(root.width * 0.75, 700px);
+        height: self.width * 0.55;
+        x: -self.width * (0.1 + 0.2 * root.drift);
+        y: -self.height * 0.55;
+        strength: 0.75;
+    }
+    Glow {
+        width: Math.max(root.width * 0.45, 480px);
+        height: self.width * 0.6;
+        x: root.width - self.width * 0.6;
+        y: -self.height * 0.5;
+        strength: 0.4;
+    }
+    Glow {
+        width: Math.max(root.width * 0.9, 800px);
+        height: 360px;
+        x: (root.width - self.width) / 2;
+        y: root.height - self.height * 0.42;
+        strength: 0.5 + 0.2 * root.breath;
+    }
+}

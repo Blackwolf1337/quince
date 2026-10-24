@@ -1,5 +1,6 @@
 #include "VideoRenderer.h"
 
+#include <mpv/client.h>
 #include <mpv/render_gl.h>
 
 #include <cstdio>
@@ -98,11 +99,6 @@ struct VideoRenderer::OwnContext
 };
 #endif
 
-VideoRenderer::VideoRenderer(slint::ComponentWeakHandle<ui::MainWindow> window)
-    : m_window(std::move(window))
-{
-}
-
 VideoRenderer::~VideoRenderer()
 {
     delete m_own;
@@ -140,23 +136,28 @@ void VideoRenderer::operator()(slint::RenderingState state, slint::GraphicsAPI a
 void VideoRenderer::setSource(mpv_handle *mpv)
 {
     m_wanted = mpv;
-    if (auto w = m_window.lock())
-        (*w)->window().request_redraw();
+    m_redraw();
 }
 
-// the video rect in framebuffer pixels, y counted from the bottom
-VideoRenderer::Rect VideoRenderer::videoRect(const ui::MainWindow &w) const
+void VideoRenderer::release(std::function<void()> done)
 {
-    const float scale = w.window().scale_factor();
-    const auto size = w.window().size();
-    const int x = int(w.get_video_x() * scale);
-    const int y = int(w.get_video_y() * scale);
-    const int vw = int(w.get_video_width() * scale);
-    const int vh = int(w.get_video_height() * scale);
-    return { x, int(size.height) - y - vh, vw, vh };
+    m_released = true;
+    if (!m_ctx) {
+        slint::invoke_from_event_loop(std::move(done));
+        return;
+    }
+    m_onReleased = std::move(done);
+    m_redraw();
 }
 
-bool VideoRenderer::ensureContext(const ui::MainWindow &w)
+void VideoRenderer::resume()
+{
+    m_released = false;
+    m_onReleased = nullptr;
+    m_redraw();
+}
+
+bool VideoRenderer::ensureContext(const View &view)
 {
     if (m_current != m_wanted)
         freeContext();
@@ -172,13 +173,12 @@ bool VideoRenderer::ensureContext(const ui::MainWindow &w)
         { MPV_RENDER_PARAM_INVALID, nullptr },
         { MPV_RENDER_PARAM_INVALID, nullptr },
     };
-#if !defined(_WIN32) && !defined(__APPLE__)
     // VAAPI interop wants the Wayland display
-    if (auto *display = w.window().wayland_display())
-        params[3] = { MPV_RENDER_PARAM_WL_DISPLAY, display };
-#else
-    (void)w;
-#endif
+    if (view.waylandDisplay)
+        params[3] = { MPV_RENDER_PARAM_WL_DISPLAY, view.waylandDisplay };
+    // the blit copies alpha as it is: pictures with alpha (the visualizer)
+    // are blended against black, or the window could turn see-through there
+    mpv_set_property_string(m_wanted, "background", "color");
     if (m_own)
         m_own->enter();
     const int created = mpv_render_context_create(&m_ctx, m_wanted, params);
@@ -192,12 +192,8 @@ bool VideoRenderer::ensureContext(const ui::MainWindow &w)
     m_current = m_wanted;
     // mpv calls this from its own threads: a redraw on the Slint thread
     mpv_render_context_set_update_callback(m_ctx, [](void *data) {
-        auto weak = *static_cast<slint::ComponentWeakHandle<ui::MainWindow> *>(data);
-        slint::invoke_from_event_loop([weak] {
-            if (auto w = weak.lock())
-                (*w)->window().request_redraw();
-        });
-    }, &m_window);
+        slint::invoke_from_event_loop(*static_cast<const std::function<void()> *>(data));
+    }, &m_redraw);
     if (onOutput)
         onOutput(true);
     return true;
@@ -272,13 +268,20 @@ void VideoRenderer::renderInto(const Rect &r)
 
 void VideoRenderer::render()
 {
-    if (!m_glOk)
+    View view;
+    if (!m_glOk || !m_view(view))
         return;
-    auto w = m_window.lock();
-    if (!w)
+    const Rect r { view.x, view.windowHeight - view.y - view.h, view.w, view.h };
+    if (m_released || !view.shown || r.w <= 0 || r.h <= 0) {
+        // the core decodes the picture only while it is drawn
+        freeContext();
+        if (m_released && m_onReleased) {
+            slint::invoke_from_event_loop(std::move(m_onReleased));
+            m_onReleased = nullptr;
+        }
         return;
-    const Rect r = videoRect(**w);
-    if (!(*w)->get_video_shown() || r.w <= 0 || r.h <= 0 || !ensureContext(**w))
+    }
+    if (!ensureContext(view))
         return;
 
     SavedState state;

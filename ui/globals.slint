@@ -17,6 +17,40 @@ export struct ListItem {
     number: string,
 }
 
+// a line of the lyrics: time in seconds (-1 when not synced), the
+// romanized line under it ("" none)
+export struct LyricsLine {
+    time: float,
+    text: string,
+    romanized: string,
+}
+
+// a caption track of the video playing
+export struct Caption {
+    name: string,
+    generated: bool,
+}
+
+// what the mini player shows; the Now Playing view hands it over on every
+// change (the mini player is a window of its own, with its own globals)
+export struct MiniState {
+    title: string,
+    subtitle: string,
+    art: image,
+    playing: bool,
+    has-next: bool,
+    position: float,
+    duration: float,
+    like-status: string,
+    can-rate: bool,
+    // the video or the visualizer draws, and whether it is a video
+    picture: bool,
+    video: bool,
+    restarts: int,
+    accent: color,
+    background: color,
+}
+
 export struct PlaylistEntry {
     title: string,
     browse-id: string,
@@ -59,6 +93,25 @@ export global Player {
     callback rate(string);
     callback shuffle-rest();
     callback clear-rest();
+
+    // area C: Now Playing, lyrics, mini player (NowPlayingBindings.cpp)
+    in property <string> album;
+    // the cover small and blurred, for backdrops (Slint has no live blur)
+    in property <image> art-blurred;
+    // counts mpv's restarts (a new file, a seek): a video's first frame is near
+    in property <int> restarts;
+    in property <[LyricsLine]> lyrics;
+    in property <bool> lyrics-synced;
+    in property <bool> lyrics-loading;
+    // the line sung now, -1 for none
+    in property <int> lyrics-line: -1;
+    in property <string> lyrics-source;
+    in property <string> lyrics-source-url;
+    in property <[Caption]> captions;
+    // the caption shown, -1 for none
+    in property <int> caption: -1;
+
+    callback set-caption(int);
 
     // m:ss, or h:mm:ss from an hour on
     public pure function time(seconds: float) -> string {
@@ -111,6 +164,26 @@ export global App {
     in-out property <bool> now-playing-open;
     // the dialog shown (settings, equalizer, signin, addToPlaylist), empty for none (area D)
     in-out property <string> dialog;
+
+    // area C: the look and lyrics settings of the Now Playing view
+    in property <color> glow: #ffc83d;
+    // the glows' strength (1 as designed), the video's ambient light and its reach
+    in property <float> glow-scale: 1;
+    in property <float> ambient-strength: 0.6;
+    in property <float> ambient-size: 1;
+    // "" off, or bars, wave, spectrum, scope
+    in property <string> visualizer;
+    in property <int> video-height: 1080;
+    // fancy, scale, offset or focus
+    in property <string> lyrics-effect: "fancy";
+    in property <bool> lyrics-time-codes;
+    in property <string> lyrics-gap-text: "♪";
+    // the mini player has the video; the main window is hidden
+    in-out property <bool> mini-player-open;
+
+    callback set-visualizer(string);
+    callback set-video-height(int);
+    callback mini-state-changed(MiniState);
 
     callback section-requested(string, string);
     callback set-video-mode(bool);

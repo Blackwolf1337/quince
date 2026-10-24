@@ -1,0 +1,199 @@
+// Pieces of the Now Playing view and the mini player.
+
+import { Style } from "style.slint";
+import { Glass } from "backdrop.slint";
+import { ToolButton } from "widgets.slint";
+
+// Cover art where a new cover fades in over the old one (qml/Art.qml).
+export component FadeArt inherits Rectangle {
+    in property <image> source;
+    in property <length> corner: 8px;
+
+    // b lies over a: a new cover goes into the hidden one, then b fades in
+    // over a, or out to show a
+    private property <image> a;
+    private property <image> b;
+    private property <bool> on-b;
+
+    init => {
+        self.a = self.source;
+    }
+    changed source => {
+        if self.on-b {
+            self.a = self.source;
+        } else {
+            self.b = self.source;
+        }
+        self.on-b = !self.on-b;
+    }
+
+    border-radius: root.corner;
+    background: root.a.width > 0 || root.b.width > 0 ? transparent : Style.placeholder;
+    clip: true;
+
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.a;
+        image-fit: cover;
+    }
+    Image {
+        width: 100%;
+        height: 100%;
+        source: root.b;
+        image-fit: cover;
+        opacity: root.on-b ? 1 : 0;
+        animate opacity { duration: Style.normal; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+    }
+}
+
+// The round play/pause button in the accent color; grows under the pointer.
+export component RoundPlayButton inherits Rectangle {
+    in property <bool> playing;
+    in property <length> icon-size: 32px;
+    in property <image> play-icon;
+    in property <image> pause-icon;
+    callback clicked();
+
+    width: 72px;
+    height: self.width;
+    border-radius: self.width / 2;
+    background: Style.accent;
+    transform-scale: touch.pressed ? 0.92 : touch.has-hover ? 1.05 : 1;
+    animate transform-scale { duration: Style.fast; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+
+    Image {
+        width: root.icon-size;
+        height: root.icon-size;
+        source: root.playing ? root.pause-icon : root.play-icon;
+        colorize: #111114;
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// An icon with a text beside it; checked shows it lit.
+export component PillButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> text;
+    in property <bool> checked;
+    callback clicked();
+
+    height: 40px;
+    border-radius: self.height / 2;
+    background: touch.pressed ? Style.pressed : touch.has-hover ? Style.hover : transparent;
+    animate background { duration: Style.fast; }
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 14px;
+        spacing: 8px;
+        Image {
+            width: 20px;
+            height: 20px;
+            y: (parent.height - self.height) / 2;
+            source: root.icon;
+            colorize: root.checked ? Style.accent : Style.text;
+        }
+        Text {
+            text: root.text;
+            color: root.checked ? Style.accent : Style.text;
+            font-size: 13px;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// An entry of a MenuButton's menu, with a check mark when it is the one chosen.
+export component ChoiceItem inherits Rectangle {
+    in property <string> label;
+    in property <bool> checked;
+    callback picked();
+
+    height: 40px;
+    background: touch.has-hover ? Style.hover : transparent;
+
+    HorizontalLayout {
+        padding-left: 12px;
+        padding-right: 16px;
+        spacing: 12px;
+
+        Rectangle {
+            width: 18px;
+            Path {
+                width: 18px;
+                height: 18px;
+                visible: root.checked;
+                viewbox-width: 18;
+                viewbox-height: 18;
+                commands: "M 3.5 9.5 L 7.5 13.5 L 14.5 5";
+                stroke: Style.accent;
+                stroke-width: 2px;
+            }
+        }
+        Text {
+            horizontal-stretch: 1;
+            text: root.label;
+            color: Style.text;
+            font-size: 14px;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.picked();
+        }
+    }
+}
+
+// A ToolButton that opens a menu on glass (qml/StyledMenu.qml) of its
+// children, ChoiceItems; a click closes it.
+export component MenuButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> text;
+    in property <bool> checked;
+
+    width: button.width;
+    height: button.height;
+    accessible-role: AccessibleRole.button;
+
+    button := ToolButton {
+        icon: root.icon;
+        text: root.text;
+        checked: root.checked;
+        clicked => {
+            menu.show();
+        }
+    }
+    menu := PopupWindow {
+        // above it: its buttons sit low in the window
+        y: -self.height - 4px;
+        width: 240px;
+        height: list.preferred-height;
+
+        Glass {
+            border-radius: 12px;
+        }
+        list := VerticalLayout {
+            padding-top: 6px;
+            padding-bottom: 6px;
+            @children
+        }
+    }
+}

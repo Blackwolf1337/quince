@@ -33,6 +33,9 @@ public:
     // the Slint thread, at once when the image is cached. An empty url gives
     // an empty image.
     void get(const std::string &url, int pixels, Done done);
+    // Slint thread: the cover small, blurred and darkened, for backdrops
+    // (Slint has no live blur); done() as with get()
+    void getBlurred(const std::string &url, Done done);
 
 private:
     class Fetcher;
@@ -42,13 +45,21 @@ private:
         std::list<std::string>::iterator age;
     };
 
-    void send(const std::string &key, const std::string &url, int pixels);
+    struct Request
+    {
+        std::string url;
+        int pixels;
+        bool blurred;
+    };
+
+    void request(const std::string &key, const Request &r, Done done);
+    void send(const std::string &key, const Request &r);
     void arrived(const std::string &key, int width, int height, std::vector<unsigned char> rgba);
 
     Fetcher *m_fetcher = nullptr; // core thread object, known to the Slint thread once it exists
     std::unordered_map<std::string, Entry> m_images;
     std::list<std::string> m_ages; // front: used last
     std::unordered_map<std::string, std::vector<Done>> m_waiting;
-    // asked for before the core side existed: key -> url, pixels
-    std::unordered_map<std::string, std::pair<std::string, int>> m_unsent;
+    // asked for before the core side existed
+    std::unordered_map<std::string, Request> m_unsent;
 };

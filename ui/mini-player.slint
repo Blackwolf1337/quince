@@ -1,0 +1,217 @@
+// Picture-in-picture (qml/MiniPlayer.qml): a small window with the cover (or
+// the video), what plays and the transport, which show under the pointer.
+// Wayland lets no window keep itself on top; on Hyprland a rule on the title
+// does ("pin" and "float" for title "Quince mini player").
+//
+// A window of its own, built apart from main.slint (namespace mini): its
+// globals are its own, so it takes what it shows from MiniState, which the
+// Now Playing view of the main window hands over (NowPlayingBindings.cpp).
+// mpv draws under it like under the main window, which gives the video up
+// while this one shows.
+
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { ToolButton } from "widgets.slint";
+import { FadeArt, RoundPlayButton } from "np-widgets.slint";
+import { MiniState } from "globals.slint";
+
+import "../qml/fonts/InterVariable.ttf";
+
+export { Style }
+
+export component MiniPlayer inherits Window {
+    in property <MiniState> state;
+
+    // where mpv draws (src/slint/VideoRenderer.cpp): the whole window
+    out property <bool> video-shown: root.state.picture;
+    out property <length> video-x: 0;
+    out property <length> video-y: 0;
+    out property <length> video-width: root.width;
+    out property <length> video-height: root.height;
+
+    callback restore();
+    callback toggle-pause();
+    callback previous();
+    callback next();
+    callback rate(string);
+    // the width the user left it at, to keep (logical pixels)
+    callback width-chosen(int);
+
+    // not translated: window rules match it
+    title: "Quince mini player";
+    icon: Icons.quince;
+    no-frame: true;
+    always-on-top: true;
+    resize-border-width: 6px;
+    min-width: 220px;
+    min-height: 160px;
+    background: root.state.background;
+    default-font-family: "Inter Variable";
+    default-font-size: 14px;
+
+    // the cover stays until the video runs (taking the video over loads the
+    // track again with its picture)
+    private property <bool> ready;
+    private property <bool> shown: root.video-shown;
+    private property <int> restarts: root.state.restarts;
+    changed shown => {
+        root.ready = false;
+    }
+    changed restarts => {
+        if root.shown {
+            ready-timer.running = true;
+        }
+    }
+    ready-timer := Timer {
+        interval: 250ms;
+        running: false;
+        triggered => {
+            root.ready = true;
+            self.running = false;
+        }
+    }
+    Timer {
+        interval: 1500ms;
+        running: root.shown && !root.state.video && !root.ready;
+        triggered => {
+            root.ready = true;
+        }
+    }
+
+    changed width => {
+        // restart() only restarts a running timer
+        if width-saver.running {
+            width-saver.restart();
+        } else {
+            width-saver.running = true;
+        }
+    }
+    width-saver := Timer {
+        interval: 600ms;
+        running: false;
+        triggered => {
+            self.running = false;
+            root.width-chosen(root.width / 1px);
+        }
+    }
+
+    keys := FocusScope {
+        init => {
+            self.focus();
+        }
+        key-pressed(event) => {
+            if event.text == " " {
+                root.toggle-pause();
+                return accept;
+            }
+            if event.text == Key.Escape {
+                root.restore();
+                return accept;
+            }
+            reject
+        }
+
+        FadeArt {
+            corner: 0;
+            source: root.state.art;
+            opacity: root.shown && root.ready ? 0 : 1;
+        }
+
+        // the window moves when dragged anywhere
+        WindowMoveArea {
+            hover := TouchArea {
+                // what plays and the controls, over a shade, under the pointer
+                Rectangle {
+                    opacity: hover.has-hover ? 1 : 0;
+                    visible: self.opacity > 0;
+                    animate opacity { duration: Style.normal; }
+                    background: @linear-gradient(180deg, #00000099 0%, #00000022 35%, #00000022 60%, #000000cc 100%);
+
+                    HorizontalLayout {
+                        y: 8px;
+                        height: 40px;
+                        padding-left: 8px;
+                        padding-right: 8px;
+                        ToolButton {
+                            icon: Icons.miniplayer;
+                            accessible-role: button;
+                            accessible-label: @tr("Back to the full window");
+                            clicked => {
+                                root.restore();
+                            }
+                        }
+                        Rectangle {
+                            horizontal-stretch: 1;
+                        }
+                        if root.state.can-rate: ToolButton {
+                            icon: root.state.like-status == "LIKE" ? Icons.heart : Icons.like;
+                            clicked => {
+                                root.rate(root.state.like-status == "LIKE" ? "INDIFFERENT" : "LIKE");
+                            }
+                        }
+                    }
+
+                    VerticalLayout {
+                        y: parent.height - self.height;
+                        height: self.preferred-height;
+                        padding: 14px;
+                        spacing: 2px;
+
+                        Text {
+                            text: root.state.title;
+                            color: white;
+                            font-size: 15px;
+                            font-weight: 600;
+                            overflow: elide;
+                        }
+                        Text {
+                            text: root.state.subtitle;
+                            color: #ffffffcc;
+                            font-size: 12px;
+                            overflow: elide;
+                        }
+                        HorizontalLayout {
+                            alignment: center;
+                            padding-top: 4px;
+                            spacing: 10px;
+                            ToolButton {
+                                y: (parent.height - self.height) / 2;
+                                icon: Icons.previous;
+                                clicked => {
+                                    root.previous();
+                                }
+                            }
+                            RoundPlayButton {
+                                width: 48px;
+                                icon-size: 22px;
+                                playing: root.state.playing;
+                                play-icon: Icons.play;
+                                pause-icon: Icons.pause;
+                                clicked => {
+                                    root.toggle-pause();
+                                }
+                            }
+                            ToolButton {
+                                y: (parent.height - self.height) / 2;
+                                icon: Icons.next;
+                                enabled: root.state.has-next;
+                                clicked => {
+                                    root.next();
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // progress along the bottom edge, always there
+        Rectangle {
+            x: 0;
+            y: parent.height - self.height;
+            height: 3px;
+            width: parent.width * (root.state.duration > 0 ? root.state.position / root.state.duration : 0);
+            background: Style.accent;
+        }
+    }
+}

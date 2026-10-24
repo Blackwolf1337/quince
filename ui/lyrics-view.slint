@@ -1,0 +1,198 @@
+// Lyrics of the playing track (qml/LyricsView.qml); synced lines follow the
+// music, a click on one jumps there.
+
+import { ScrollView, Spinner } from "std-widgets.slint";
+import { Style } from "style.slint";
+import { App, LyricsLine, Player } from "globals.slint";
+
+// Pear's line effects: fancy (large, the sung line glows and wobbles), scale
+// (the sung line grows), offset (it moves right), focus (only it is bright);
+// the romanized line sits under each line
+component Line inherits Rectangle {
+    in property <LyricsLine> line;
+    in property <bool> sung;
+    in property <length> line-size;
+    in property <length> plain-size;
+    callback chosen();
+
+    private property <bool> synced: Player.lyrics-synced;
+    private property <string> effect: App.lyrics-effect;
+    private property <bool> fancy: root.synced && root.effect == "fancy";
+    private property <bool> timed: root.synced && App.lyrics-time-codes && root.line.time >= 0;
+    private property <length> indent: root.timed ? stamp.preferred-width + 10px : 0;
+    private property <length> size: !root.synced ? root.plain-size
+        : root.fancy ? Math.round(root.line-size * 1.25 / 1px) * 1px : root.line-size;
+    // fancy: seconds since the line started, for its glow (2 s) and wobble (1 s)
+    private property <float> age: root.sung ? Player.position - root.line.time : 9;
+
+    // the side room lies inside the list, so the glow is not cut off at its edge
+    height: body.preferred-height;
+
+    stamp := Text {
+        visible: root.timed;
+        x: 0;
+        // on the baseline of the line's first row
+        y: body.y + (root.size - 12px) * 0.97;
+        text: Player.time(root.line.time);
+        color: Style.text-dim;
+        font-size: 12px;
+    }
+
+    body := VerticalLayout {
+        // a grown line must still fit
+        width: (root.width - root.indent) * (root.synced && root.effect == "scale" ? 0.83 : 1);
+        x: root.indent + (root.sung && root.effect == "offset" ? (root.width - root.indent) * 0.05 : 0);
+        y: !root.fancy || root.age < 0 || root.age > 1 ? 0
+            : root.age < 0.333 ? 1.75px * root.age / 0.333
+            : root.age < 0.666 ? 1.75px - 3.5px * (root.age - 0.333) / 0.333
+            : -1.75px + 1.75px * (root.age - 0.666) / 0.334;
+        spacing: 2px;
+        opacity: !root.synced || root.sung ? 1 : 0.33;
+        transform-scale: !root.synced ? 1 : root.sung ? (root.effect == "scale" ? 1.2 : 1) : (root.fancy ? 0.95 : 1);
+        transform-origin: { x: 0, y: self.height / 2 };
+        animate x { duration: Style.normal; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+        animate opacity { duration: 330ms; }
+        animate transform-scale {
+            duration: root.fancy ? Style.slow : 166ms;
+            easing: cubic-bezier(0.33, 1, 0.68, 1);
+        }
+
+        Text {
+            // the pauses of synced lyrics show a mark, so the line still moves on
+            text: root.line.text != "" ? root.line.text : root.synced ? App.lyrics-gap-text : "";
+            wrap: word-wrap;
+            color: root.synced ? Style.text : #b3b3c2;
+            font-size: root.size;
+            font-weight: root.synced && (root.fancy || root.sung) ? 700 : 400;
+            // fancy: a light edge instead of the glow, fading out after the line starts
+            stroke: #ffffff.with-alpha(root.fancy && root.age >= 0 && root.age < 2 ? 0.2 * (1 - root.age / 2) : 0);
+            stroke-width: 2px;
+            stroke-style: outside;
+        }
+        if root.line.romanized != "": Text {
+            text: root.line.romanized;
+            wrap: word-wrap;
+            color: Style.text-dim;
+            font-size: Math.round(root.size * 0.6 / 1px) * 1px;
+        }
+    }
+
+    TouchArea {
+        enabled: root.synced && root.line.time >= 0;
+        mouse-cursor: self.enabled ? pointer : default;
+        clicked => {
+            root.chosen();
+        }
+    }
+}
+
+export component LyricsView inherits Rectangle {
+    // size of synced lines and of lyrics without times; the Now Playing view
+    // shows them large (the side panel is hidden while it is open)
+    in property <length> line-size: App.now-playing-open ? 30px : 20px;
+    in property <length> plain-size: App.now-playing-open ? 19px : 15px;
+
+    private property <bool> synced: Player.lyrics-synced;
+    // the sung line stays in the upper middle until the user scrolls; the
+    // next line takes it there again
+    private property <bool> following: true;
+    private property <length> scroll-from;
+    private property <length> scroll-to;
+    // flips for each move; its animated value runs 0 -> 1 or 1 -> 0
+    private property <bool> flip;
+    private property <float> phase: root.flip ? 1 : 0;
+    animate phase { duration: Style.slow; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+    private property <length> scroll-at: root.scroll-from + (root.scroll-to - root.scroll-from) * (root.flip ? root.phase : 1 - root.phase);
+
+    // other lyrics start at the top
+    private property <[LyricsLine]> lines: Player.lyrics;
+    changed lines => {
+        list.content-y = 0;
+        root.following = true;
+    }
+
+    changed scroll-at => {
+        if root.following {
+            list.content-y = -root.scroll-at;
+        }
+    }
+
+    // a line at y (height h) in the list came up: the list moves it to 35 %
+    function follow(y: length, h: length) {
+        if !root.synced {
+            return;
+        }
+        let most = Math.max(0px, list.content-height - list.visible-height);
+        root.scroll-from = -list.content-y;
+        root.scroll-to = Math.clamp(y + h / 2 - list.visible-height * 0.35, 0px, most);
+        root.following = true;
+        root.flip = !root.flip;
+    }
+
+    list := ScrollView {
+        y: 12px;
+        height: parent.height - 24px;
+        content-height: column.preferred-height;
+        scrolled => {
+            root.following = false;
+        }
+
+        column := VerticalLayout {
+            width: list.visible-width;
+            padding-left: 12px;
+            padding-right: 12px;
+            spacing: root.synced ? (App.lyrics-effect == "fancy" ? 14px : 10px) : 2px;
+
+            for line[index] in Player.lyrics: Line {
+                line: line;
+                sung: root.synced && index == Player.lyrics-line;
+                line-size: root.line-size;
+                plain-size: root.plain-size;
+                chosen => {
+                    Player.seek(line.time);
+                }
+                changed sung => {
+                    if self.sung {
+                        root.follow(self.y, self.height);
+                    }
+                }
+                changed y => {
+                    if self.sung {
+                        root.follow(self.y, self.height);
+                    }
+                }
+            }
+
+            if Player.lyrics-source != "": HorizontalLayout {
+                padding-top: 16px;
+                Text {
+                    text: @tr("Lyrics: {}", Player.lyrics-source);
+                    color: Style.text-dim;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    TouchArea {
+                        enabled: Player.lyrics-source-url != "";
+                        mouse-cursor: self.enabled ? pointer : default;
+                        clicked => {
+                            Platform.open-url(Player.lyrics-source-url);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if Player.lyrics-loading: Spinner {
+        width: 40px;
+        height: 40px;
+        indeterminate: true;
+    }
+
+    if !Player.lyrics-loading && Player.lyrics.length == 0: Text {
+        width: parent.width - 48px;
+        text: Player.video-id != "" ? @tr("No lyrics found for this track.") : @tr("Play something to see its lyrics.");
+        color: Style.text-dim;
+        wrap: word-wrap;
+        horizontal-alignment: center;
+    }
+}

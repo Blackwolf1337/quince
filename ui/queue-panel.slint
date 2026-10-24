@@ -6,6 +6,7 @@ import { Icons } from "icons.slint";
 import { ToolButton } from "widgets.slint";
 import { ItemRow } from "item-row.slint";
 import { ItemMenuArea } from "item-menu.slint";
+import { LyricsView } from "lyrics-view.slint";
 import { App, Player } from "globals.slint";
 
 component Tab inherits Rectangle {
@@ -129,15 +130,10 @@ export component QueuePanel inherits VerticalLayout {
             }
         }
 
-        // the lyrics view comes with the Now Playing port
-        Text {
+        LyricsView {
             width: 100%;
             height: 100%;
             visible: App.queue-tab == 1;
-            text: @tr("Lyrics");
-            color: Style.text-dim;
-            horizontal-alignment: center;
-            vertical-alignment: center;
         }
     }
 }
