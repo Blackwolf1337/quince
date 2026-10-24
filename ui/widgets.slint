@@ -31,7 +31,8 @@ export component Tip inherits Rectangle {
 export component ToolButton inherits Rectangle {
     in property <image> icon;
     in property <string> text;
-    in property <length> icon-size: 20px;
+    // Material's ToolButton: 48 px with a 24 px icon
+    in property <length> icon-size: 24px;
     in property <bool> enabled: true;
     in property <bool> checked;
     in property <float> rotation;
@@ -39,8 +40,8 @@ export component ToolButton inherits Rectangle {
     out property <bool> hovered: touch.has-hover;
     callback clicked();
 
-    width: root.text != "" ? Math.max(40px, label.preferred-width + 20px) : 40px;
-    height: 40px;
+    width: root.text != "" ? Math.max(48px, label.preferred-width + 24px) : 48px;
+    height: 48px;
     border-radius: self.height / 2;
     background: touch.pressed ? Style.pressed : touch.has-hover && root.enabled ? Style.hover : transparent;
     opacity: root.enabled ? 1 : 0.38;
@@ -76,7 +77,8 @@ export component ToolButton inherits Rectangle {
     }
 }
 
-// The big round play/pause button.
+// The big round play/pause button: Material's RoundButton takes 52 px and
+// draws a 40 px circle; it grows under the pointer and sinks when pressed.
 export component PlayButton inherits Rectangle {
     in property <bool> playing;
     in property <bool> enabled: true;
@@ -86,15 +88,22 @@ export component PlayButton inherits Rectangle {
 
     width: 52px;
     height: 52px;
-    border-radius: self.width / 2;
-    background: root.enabled ? Style.accent : #ffffff33;
-    animate background { duration: Style.slow; }
 
-    Image {
-        width: 26px;
-        height: 26px;
-        source: root.playing ? root.pause-icon : root.play-icon;
-        colorize: #111114;
+    Rectangle {
+        width: 40px;
+        height: 40px;
+        border-radius: self.width / 2;
+        background: root.enabled ? Style.accent : #ffffff33;
+        transform-scale: touch.pressed ? 0.92 : touch.has-hover && root.enabled ? 1.06 : 1;
+        animate background { duration: Style.slow; }
+        animate transform-scale { duration: Style.fast; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+
+        Image {
+            width: 26px;
+            height: 26px;
+            source: root.playing ? root.pause-icon : root.play-icon;
+            colorize: #111114;
+        }
     }
 
     touch := TouchArea {
@@ -104,18 +113,6 @@ export component PlayButton inherits Rectangle {
             root.clicked();
         }
     }
-
-    states [
-        down when touch.pressed: {
-            width: 48px;
-            height: 48px;
-        }
-        over when touch.has-hover: {
-            width: 55px;
-            height: 55px;
-        }
-    ]
-    animate width, height { duration: Style.fast; easing: cubic-bezier(0.33, 1, 0.68, 1); }
 }
 
 // Cover art; round for artists. The placeholder shows until the picture is there.
@@ -141,6 +138,13 @@ export component Art inherits Rectangle {
     }
 }
 
+// A control of fixed size, centered across a row layout (a layout's children
+// are not centered on their own, and their y is the layout's to set).
+export component Centered inherits VerticalLayout {
+    alignment: center;
+    @children
+}
+
 // A thin line between groups.
 export component Separator inherits Rectangle {
     height: 1px;
@@ -159,6 +163,10 @@ export component ThinSlider inherits Rectangle {
     in property <color> fill: Style.text;
     in property <length> thickness: 3px;
     in property <length> active-thickness: 6px;
+    // the knob shows all the time (the Material slider), else only under the pointer
+    in property <bool> knob-always;
+    in property <color> knob-color: Style.text;
+    in property <color> track: #ffffff26;
     in property <string> tooltip;
     out property <bool> pressed: touch.pressed;
     out property <bool> active: touch.has-hover || touch.pressed;
@@ -183,7 +191,7 @@ export component ThinSlider inherits Rectangle {
         y: (parent.height - self.height) / 2;
         height: root.active ? root.active-thickness : root.thickness;
         border-radius: self.height / 2;
-        background: #ffffff26;
+        background: root.track;
         animate height { duration: Style.fast; }
 
         Rectangle {
@@ -196,10 +204,10 @@ export component ThinSlider inherits Rectangle {
     Rectangle {
         x: root.width * root.fraction - self.width / 2;
         y: (parent.height - self.height) / 2;
-        width: root.active ? 14px : 0px;
+        width: root.active || root.knob-always ? 14px : 0px;
         height: self.width;
         border-radius: self.width / 2;
-        background: Style.text;
+        background: root.knob-color;
         animate width { duration: Style.fast; easing: ease-out-back; }
     }
 
