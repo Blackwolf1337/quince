@@ -8,12 +8,15 @@
 struct mpv_handle;
 struct mpv_render_context;
 
-// Draws mpv's picture under the Slint items, into the rect of a window's
-// video area (the component's video-shown and video-x/y/width/height: the
-// main window's, or the mini player's). Slint's rendering notifier: runs on
-// the Slint thread with Slint's GL context current. The render context lives
-// while the area is shown; one mpv instance has one at a time, so a window
-// that takes the video over waits for release() of the other's.
+// Renders mpv's picture into a texture the size of a window's video area
+// (the component's video-shown, video-width and video-height: the main
+// window's, or the mini player's) and hands it to the component's
+// video-frame as a slint::Image, which the scene draws like any picture.
+// Slint's rendering notifier: runs on the Slint thread with Slint's GL
+// context current, before Slint draws, so a new frame shows at once. The
+// render context lives while the area is shown; one mpv instance has one at
+// a time, so a window that takes the video over waits for release() of the
+// other's.
 //
 // On Linux mpv renders in an EGL context of its own that shares objects with
 // Slint's: FemtoVG's GL state breaks mpv's rendering of hardware decoded
@@ -30,9 +33,8 @@ public:
                 return false;
             const Component &w = **c;
             const float scale = w.window().scale_factor();
-            view = { w.get_video_shown(), int(w.window().size().height),
-                     int(w.get_video_x() * scale), int(w.get_video_y() * scale),
-                     int(w.get_video_width() * scale), int(w.get_video_height() * scale), nullptr };
+            view = { w.get_video_shown(), int(w.get_video_width() * scale), int(w.get_video_height() * scale),
+                     nullptr };
 #if !defined(_WIN32) && !defined(__APPLE__)
             view.waylandDisplay = w.window().wayland_display();
 #endif
@@ -41,6 +43,13 @@ public:
         , m_redraw([component] {
             if (auto c = component.lock())
                 (*c)->window().request_redraw();
+        })
+        // after the frame being drawn: the window is busy while it draws
+        , m_setFrame([component](const slint::Image &frame) {
+            slint::invoke_from_event_loop([component, frame] {
+                if (auto c = component.lock())
+                    (*c)->set_video_frame(frame);
+            });
         })
     {
     }
@@ -60,29 +69,25 @@ public:
     std::function<void(bool)> onOutput;
 
 private:
-    // the video area in framebuffer pixels, y counted from the top
+    // the video area's size in framebuffer pixels
     struct View
     {
         bool shown;
-        int windowHeight, x, y, w, h;
+        int w, h;
         void *waylandDisplay;
-    };
-    struct Rect
-    {
-        int x, y, w, h;
     };
     struct OwnContext;
 
     bool ensureContext(const View &view);
     void freeContext();
-    void ensureFbo(int w, int h);
+    // true when the texture has a new size (or is new)
+    bool ensureFbo(int w, int h);
     void render();
     void frameStats(bool before);
-    // mpv into the video texture; leaves it bound for reading in Slint's context
-    void renderInto(const Rect &r);
 
     std::function<bool(View &)> m_view; // false once the window is gone
     std::function<void()> m_redraw;
+    std::function<void(const slint::Image &)> m_setFrame;
     gl::Functions m_gl;
     bool m_glOk = false;
     OwnContext *m_own = nullptr;
@@ -92,6 +97,6 @@ private:
     mpv_render_context *m_ctx = nullptr;
     bool m_released = false;
     std::function<void()> m_onReleased;
-    gl::GLuint m_fbo = 0, m_tex = 0, m_blitFbo = 0;
+    gl::GLuint m_fbo = 0, m_tex = 0;
     int m_fboW = 0, m_fboH = 0;
 };

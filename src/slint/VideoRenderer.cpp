@@ -21,7 +21,8 @@ void *mpvProcAddress(void *, const char *name)
     return procAddress(name);
 }
 
-// GL state mpv and the blit touch; Slint expects it unchanged afterwards
+// GL state mpv touches when it renders in Slint's context (no context of its
+// own); Slint expects it unchanged afterwards
 struct SavedState
 {
     GLint drawFbo = 0, readFbo = 0, activeTexture = 0, texture = 0;
@@ -139,7 +140,8 @@ void VideoRenderer::operator()(slint::RenderingState state, slint::GraphicsAPI a
         }
         m_glOk = load(m_gl);
         unblockSwap();
-        if (m_glOk && !m_own)
+        // QUINCE_SHARED_GL=1: mpv in Slint's context, as without EGL (comparisons)
+        if (m_glOk && !m_own && !std::getenv("QUINCE_SHARED_GL"))
             m_own = OwnContext::create();
         break;
     case slint::RenderingState::BeforeRendering:
@@ -151,9 +153,6 @@ void VideoRenderer::operator()(slint::RenderingState state, slint::GraphicsAPI a
         break;
     case slint::RenderingState::RenderingTeardown:
         freeContext();
-        if (m_blitFbo)
-            m_gl.DeleteFramebuffers(1, &m_blitFbo);
-        m_blitFbo = 0;
         delete m_own;
         m_own = nullptr;
         m_glOk = false;
@@ -229,9 +228,9 @@ bool VideoRenderer::ensureContext(const View &view)
     // VAAPI interop wants the Wayland display
     if (view.waylandDisplay)
         params[3] = { MPV_RENDER_PARAM_WL_DISPLAY, view.waylandDisplay };
-    // the blit copies alpha as it is: pictures with alpha (the visualizer)
-    // are blended against black, or the window could turn see-through there
-    mpv_set_property_string(m_wanted, "background", "color");
+    // what mpv does not draw stays transparent: the visualizer lies over the
+    // backdrop; the scene puts black behind a video (letterbox bars)
+    mpv_set_property_string(m_wanted, "background", "none");
     if (m_own)
         m_own->enter();
     const int created = mpv_render_context_create(&m_ctx, m_wanted, params);
@@ -256,6 +255,7 @@ void VideoRenderer::freeContext()
 {
     if (!m_ctx)
         return;
+    m_setFrame({});
     if (m_own)
         m_own->enter();
     mpv_render_context_free(m_ctx);
@@ -263,21 +263,25 @@ void VideoRenderer::freeContext()
         m_gl.DeleteFramebuffers(1, &m_fbo);
         m_gl.DeleteTextures(1, &m_tex);
     }
+    m_tex = 0;
     if (m_own)
         m_own->leave();
     m_ctx = nullptr;
     m_current = nullptr;
-    m_fbo = m_tex = 0;
+    m_fbo = 0;
     m_fboW = m_fboH = 0;
     if (onOutput)
         onOutput(false);
 }
 
-// in the context current now (mpv's own, or Slint's)
-void VideoRenderer::ensureFbo(int w, int h)
+// in the context current now (mpv's own, or Slint's). One texture for the
+// context's life: another size gets new storage under the same id, and the
+// scene a new image of it (deleting and making textures while the slot grows
+// left Slint drawing a texture that was gone)
+bool VideoRenderer::ensureFbo(int w, int h)
 {
     if (m_fbo && w == m_fboW && h == m_fboH)
-        return;
+        return false;
     if (!m_fbo) {
         m_gl.GenFramebuffers(1, &m_fbo);
         m_gl.GenTextures(1, &m_tex);
@@ -292,31 +296,7 @@ void VideoRenderer::ensureFbo(int w, int h)
         std::fprintf(stderr, "quince: video framebuffer incomplete\n");
     m_fboW = w;
     m_fboH = h;
-}
-
-void VideoRenderer::renderInto(const Rect &r)
-{
-    ensureFbo(r.w, r.h);
-    mpv_render_context_update(m_ctx);
-    mpv_opengl_fbo fbo { GLint(m_fbo), r.w, r.h, 0 };
-    int flip = 0;
-    mpv_render_param params[] = {
-        { MPV_RENDER_PARAM_OPENGL_FBO, &fbo },
-        { MPV_RENDER_PARAM_FLIP_Y, &flip },
-        { MPV_RENDER_PARAM_INVALID, nullptr },
-    };
-    mpv_render_context_render(m_ctx, params);
-    if (!m_own) {
-        m_gl.BindFramebuffer(READ_FRAMEBUFFER, m_fbo);
-        return;
-    }
-    // Slint's context reads the texture next; FBOs are not shared
-    m_gl.Finish();
-    m_own->leave();
-    if (!m_blitFbo)
-        m_gl.GenFramebuffers(1, &m_blitFbo);
-    m_gl.BindFramebuffer(READ_FRAMEBUFFER, m_blitFbo);
-    m_gl.FramebufferTexture2D(READ_FRAMEBUFFER, COLOR_ATTACHMENT0, TEXTURE_2D, m_tex, 0);
+    return true;
 }
 
 void VideoRenderer::render()
@@ -324,8 +304,7 @@ void VideoRenderer::render()
     View view;
     if (!m_glOk || !m_view(view))
         return;
-    const Rect r { view.x, view.windowHeight - view.y - view.h, view.w, view.h };
-    if (m_released || !view.shown || r.w <= 0 || r.h <= 0) {
+    if (m_released || !view.shown || view.w <= 0 || view.h <= 0) {
         // the core decodes the picture only while it is drawn
         freeContext();
         if (m_released && m_onReleased) {
@@ -338,14 +317,33 @@ void VideoRenderer::render()
         return;
 
     SavedState state;
-    state.save(m_gl);
     if (m_own)
         m_own->enter();
-    renderInto(r);
-    m_gl.Disable(SCISSOR_TEST);
-    m_gl.BindFramebuffer(DRAW_FRAMEBUFFER, state.drawFbo);
-    // mpv renders top-down into the FBO: swapped target rows flip it
-    m_gl.BlitFramebuffer(0, 0, r.w, r.h, r.x, r.y + r.h, r.x + r.w, r.y, COLOR_BUFFER_BIT, NEAREST);
-    state.restore(m_gl);
+    else
+        state.save(m_gl);
+    const bool fresh = ensureFbo(view.w, view.h);
+    if ((mpv_render_context_update(m_ctx) & MPV_RENDER_UPDATE_FRAME) || fresh) {
+        mpv_opengl_fbo fbo { GLint(m_fbo), view.w, view.h, 0 };
+        int flip = 0;
+        mpv_render_param params[] = {
+            { MPV_RENDER_PARAM_OPENGL_FBO, &fbo },
+            { MPV_RENDER_PARAM_FLIP_Y, &flip },
+            { MPV_RENDER_PARAM_INVALID, nullptr },
+        };
+        mpv_render_context_render(m_ctx, params);
+    }
+    if (m_own) {
+        // Slint samples the texture right after, in its own context
+        m_gl.Finish();
+        m_own->leave();
+    } else {
+        state.restore(m_gl);
+    }
+    if (fresh) {
+        // mpv renders top-down, the image's default origin
+        // shows from the next frame on (setting it redraws)
+        m_setFrame(slint::Image::create_from_borrowed_gl_2d_rgba_texture(
+            m_tex, { uint32_t(view.w), uint32_t(view.h) }));
+    }
     mpv_render_context_report_swap(m_ctx);
 }

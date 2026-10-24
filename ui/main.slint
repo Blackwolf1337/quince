@@ -150,10 +150,10 @@ export component MainWindow inherits Window {
     default-font-family: "Inter Variable";
     default-font-size: 14px;
 
-    // the video area for src/slint/VideoRenderer.cpp (in the Now Playing view)
+    // the video area for src/slint/VideoRenderer.cpp (in the Now Playing
+    // view), and the picture it renders for it
+    in property <image> video-frame;
     out property <bool> video-shown: now-playing.video-shown;
-    out property <length> video-x: now-playing.video-x;
-    out property <length> video-y: now-playing.video-y;
     out property <length> video-width: now-playing.video-width;
     out property <length> video-height: now-playing.video-height;
 
@@ -350,6 +350,7 @@ export component MainWindow inherits Window {
         now-playing := NowPlaying {
             width: 100%;
             height: 100%;
+            frame: root.video-frame;
         }
 
         Toast {

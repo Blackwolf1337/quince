@@ -84,9 +84,9 @@ component BackdropPart inherits Rectangle {
 
 export component NowPlaying inherits Rectangle {
     // where mpv draws (src/slint/VideoRenderer.cpp reads it through MainWindow)
+    // the picture mpv renders (src/slint/VideoRenderer.cpp)
+    in property <image> frame;
     out property <bool> video-shown: root.progress > 0 && root.picture && !App.mini-player-open;
-    out property <length> video-x: root.absolute-position.x + root.cover-x;
-    out property <length> video-y: root.absolute-position.y + root.cover-y;
     out property <length> video-width: root.cover-width;
     out property <length> video-height: root.cover-height;
 
@@ -116,10 +116,6 @@ export component NowPlaying inherits Rectangle {
     private property <length> cover-height: root.mix(root.from-size, slot.height);
 
     // the backdrop leaves the video's rect free
-    private property <length> hole-x: root.video-shown ? root.cover-x : 0;
-    private property <length> hole-y: root.video-shown ? root.cover-y : 0;
-    private property <length> hole-width: root.video-shown ? root.cover-width : 0;
-    private property <length> hole-height: root.video-shown ? root.cover-height : 0;
 
     // The first frame came: the cover stays until the video runs (opening
     // may load the track again with its picture).
@@ -214,7 +210,7 @@ export component NowPlaying inherits Rectangle {
         }
     }
 
-    // the backdrop around the hole, drawn as four parts
+    // the backdrop: the picture is a part of the scene, so it lies behind it
     Rectangle {
         opacity: root.progress;
 
@@ -222,46 +218,7 @@ export component NowPlaying inherits Rectangle {
             x: 0;
             y: 0;
             width: root.width;
-            height: root.hole-y;
-            cover-x: root.cover-x;
-            cover-y: root.cover-y;
-            cover-width: root.cover-width;
-            cover-height: root.cover-height;
-            ambient: root.video-ready ? App.ambient-strength : 0;
-            view-width: root.width;
-            view-height: root.height;
-        }
-        BackdropPart {
-            x: 0;
-            y: root.hole-y + root.hole-height;
-            width: root.width;
-            height: root.height - self.y;
-            cover-x: root.cover-x;
-            cover-y: root.cover-y;
-            cover-width: root.cover-width;
-            cover-height: root.cover-height;
-            ambient: root.video-ready ? App.ambient-strength : 0;
-            view-width: root.width;
-            view-height: root.height;
-        }
-        BackdropPart {
-            x: 0;
-            y: root.hole-y;
-            width: root.hole-x;
-            height: root.hole-height;
-            cover-x: root.cover-x;
-            cover-y: root.cover-y;
-            cover-width: root.cover-width;
-            cover-height: root.cover-height;
-            ambient: root.video-ready ? App.ambient-strength : 0;
-            view-width: root.width;
-            view-height: root.height;
-        }
-        BackdropPart {
-            x: root.hole-x + root.hole-width;
-            y: root.hole-y;
-            width: root.width - self.x;
-            height: root.hole-height;
+            height: root.height;
             cover-x: root.cover-x;
             cover-y: root.cover-y;
             cover-width: root.cover-width;
@@ -474,6 +431,24 @@ export component NowPlaying inherits Rectangle {
             horizontal-stretch: 1;
             min-width: 320px;
             preferred-width: 320px;
+        }
+    }
+
+    // the video (black around it), or the visualizer over the backdrop. No
+    // clip with round corners (QML has none either): FemtoVG keeps a clipped
+    // item as a layer and would not see the texture change
+    if root.video-shown: Rectangle {
+        x: root.cover-x;
+        y: root.cover-y;
+        width: root.cover-width;
+        height: root.cover-height;
+        background: Player.video-playing ? black : transparent;
+
+        Image {
+            width: 100%;
+            height: 100%;
+            source: root.frame;
+            image-fit: fill;
         }
     }
 
