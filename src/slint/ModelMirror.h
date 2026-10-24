@@ -19,7 +19,7 @@ struct ModelMirror
     using Model = slint::VectorModel<Row>;
     using Read = std::function<Data(const QModelIndex &)>;
     using Make = std::function<Row(const Data &)>;
-    using Attach = std::function<void(MainWindow &, std::shared_ptr<Model>)>;
+    using Attach = std::function<void(ui::MainWindow &, std::shared_ptr<Model>)>;
     // after a row was made, e.g. to load its picture (Slint thread)
     using Made = std::function<void(const std::shared_ptr<Model> &, size_t row, const Data &)>;
 
@@ -46,7 +46,7 @@ struct ModelMirror
         };
 
         auto reset = [window, model, readRows, slot, put, attach] {
-            bridge::toUi(window, [rows = readRows(0, model->rowCount() - 1), slot, put, attach](MainWindow &w) {
+            bridge::toUi(window, [rows = readRows(0, model->rowCount() - 1), slot, put, attach](ui::MainWindow &w) {
                 auto m = slot->lock();
                 if (!m) {
                     m = std::make_shared<Model>();
@@ -62,14 +62,14 @@ struct ModelMirror
         QObject::connect(model, &QAbstractItemModel::rowsMoved, model, reset);
         QObject::connect(model, &QAbstractItemModel::rowsInserted, model,
                          [window, readRows, slot, put](const QModelIndex &, int first, int last) {
-            bridge::toUi(window, [rows = readRows(first, last), first, slot, put](MainWindow &) {
+            bridge::toUi(window, [rows = readRows(first, last), first, slot, put](ui::MainWindow &) {
                 if (auto m = slot->lock())
                     put(m, size_t(first), rows, true);
             });
         });
         QObject::connect(model, &QAbstractItemModel::rowsRemoved, model,
                          [window, slot](const QModelIndex &, int first, int last) {
-            bridge::toUi(window, [first, last, slot](MainWindow &) {
+            bridge::toUi(window, [first, last, slot](ui::MainWindow &) {
                 if (auto m = slot->lock())
                     for (int i = last; i >= first; i--)
                         if (size_t(i) < m->row_count())
@@ -79,7 +79,7 @@ struct ModelMirror
         QObject::connect(model, &QAbstractItemModel::dataChanged, model,
                          [window, readRows, slot, put](const QModelIndex &topLeft, const QModelIndex &bottomRight) {
             bridge::toUi(window, [rows = readRows(topLeft.row(), bottomRight.row()), first = topLeft.row(), slot,
-                                  put](MainWindow &) {
+                                  put](ui::MainWindow &) {
                 if (auto m = slot->lock())
                     put(m, size_t(first), rows, false);
             });

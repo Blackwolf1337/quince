@@ -19,7 +19,7 @@ void SlintHost::setWindowState(bool visible, bool minimized)
 
 void SlintHost::toggleWindow()
 {
-    bridge::toUi(m_window, [this](MainWindow &w) {
+    bridge::toUi(m_window, [this](ui::MainWindow &w) {
         if (w.window().is_visible() && !w.window().is_minimized()) {
             w.hide();
             setWindowState(false, false);
@@ -33,7 +33,7 @@ void SlintHost::toggleWindow()
 
 void SlintHost::raiseWindow()
 {
-    bridge::toUi(m_window, [this](MainWindow &w) {
+    bridge::toUi(m_window, [this](ui::MainWindow &w) {
         w.show();
         w.window().set_minimized(false);
         setWindowState(true, false);
@@ -42,7 +42,7 @@ void SlintHost::raiseWindow()
 
 void SlintHost::setClipboard(const QString &text)
 {
-    bridge::toUi(m_window, [text = bridge::utf8(text)](MainWindow &w) { w.invoke_copy_text(bridge::str(text)); });
+    bridge::toUi(m_window, [text = bridge::utf8(text)](ui::MainWindow &w) { w.invoke_copy_text(bridge::str(text)); });
 }
 
 void SlintHost::openUrl(const QUrl &url)

@@ -6,27 +6,41 @@
 #include "app/AppController.h"
 #include "app/ColorTheme.h"
 #include "app/Settings.h"
+#include "download/Downloader.h"
 #include "integrations/Notifications.h"
+#include "integrations/SponsorBlock.h"
+#include "player/AudioEffects.h"
 #include "player/MpvPlayer.h"
 #include "player/Playback.h"
 #include "player/Queue.h"
+#include "ytm/Account.h"
 
 #include <QColor>
 #include <QCoreApplication>
+#include <QLocale>
+#include <QTime>
+#include <QTimer>
 
 using namespace bridge;
 
 namespace {
 
-// cover sizes in device pixels: the big one (the player bar shows it too), queue rows
-constexpr int kBigArt = 640;
-constexpr int kRowArt = 80;
+// cover sizes in logical pixels: the big one (the player bar shows it too),
+// queue rows, the account's photo
+constexpr int kBigArt = 320;
+constexpr int kRowArt = 44;
+constexpr int kPhoto = 30;
+constexpr int kClockMs = 1000;
 
 struct QueueData
 {
     std::string title;
     std::string subtitle;
     std::string artUrl;
+    std::string duration;
+    std::string kind;
+    bool explicitContent = false;
+    bool unavailable = false;
     bool current = false;
 };
 
@@ -35,12 +49,25 @@ struct TrackData
     std::string title;
     std::string subtitle;
     std::string artUrl;
+    std::string videoId;
+    std::string likeStatus;
 };
+
+struct PlaylistData
+{
+    std::string title;
+    std::string browseId;
+};
+
+std::string text(const QVariantMap &map, const char *key)
+{
+    return utf8(map.value(QLatin1String(key)).toString());
+}
 
 TrackData trackOf(const QVariantMap &track)
 {
-    return { utf8(track.value(QStringLiteral("title")).toString()), utf8(Notifications::artistsOf(track)),
-             utf8(track.value(QStringLiteral("thumbnail")).toString()) };
+    return { text(track, "title"), utf8(Notifications::artistsOf(track)), text(track, "thumbnail"),
+             text(track, "videoId"), text(track, "likeStatus") };
 }
 
 slint::Color color(const QColor &c)
@@ -48,65 +75,119 @@ slint::Color color(const QColor &c)
     return slint::Color::from_argb_uint8(uint8_t(c.alpha()), uint8_t(c.red()), uint8_t(c.green()), uint8_t(c.blue()));
 }
 
-void bindPlayer(MpvPlayer *player, Playback *playback, Settings *settings, const Window &window, ImageCache *images)
+QString fromSlint(const slint::SharedString &s)
 {
+    return QString::fromUtf8(s.data(), qsizetype(s.size()));
+}
+
+// the clock's text in the format the settings ask for; empty while it is off
+std::string clockText(const Settings *settings)
+{
+    if (!settings->clock())
+        return {};
+    const bool seconds = settings->clockSeconds();
+    QString format;
+    if (settings->clockHours() == u"24")
+        format = seconds ? QStringLiteral("HH:mm:ss") : QStringLiteral("HH:mm");
+    else if (settings->clockHours() == u"12")
+        format = seconds ? QStringLiteral("h:mm:ss AP") : QStringLiteral("h:mm AP");
+    else {
+        format = QLocale::system().timeFormat(QLocale::ShortFormat);
+        if (seconds)
+            format.replace(QStringLiteral("mm"), QStringLiteral("mm:ss"));
+    }
+    return utf8(QTime::currentTime().toString(format));
+}
+
+void bindPlayer(AppController &app, const Window &window, ImageCache *images)
+{
+    MpvPlayer *player = app.player();
+    Playback *playback = app.playback();
+    Settings *settings = app.settings();
+
     bind(window, player, &MpvPlayer::pausedChanged, [](MpvPlayer *p) { return p->paused(); },
-         [](MainWindow &w, bool v) { w.global<Player>().set_paused(v); });
+         [](ui::MainWindow &w, bool v) { w.global<ui::Player>().set_paused(v); });
     bind(window, player, &MpvPlayer::idleChanged, [](MpvPlayer *p) { return p->idle(); },
-         [](MainWindow &w, bool v) { w.global<Player>().set_idle(v); });
+         [](ui::MainWindow &w, bool v) { w.global<ui::Player>().set_idle(v); });
+    bind(window, player, &MpvPlayer::bufferingChanged, [](MpvPlayer *p) { return p->buffering(); },
+         [](ui::MainWindow &w, bool v) { w.global<ui::Player>().set_buffering(v); });
     bind(window, player, &MpvPlayer::positionChanged, [](MpvPlayer *p) { return float(p->position()); },
-         [](MainWindow &w, float v) { w.global<Player>().set_position(v); });
+         [](ui::MainWindow &w, float v) { w.global<ui::Player>().set_position(v); });
     bind(window, player, &MpvPlayer::durationChanged, [](MpvPlayer *p) { return float(p->duration()); },
-         [](MainWindow &w, float v) { w.global<Player>().set_duration(v); });
+         [](ui::MainWindow &w, float v) { w.global<ui::Player>().set_duration(v); });
+    bind(window, player, &MpvPlayer::mutedChanged, [](MpvPlayer *p) { return p->muted(); },
+         [](ui::MainWindow &w, bool v) { w.global<ui::Player>().set_muted(v); });
     bind(window, settings, &Settings::changed, [](Settings *s) { return float(s->volume()); },
-         [](MainWindow &w, float v) { w.global<Player>().set_volume(v); });
+         [](ui::MainWindow &w, float v) { w.global<ui::Player>().set_volume(v); });
+    bind(window, settings, &Settings::changed, [](Settings *s) { return float(s->volumeStep()); },
+         [](ui::MainWindow &w, float v) { w.global<ui::Player>().set_volume_step(v); });
+    bind(window, app.effects(), &AudioEffects::changed, [](AudioEffects *e) { return float(e->speed()); },
+         [](ui::MainWindow &w, float v) { w.global<ui::Player>().set_speed(v); });
 
     bind(window, playback, &Playback::loadingChanged, [](Playback *p) { return p->loading(); },
-         [](MainWindow &w, bool v) { w.global<Player>().set_loading(v); });
+         [](ui::MainWindow &w, bool v) { w.global<ui::Player>().set_loading(v); });
     bind(window, playback, &Playback::errorChanged, [](Playback *p) { return utf8(p->error()); },
-         [](MainWindow &w, const std::string &v) { w.global<Player>().set_error(str(v)); });
+         [](ui::MainWindow &w, const std::string &v) { w.global<ui::Player>().set_error(str(v)); });
     bind(window, playback, &Playback::queueStateChanged, [](Playback *p) { return p->hasNext(); },
-         [](MainWindow &w, bool v) { w.global<Player>().set_has_next(v); });
-    bind(window, playback, &Playback::queueStateChanged, [](Playback *p) { return p->hasPrevious(); },
-         [](MainWindow &w, bool v) { w.global<Player>().set_has_previous(v); });
+         [](ui::MainWindow &w, bool v) { w.global<ui::Player>().set_has_next(v); });
     bind(window, playback, &Playback::streamInfoChanged, [](Playback *p) { return p->videoPlaying(); },
-         [](MainWindow &w, bool v) { w.global<Player>().set_video_playing(v); });
+         [](ui::MainWindow &w, bool v) { w.global<ui::Player>().set_video_playing(v); });
+    bind(window, playback, &Playback::streamInfoChanged, [](Playback *p) { return utf8(p->streamInfo()); },
+         [](ui::MainWindow &w, const std::string &v) { w.global<ui::Player>().set_stream_info(str(v)); });
+    bind(window, playback->queue(), &Queue::currentChanged, [](Queue *q) { return q->current(); },
+         [](ui::MainWindow &w, int v) { w.global<ui::Player>().set_queue_current(v); });
+
+    auto shownArt = std::make_shared<std::string>(); // the cover asked for last (Slint thread only)
     bind(window, playback, &Playback::trackChanged, [](Playback *p) { return trackOf(p->track()); },
-         [images, window](MainWindow &w, const TrackData &t) {
-        w.global<Player>().set_title(str(t.title));
-        w.global<Player>().set_subtitle(str(t.subtitle));
-        const float scale = w.window().scale_factor();
-        images->get(t.artUrl, int(kBigArt * scale), [window](const slint::Image &image) {
-            if (auto ui = window.lock())
-                (*ui)->global<Player>().set_art(image);
+         [images, window, shownArt](ui::MainWindow &w, const TrackData &t) {
+        auto &p = w.global<ui::Player>();
+        p.set_title(str(t.title));
+        p.set_subtitle(str(t.subtitle));
+        p.set_video_id(str(t.videoId));
+        p.set_like_status(str(t.likeStatus));
+        if (*shownArt == t.artUrl)
+            return;
+        *shownArt = t.artUrl;
+        const int pixels = int(kBigArt * w.window().scale_factor());
+        images->get(t.artUrl, pixels, [window, shownArt, url = t.artUrl](const slint::Image &image) {
+            auto ui = window.lock();
+            // a later track may have asked for another cover meanwhile
+            if (ui && *shownArt == url)
+                (*ui)->global<ui::Player>().set_art(image);
         });
     });
 
-    ModelMirror<QueueData, QueueRow>::start(
+    ModelMirror<QueueData, ui::QueueRow>::start(
         window, playback->queue(),
         [](const QModelIndex &index) {
             const QVariantMap item = index.data(Queue::ItemRole).toMap();
-            return QueueData{ utf8(item.value(QStringLiteral("title")).toString()), utf8(Notifications::artistsOf(item)),
-                              utf8(item.value(QStringLiteral("thumbnail")).toString()),
+            return QueueData{ text(item, "title"), utf8(Notifications::artistsOf(item)), text(item, "thumbnail"),
+                              text(item, "duration"), text(item, "kind"),
+                              item.value(QStringLiteral("explicit")).toBool(),
+                              item.value(QStringLiteral("unavailable")).toBool(),
                               index.data(Queue::CurrentRole).toBool() };
         },
         [](const QueueData &d) {
-            QueueRow row;
+            ui::QueueRow row;
             row.title = str(d.title);
             row.subtitle = str(d.subtitle);
             row.art_url = str(d.artUrl);
+            row.duration = str(d.duration);
+            row.kind = str(d.kind);
+            row.explicit_ = d.explicitContent;
+            row.unavailable = d.unavailable;
             row.current = d.current;
             return row;
         },
-        [](MainWindow &w, std::shared_ptr<slint::VectorModel<QueueRow>> model) { w.global<Player>().set_queue(model); },
-        [images](const std::shared_ptr<slint::VectorModel<QueueRow>> &model, size_t, const QueueData &d) {
+        [](ui::MainWindow &w, std::shared_ptr<slint::VectorModel<ui::QueueRow>> model) { w.global<ui::Player>().set_queue(model); },
+        [images](const std::shared_ptr<slint::VectorModel<ui::QueueRow>> &model, size_t, const QueueData &d) {
             // rows move while the picture loads: it goes to every row with this cover
-            images->get(d.artUrl, kRowArt, [weak = std::weak_ptr(model), url = str(d.artUrl)](const slint::Image &image) {
+            images->get(d.artUrl, kRowArt * 2, [weak = std::weak_ptr(model), url = str(d.artUrl)](const slint::Image &image) {
                 auto m = weak.lock();
                 if (!m)
                     return;
                 for (size_t i = 0; i < m->row_count(); i++) {
-                    QueueRow row = *m->row_data(i);
+                    ui::QueueRow row = *m->row_data(i);
                     if (row.art_url == url) {
                         row.art = image;
                         m->set_row_data(i, row);
@@ -114,6 +195,93 @@ void bindPlayer(MpvPlayer *player, Playback *playback, Settings *settings, const
                 }
             });
         });
+}
+
+void bindAccount(Account *account, const Window &window, ImageCache *images)
+{
+    bind(window, account, &Account::signedInChanged, [](Account *a) { return a->signedIn(); },
+         [](ui::MainWindow &w, bool v) { w.global<ui::Account>().set_signed_in(v); });
+    struct Info
+    {
+        std::string name, handle, photo;
+    };
+    bind(window, account, &Account::infoChanged,
+         [](Account *a) { return Info{ utf8(a->name()), utf8(a->handle()), utf8(a->photo()) }; },
+         [images, window](ui::MainWindow &w, const Info &info) {
+        auto &a = w.global<ui::Account>();
+        a.set_name(str(info.name));
+        a.set_handle(str(info.handle));
+        const int pixels = int(kPhoto * w.window().scale_factor());
+        images->get(info.photo, pixels, [window](const slint::Image &image) {
+            if (auto ui = window.lock())
+                (*ui)->global<ui::Account>().set_photo(image);
+        });
+    });
+    bind(window, account, &Account::playlistsChanged,
+         [](Account *a) {
+        std::vector<PlaylistData> list;
+        for (const QVariant &v : a->playlists()) {
+            const QVariantMap p = v.toMap();
+            list.push_back({ text(p, "title"), text(p, "browseId") });
+        }
+        return list;
+    },
+         [](ui::MainWindow &w, const std::vector<PlaylistData> &list) {
+        auto model = std::make_shared<slint::VectorModel<ui::PlaylistEntry>>();
+        for (const PlaylistData &p : list) {
+            ui::PlaylistEntry entry;
+            entry.title = str(p.title);
+            entry.browse_id = str(p.browseId);
+            model->push_back(entry);
+        }
+        w.global<ui::Account>().set_playlists(model);
+    });
+}
+
+void bindApp(AppController &app, const Window &window)
+{
+    Settings *settings = app.settings();
+    bind(window, settings, &Settings::changed, [](Settings *s) { return s->compactSidebar(); },
+         [](ui::MainWindow &w, bool v) { w.global<ui::App>().set_compact_sidebar(v); });
+    bind(window, settings, &Settings::changed, [](Settings *s) { return s->coloredProgress(); },
+         [](ui::MainWindow &w, bool v) { w.global<ui::App>().set_colored_progress(v); });
+    bind(window, settings, &Settings::changed, [](Settings *s) { return s->videoMode(); },
+         [](ui::MainWindow &w, bool v) { w.global<ui::App>().set_video_mode(v); });
+    bind(window, app.downloads(), &Downloader::runningChanged, [](Downloader *d) { return d->running(); },
+         [](ui::MainWindow &w, int v) { w.global<ui::App>().set_downloads_running(v); });
+
+    // the clock: every second while it is on, and when the settings change
+    auto *clock = new QTimer(settings);
+    clock->setInterval(kClockMs);
+    auto tick = [window, settings] {
+        toUi(window, [t = clockText(settings)](ui::MainWindow &w) { w.global<ui::App>().set_clock(str(t)); });
+    };
+    QObject::connect(clock, &QTimer::timeout, settings, tick);
+    QObject::connect(settings, &Settings::changed, clock, [clock, settings, tick] {
+        settings->clock() ? clock->start() : clock->stop();
+        tick();
+    });
+    if (settings->clock())
+        clock->start();
+    tick();
+
+    // short messages for the toast; playback errors in red
+    auto toast = [window](const QString &message, bool error) {
+        toUi(window, [m = utf8(message), error](ui::MainWindow &w) {
+            auto &a = w.global<ui::App>();
+            a.set_toast(str(m));
+            a.set_toast_error(error);
+            a.set_toast_serial(a.get_toast_serial() + 1);
+        });
+    };
+    QObject::connect(&app, &AppController::message, &app, [toast](const QString &m) { toast(m, false); });
+    QObject::connect(app.account(), &Account::message, &app, [toast](const QString &m) { toast(m, false); });
+    QObject::connect(app.downloads(), &Downloader::message, &app, [toast](const QString &m) { toast(m, false); });
+    QObject::connect(app.sponsorBlock(), &SponsorBlock::skipped, &app, [toast](const QString &m) { toast(m, false); });
+    QObject::connect(app.playback(), &Playback::errorChanged, &app, [toast, playback = app.playback()] {
+        if (!playback->error().isEmpty())
+            toast(playback->error(), true);
+    });
 }
 
 void bindTheme(ColorTheme *theme, const Window &window)
@@ -124,12 +292,12 @@ void bindTheme(ColorTheme *theme, const Window &window)
     };
     bind(window, theme, &ColorTheme::colorsChanged,
          [](ColorTheme *t) { return Colors{ t->accent(), t->background(), t->surface(), t->surfaceHigh() }; },
-         [](MainWindow &w, const Colors &c) {
-        auto &theme = w.global<Theme>();
-        theme.set_accent(color(c.accent));
-        theme.set_background(color(c.background));
-        theme.set_surface(color(c.surface));
-        theme.set_surface_high(color(c.surfaceHigh));
+         [](ui::MainWindow &w, const Colors &c) {
+        auto &style = w.global<ui::Style>();
+        style.set_accent(color(c.accent));
+        style.set_background(color(c.background));
+        style.set_surface(color(c.surface));
+        style.set_surface_high(color(c.surfaceHigh));
     });
 }
 
@@ -138,11 +306,12 @@ void bindTray(MpvPlayer *player, Playback *playback, const Tray &tray)
     bind(tray, playback, &Playback::trackChanged,
          [](Playback *p) {
         const TrackData t = trackOf(p->track());
-        return t.title.empty() ? std::string("Nothing playing") : t.title + " - " + t.subtitle;
+        return t.title.empty() ? utf8(QCoreApplication::translate("Tray", "Nothing playing"))
+                               : t.title + " - " + t.subtitle;
     },
-         [](TrayIcon &t, const std::string &line) { t.set_now_playing(str(line)); });
+         [](ui::TrayIcon &t, const std::string &line) { t.set_now_playing(str(line)); });
     bind(tray, player, &MpvPlayer::pausedChanged, [](MpvPlayer *p) { return !p->paused() && !p->idle(); },
-         [](TrayIcon &t, bool playing) { t.set_playing(playing); });
+         [](ui::TrayIcon &t, bool playing) { t.set_playing(playing); });
 }
 
 // the Slint callbacks: they run on the Slint thread and post to the core
@@ -150,21 +319,44 @@ void connectCallbacks(AppController *app, const Window &window, const Tray &tray
 {
     MpvPlayer *player = app->player();
     Playback *playback = app->playback();
-    toUi(window, [app, player, playback](MainWindow &w) {
-        auto &p = w.global<Player>();
+    Settings *settings = app->settings();
+    AudioEffects *effects = app->effects();
+    Account *account = app->account();
+    toUi(window, [=](ui::MainWindow &w) {
+        auto &p = w.global<ui::Player>();
         p.on_toggle_pause([player] { toCore(player, [player] { player->togglePause(); }); });
         p.on_next([playback] { toCore(playback, [playback] { playback->next(); }); });
         p.on_previous([playback] { toCore(playback, [playback] { playback->previous(); }); });
         p.on_seek([player](float s) { toCore(player, [player, s] { player->seek(s); }); });
         p.on_set_volume([app](float v) { toCore(app, [app, v] { app->setVolumeSlider(v); }); });
+        p.on_set_muted([player](bool m) { toCore(player, [player, m] { player->setMuted(m); }); });
+        p.on_set_speed([effects](float s) { toCore(effects, [effects, s] { effects->setSpeed(s); }); });
         p.on_play_index([playback](int i) { toCore(playback, [playback, i] { playback->playIndex(i); }); });
-        p.on_play_text([playback](const slint::SharedString &text) {
-            toCore(playback, [playback, text = QString::fromUtf8(text.data(), qsizetype(text.size()))] {
-                playback->playText(text);
-            });
+        p.on_play_text([playback](const slint::SharedString &t) {
+            toCore(playback, [playback, t = fromSlint(t)] { playback->playText(t); });
+        });
+        p.on_rate([account, playback](const slint::SharedString &status) {
+            toCore(account, [account, playback, s = fromSlint(status)] { account->rate(playback->videoId(), s); });
+        });
+        p.on_shuffle_rest([playback] { toCore(playback, [playback] { playback->queue()->shuffleRest(); }); });
+        p.on_clear_rest([playback] { toCore(playback, [playback] { playback->queue()->clearRest(); }); });
+
+        auto &a = w.global<ui::Account>();
+        a.on_sign_in([account] { toCore(account, [account] { account->signIn(); }); });
+        a.on_sign_out([account] { toCore(account, [account] { account->signOut(); }); });
+
+        auto &appState = w.global<ui::App>();
+        appState.on_set_video_mode([settings](bool on) { toCore(settings, [settings, on] { settings->setVideoMode(on); }); });
+        appState.on_section_requested([window](const slint::SharedString &name, const slint::SharedString &) {
+            // the pages come with the browse view; until then only the mark moves
+            if (auto ui = window.lock())
+                (*ui)->global<ui::App>().set_section(name);
+        });
+        appState.on_request_dialog([app](const slint::SharedString &name) {
+            toCore(app, [app, n = fromSlint(name)] { app->requestDialog(n); });
         });
     });
-    toUi(tray, [player, playback, host](TrayIcon &t) {
+    toUi(tray, [player, playback, host](ui::TrayIcon &t) {
         t.on_toggle_pause([player] { toCore(player, [player] { player->togglePause(); }); });
         t.on_next([playback] { toCore(playback, [playback] { playback->next(); }); });
         t.on_previous([playback] { toCore(playback, [playback] { playback->previous(); }); });
@@ -177,11 +369,11 @@ void bindVideo(MpvPlayer *player, const Window &window, VideoRenderer *video)
 {
     // the renderer only knows the deck's mpv handle; the handle is thread safe
     auto source = [player, window, video] {
-        toUi(window, [video, mpv = player->renderHandle()](MainWindow &) { video->setSource(mpv); });
+        toUi(window, [video, mpv = player->renderHandle()](ui::MainWindow &) { video->setSource(mpv); });
     };
     QObject::connect(player, &MpvPlayer::activeDeckChanged, player, source);
     source();
-    toUi(window, [player, video](MainWindow &) {
+    toUi(window, [player, video](ui::MainWindow &) {
         video->onOutput = [player](bool on) { toCore(player, [player, on] { player->setVideoOutput(on); }); };
     });
 }
@@ -191,7 +383,9 @@ void bindVideo(MpvPlayer *player, const Window &window, VideoRenderer *video)
 void bindCore(AppController &app, const Window &window, const Tray &tray, ImageCache *images, VideoRenderer *video,
               SlintHost *host)
 {
-    bindPlayer(app.player(), app.playback(), app.settings(), window, images);
+    bindPlayer(app, window, images);
+    bindAccount(app.account(), window, images);
+    bindApp(app, window);
     bindTheme(app.theme(), window);
     bindTray(app.player(), app.playback(), tray);
     bindVideo(app.player(), window, video);

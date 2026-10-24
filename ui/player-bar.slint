@@ -1,0 +1,232 @@
+// Transport, what plays, volume and the queue switch, along the bottom
+// (qml/PlayerBar.qml).
+
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { Art, PlayButton, ThinSlider, ToolButton } from "widgets.slint";
+import { Account, App, Player } from "globals.slint";
+
+export component PlayerBar inherits Rectangle {
+    callback now-playing-requested();
+    callback mini-player-requested();
+
+    height: 92px;
+
+    // seek line along the top edge; thicker with a knob under the pointer
+    seek := ThinSlider {
+        x: 12px;
+        y: 0;
+        width: parent.width - 24px;
+        minimum: 0;
+        maximum: Math.max(Player.duration, 0.01);
+        value: Player.position;
+        enabled: Player.duration > 0;
+        fill: App.colored-progress ? Style.accent : Style.text;
+        released(value) => {
+            Player.seek(value);
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: 16px;
+        padding-right: 18px;
+        padding-top: 14px;
+        spacing: 8px;
+        alignment: stretch;
+
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.previous;
+            enabled: Player.queue.length > 0;
+            clicked => {
+                Player.previous();
+            }
+        }
+        PlayButton {
+            y: (parent.height - self.height) / 2;
+            playing: !Player.paused && !Player.idle;
+            enabled: !Player.idle;
+            play-icon: Icons.play;
+            pause-icon: Icons.pause;
+            clicked => {
+                Player.toggle-pause();
+            }
+        }
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.next;
+            enabled: Player.has-next;
+            clicked => {
+                Player.next();
+            }
+        }
+        Text {
+            text: Player.time(seek.shown) + " / " + Player.time(Player.duration);
+            color: Style.text-dim;
+            font-size: 13px;
+            vertical-alignment: center;
+        }
+
+        Rectangle {
+            width: 24px;
+        }
+
+        if Player.video-id != "": Rectangle {
+            width: 56px;
+            height: 56px;
+            y: (parent.height - self.height) / 2;
+
+            Art {
+                width: 100%;
+                height: 100%;
+                corner: 8px;
+                source: Player.art;
+                zoom: cover-touch.has-hover ? 1.08 : 1;
+                animate zoom { duration: Style.normal; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+            }
+            if Player.loading || Player.buffering: Rectangle {
+                border-radius: 8px;
+                background: #00000060;
+                Text {
+                    text: "…";
+                    color: Style.text;
+                    font-size: 22px;
+                }
+            }
+            cover-touch := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.now-playing-requested();
+                }
+            }
+        }
+
+        VerticalLayout {
+            horizontal-stretch: 1;
+            min-width: 120px;
+            alignment: center;
+            spacing: 2px;
+            Text {
+                text: Player.title;
+                color: Style.text;
+                font-size: 15px;
+                font-weight: 600;
+                overflow: elide;
+                TouchArea {
+                    clicked => {
+                        root.now-playing-requested();
+                    }
+                }
+            }
+            Text {
+                text: Player.subtitle;
+                color: Style.text-dim;
+                font-size: 13px;
+                overflow: elide;
+            }
+        }
+
+        if Account.signed-in && Player.video-id != "": ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.like;
+            checked: Player.like-status == "LIKE";
+            clicked => {
+                Player.rate(self.checked ? "INDIFFERENT" : "LIKE");
+            }
+        }
+        if Account.signed-in && Player.video-id != "": ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.dislike;
+            checked: Player.like-status == "DISLIKE";
+            clicked => {
+                Player.rate(self.checked ? "INDIFFERENT" : "DISLIKE");
+            }
+        }
+
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.video;
+            checked: App.video-mode;
+            clicked => {
+                App.set-video-mode(!App.video-mode);
+                // the picture is in the Now Playing view
+                if !App.video-mode {
+                    root.now-playing-requested();
+                }
+            }
+        }
+
+        if Player.video-id != "" && Player.stream-info != "": Text {
+            text: Player.stream-info;
+            color: Style.text-dim;
+            font-size: 11px;
+            opacity: 0.7;
+            vertical-alignment: center;
+        }
+
+        // playback speed; shown when it is not 1x, the menu sets it
+        if Player.speed != 1: speed := ToolButton {
+            y: (parent.height - self.height) / 2;
+            text: Math.round(Player.speed * 100) / 100 + "×";
+            clicked => {
+                speed-menu.show({ x: 0, y: -200px });
+            }
+            speed-menu := ContextMenuArea {
+                Menu {
+                    MenuItem { title: "0.75×"; activated => { Player.set-speed(0.75); } }
+                    MenuItem { title: "0.9×"; activated => { Player.set-speed(0.9); } }
+                    MenuItem { title: "1×"; activated => { Player.set-speed(1); } }
+                    MenuItem { title: "1.1×"; activated => { Player.set-speed(1.1); } }
+                    MenuItem { title: "1.25×"; activated => { Player.set-speed(1.25); } }
+                    MenuItem { title: "1.5×"; activated => { Player.set-speed(1.5); } }
+                }
+            }
+        }
+
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Player.muted ? Icons.volume-off : Icons.volume;
+            clicked => {
+                Player.set-muted(!Player.muted);
+            }
+        }
+        ThinSlider {
+            width: 120px;
+            y: (parent.height - self.height) / 2;
+            minimum: 0;
+            maximum: 100;
+            step: Player.volume-step;
+            value: Player.volume;
+            fill: Style.accent;
+            moved(value) => {
+                Player.set-volume(value);
+            }
+        }
+
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.queue;
+            checked: App.queue-open;
+            clicked => {
+                App.queue-open = !App.queue-open;
+            }
+        }
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.miniplayer;
+            enabled: Player.video-id != "";
+            clicked => {
+                root.mini-player-requested();
+            }
+        }
+        ToolButton {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.chevron-left;
+            rotation: 90;
+            enabled: Player.video-id != "";
+            clicked => {
+                root.now-playing-requested();
+            }
+        }
+    }
+}

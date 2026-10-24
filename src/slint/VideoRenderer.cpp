@@ -98,7 +98,7 @@ struct VideoRenderer::OwnContext
 };
 #endif
 
-VideoRenderer::VideoRenderer(slint::ComponentWeakHandle<MainWindow> window)
+VideoRenderer::VideoRenderer(slint::ComponentWeakHandle<ui::MainWindow> window)
     : m_window(std::move(window))
 {
 }
@@ -145,7 +145,7 @@ void VideoRenderer::setSource(mpv_handle *mpv)
 }
 
 // the video rect in framebuffer pixels, y counted from the bottom
-VideoRenderer::Rect VideoRenderer::videoRect(const MainWindow &w) const
+VideoRenderer::Rect VideoRenderer::videoRect(const ui::MainWindow &w) const
 {
     const float scale = w.window().scale_factor();
     const auto size = w.window().size();
@@ -156,7 +156,7 @@ VideoRenderer::Rect VideoRenderer::videoRect(const MainWindow &w) const
     return { x, int(size.height) - y - vh, vw, vh };
 }
 
-bool VideoRenderer::ensureContext(const MainWindow &w)
+bool VideoRenderer::ensureContext(const ui::MainWindow &w)
 {
     if (m_current != m_wanted)
         freeContext();
@@ -192,7 +192,7 @@ bool VideoRenderer::ensureContext(const MainWindow &w)
     m_current = m_wanted;
     // mpv calls this from its own threads: a redraw on the Slint thread
     mpv_render_context_set_update_callback(m_ctx, [](void *data) {
-        auto weak = *static_cast<slint::ComponentWeakHandle<MainWindow> *>(data);
+        auto weak = *static_cast<slint::ComponentWeakHandle<ui::MainWindow> *>(data);
         slint::invoke_from_event_loop([weak] {
             if (auto w = weak.lock())
                 (*w)->window().request_redraw();

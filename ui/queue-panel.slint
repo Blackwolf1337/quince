@@ -1,0 +1,139 @@
+// Beside the pages: the play queue, and the lyrics (qml/QueuePanel.qml).
+
+import { ListView } from "std-widgets.slint";
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { ToolButton } from "widgets.slint";
+import { ItemRow } from "item-row.slint";
+import { App, Player } from "globals.slint";
+
+component Tab inherits Rectangle {
+    in property <string> text;
+    in property <bool> selected;
+    callback clicked();
+
+    height: 44px;
+    Text {
+        text: root.text;
+        color: root.selected ? Style.accent : Style.text-dim;
+        font-size: 14px;
+        font-weight: 600;
+    }
+    Rectangle {
+        y: parent.height - self.height;
+        height: 2px;
+        width: root.selected ? parent.width : 0px;
+        x: (parent.width - self.width) / 2;
+        background: Style.accent;
+        animate width { duration: Style.normal; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+    }
+    TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+export component QueuePanel inherits VerticalLayout {
+    // rows are this tall; the current one is kept in view
+    private property <length> row-height: 56px;
+    private property <int> current: Player.queue-current;
+
+    changed current => {
+        let top = root.current * root.row-height;
+        if top < -list.content-y {
+            list.content-y = -top;
+        } else if top + root.row-height > -list.content-y + list.visible-height {
+            list.content-y = -(top + root.row-height - list.visible-height);
+        }
+    }
+
+    HorizontalLayout {
+        Tab {
+            text: @tr("Up next");
+            selected: App.queue-tab == 0;
+            clicked => {
+                App.queue-tab = 0;
+            }
+        }
+        Tab {
+            text: @tr("Lyrics");
+            selected: App.queue-tab == 1;
+            clicked => {
+                App.queue-tab = 1;
+            }
+        }
+    }
+
+    Rectangle {
+        vertical-stretch: 1;
+
+        VerticalLayout {
+            width: 100%;
+            height: 100%;
+            visible: App.queue-tab == 0;
+
+            HorizontalLayout {
+                padding-left: 18px;
+                padding-right: 8px;
+                padding-top: 4px;
+                Text {
+                    horizontal-stretch: 1;
+                    text: Player.queue.length > 0 ? @tr("{n} track" | "{n} tracks" % Player.queue.length) : "";
+                    color: Style.text-dim;
+                    font-size: 13px;
+                    vertical-alignment: center;
+                }
+                ToolButton {
+                    icon: Icons.shuffle;
+                    enabled: Player.queue.length > Player.queue-current + 2;
+                    clicked => {
+                        Player.shuffle-rest();
+                    }
+                }
+                ToolButton {
+                    text: @tr("Clear");
+                    enabled: Player.queue.length > 1;
+                    clicked => {
+                        Player.clear-rest();
+                    }
+                }
+            }
+
+            list := ListView {
+                vertical-stretch: 1;
+                for entry[index] in Player.queue: Rectangle {
+                    height: root.row-height;
+                    ItemRow {
+                        x: 6px;
+                        width: parent.width - 12px;
+                        height: root.row-height;
+                        entry: entry;
+                        opacity: index < Player.queue-current ? 0.5 : 1;
+                        activated => {
+                            Player.play-index(index);
+                        }
+                    }
+                }
+            }
+
+            if Player.queue.length == 0: Text {
+                text: @tr("Nothing queued. Play a song, album or playlist.");
+                color: Style.text-dim;
+                wrap: word-wrap;
+            }
+        }
+
+        // the lyrics view comes with the Now Playing port
+        Text {
+            width: 100%;
+            height: 100%;
+            visible: App.queue-tab == 1;
+            text: @tr("Lyrics");
+            color: Style.text-dim;
+            horizontal-alignment: center;
+            vertical-alignment: center;
+        }
+    }
+}

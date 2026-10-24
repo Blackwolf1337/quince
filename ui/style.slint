@@ -1,0 +1,28 @@
+// Colors and sizes of the interface (qml/Style.qml). The four colors come
+// from the cover of the playing track (ColorTheme), the rest is fixed.
+
+export global Style {
+    in property <color> accent: #ffc83d;
+    in property <color> background: #101014;
+    in property <color> surface: #1b1b21;
+    in property <color> surface-high: #26262e;
+
+    out property <color> hover: #ffffff12;
+    out property <color> pressed: #ffffff1e;
+    out property <color> line: #ffffff14;
+    out property <color> placeholder: #24242a;
+    out property <color> text: #f4f4f6;
+    out property <color> text-dim: #9c9ca8;
+
+    // left and right page margin
+    out property <length> margin: 28px;
+    out property <length> card-width: 172px;
+    out property <length> wide-card-width: 300px;
+    out property <length> radius: 10px;
+    out property <length> radius-large: 16px;
+
+    // durations of the motion
+    out property <duration> fast: 140ms;
+    out property <duration> normal: 260ms;
+    out property <duration> slow: 420ms;
+}

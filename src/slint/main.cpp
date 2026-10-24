@@ -5,18 +5,18 @@
 #include "Bindings.h"
 #include "ImageCache.h"
 #include "SlintHost.h"
+#include "TestDriver.h"
 #include "VideoRenderer.h"
 #include "app/AppController.h"
 #include "app/CommandLine.h"
 #include "player/MpvPlayer.h"
 
 #include <QCoreApplication>
-#include <QImage>
+#include <QFile>
 #include <QTimer>
 
 #include <chrono>
 #include <clocale>
-#include <cstring>
 #include <cstdio>
 #include <mutex>
 #include <optional>
@@ -73,27 +73,13 @@ private:
     bool m_quit = false;
 };
 
-// test runs: a picture of the window (without the video under it) as PNG
-void saveScreenshot(MainWindow &w, const QString &file, QObject *coreObject)
-{
-    auto shot = w.window().take_snapshot();
-    if (!shot)
-        return;
-    const int width = int(shot->width()), height = int(shot->height());
-    QImage image(width, height, QImage::Format_RGBA8888);
-    for (int y = 0; y < height; y++)
-        std::memcpy(image.scanLine(y), shot->begin() + size_t(y) * width, size_t(width) * 4);
-    // the PNG is written on the core thread; Slint's pixels were copied
-    bridge::toCore(coreObject, [image, file] { image.save(file); });
-}
-
 } // namespace
 
 int main(int argc, char *argv[])
 {
     // the window first: it shows while the core starts
-    std::optional<slint::ComponentHandle<MainWindow>> window(MainWindow::create());
-    std::optional<slint::ComponentHandle<TrayIcon>> tray(TrayIcon::create());
+    std::optional<slint::ComponentHandle<ui::MainWindow>> window(ui::MainWindow::create());
+    std::optional<slint::ComponentHandle<ui::TrayIcon>> tray(ui::TrayIcon::create());
     const bridge::Window weakWindow(*window);
     const bridge::Tray weakTray(*tray);
 
@@ -117,14 +103,21 @@ int main(int argc, char *argv[])
         images.startCore(&app);
         bindCore(controller, weakWindow, weakTray, &images, &video, &host);
 
+        if (!line.steps.isEmpty()) {
+            QFile script(line.steps);
+            if (script.open(QIODevice::ReadOnly)) {
+                const QStringList lines = QString::fromUtf8(script.readAll()).split(u'\n');
+                (new TestDriver(weakWindow, &controller, lines, &app))->start();
+            }
+        }
         if (line.quitAfterMs >= 0) {
             QTimer::singleShot(line.quitAfterMs, &app, [&app, weakWindow, shot = line.screenshot, &controller] {
                 const MpvPlayer *player = controller.player();
                 qInfo("test: position %.1f duration %.1f paused %d idle %d", player->position(), player->duration(),
                       player->paused(), player->idle());
-                bridge::toUi(weakWindow, [shot, &app](MainWindow &w) {
+                bridge::toUi(weakWindow, [shot, &app](ui::MainWindow &w) {
                     if (!shot.isEmpty())
-                        saveScreenshot(w, shot, &app);
+                        TestDriver::screenshot(w, shot, &app);
                     slint::quit_event_loop();
                 });
             });

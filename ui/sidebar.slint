@@ -1,0 +1,202 @@
+// Sections, the account's playlists, settings and who is signed in
+// (qml/Sidebar.qml). Compact, it shows the icons only.
+
+import { ListView } from "std-widgets.slint";
+import { Style } from "style.slint";
+import { Icons } from "icons.slint";
+import { Art, Separator } from "widgets.slint";
+import { Account, App } from "globals.slint";
+
+component SideButton inherits Rectangle {
+    in property <image> icon;
+    // a round picture in the icon's place (the account's photo)
+    in property <image> photo;
+    in property <string> text;
+    in property <bool> selected;
+    in property <bool> enabled: true;
+    in property <bool> compact;
+    in property <length> font-size: 14px;
+    callback clicked();
+
+    height: 44px;
+    border-radius: Style.radius;
+    background: root.selected ? Style.accent.with-alpha(0.14) : touch.pressed ? Style.pressed : touch.has-hover ? Style.hover : transparent;
+    opacity: root.enabled ? 1 : 0.38;
+    animate background { duration: Style.fast; }
+
+    // the mark of the open section
+    Rectangle {
+        x: 0;
+        width: 3px;
+        height: root.selected ? 18px : 0px;
+        border-radius: 2px;
+        background: Style.accent;
+        animate height { duration: Style.normal; easing: ease-out-back; }
+    }
+
+    HorizontalLayout {
+        padding-left: root.compact ? (root.width - 22px) / 2 : 14px;
+        padding-right: 10px;
+        spacing: 14px;
+        if root.photo.width > 0: Art {
+            width: 30px;
+            height: 30px;
+            y: (parent.height - self.height) / 2;
+            source: root.photo;
+            round: true;
+        }
+        if root.photo.width == 0 && root.icon.width > 0: Image {
+            width: 22px;
+            height: 22px;
+            y: (parent.height - self.height) / 2;
+            source: root.icon;
+            colorize: root.selected ? Style.accent : Style.text;
+        }
+        if !root.compact: Text {
+            text: root.text;
+            color: Style.text;
+            font-size: root.font-size;
+            font-weight: root.selected ? 600 : 400;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+component SideItem inherits SideButton {
+    in property <string> name;
+    in property <string> browse-id;
+
+    selected: App.section == root.name;
+    clicked => {
+        App.section-requested(root.name, root.browse-id);
+    }
+}
+
+export component Sidebar inherits VerticalLayout {
+    in property <bool> compact: App.compact-sidebar;
+
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-bottom: 10px;
+    padding-top: 4px;
+    spacing: 2px;
+
+    SideItem {
+        name: "home";
+        text: @tr("Home");
+        icon: Icons.home;
+        compact: root.compact;
+    }
+    SideItem {
+        name: "explore";
+        browse-id: "FEmusic_explore";
+        text: @tr("Explore");
+        icon: Icons.explore;
+        compact: root.compact;
+    }
+    SideItem {
+        name: "library";
+        browse-id: "FEmusic_library_landing";
+        text: @tr("Library");
+        icon: Icons.library;
+        enabled: Account.signed-in;
+        compact: root.compact;
+    }
+    SideItem {
+        name: "liked";
+        browse-id: "VLLM";
+        text: @tr("Liked songs");
+        icon: Icons.heart;
+        enabled: Account.signed-in;
+        compact: root.compact;
+    }
+    SideItem {
+        name: "history";
+        browse-id: "FEmusic_history";
+        text: @tr("History");
+        icon: Icons.history;
+        enabled: Account.signed-in;
+        compact: root.compact;
+    }
+    SideItem {
+        name: "downloads";
+        text: App.downloads-running > 0 ? @tr("Downloads ({})", App.downloads-running) : @tr("Downloads");
+        icon: Icons.download;
+        compact: root.compact;
+    }
+
+    if Account.signed-in: Separator {
+        // the layout's padding plus this gives the QML margin of 16
+        width: parent.width - 12px;
+        x: 6px;
+    }
+    if Account.signed-in: Rectangle {
+        height: 12px;
+    }
+
+    ListView {
+        vertical-stretch: 1;
+        visible: !root.compact;
+        for playlist in Account.playlists: SideButton {
+            height: 38px;
+            text: playlist.title;
+            font-size: 13px;
+            selected: App.section == playlist.browse-id;
+            clicked => {
+                App.section-requested(playlist.browse-id, playlist.browse-id);
+            }
+        }
+    }
+    if root.compact: Rectangle {
+        vertical-stretch: 1;
+    }
+
+    SideButton {
+        text: @tr("Settings");
+        icon: Icons.settings;
+        compact: root.compact;
+        clicked => {
+            App.request-dialog("settings");
+        }
+    }
+
+    // who is signed in, or the way to sign in
+    account := SideButton {
+        height: 52px;
+        text: Account.signed-in ? (Account.name != "" ? Account.name : @tr("Signed in")) : @tr("Sign in");
+        icon: Icons.account;
+        photo: Account.signed-in ? Account.photo : @image-url("");
+        compact: root.compact;
+        clicked => {
+            if Account.signed-in {
+                account-menu.show({ x: 0, y: -40px });
+            } else {
+                App.request-dialog("signin");
+            }
+        }
+
+        account-menu := ContextMenuArea {
+            Menu {
+                MenuItem {
+                    title: Account.handle != "" ? Account.handle : Account.name;
+                    enabled: false;
+                }
+                MenuItem {
+                    title: @tr("Sign out");
+                    activated => {
+                        Account.sign-out();
+                    }
+                }
+            }
+        }
+    }
+}

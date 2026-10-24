@@ -1,0 +1,201 @@
+// Small controls shared by the views.
+
+import { Style } from "style.slint";
+
+// An icon (or a short text) that reacts to the pointer; checked shows it lit.
+export component ToolButton inherits Rectangle {
+    in property <image> icon;
+    in property <string> text;
+    in property <length> icon-size: 20px;
+    in property <bool> enabled: true;
+    in property <bool> checked;
+    in property <float> rotation;
+    out property <bool> hovered: touch.has-hover;
+    callback clicked();
+
+    width: root.text != "" ? Math.max(40px, label.preferred-width + 20px) : 40px;
+    height: 40px;
+    border-radius: self.height / 2;
+    background: touch.pressed ? Style.pressed : touch.has-hover && root.enabled ? Style.hover : transparent;
+    opacity: root.enabled ? 1 : 0.38;
+    animate background { duration: Style.fast; }
+
+    if root.text == "": Image {
+        width: root.icon-size;
+        height: root.icon-size;
+        source: root.icon;
+        colorize: root.checked ? Style.accent : Style.text;
+        transform-rotation: root.rotation * 1deg;
+    }
+    label := Text {
+        visible: root.text != "";
+        text: root.text;
+        color: root.checked ? Style.accent : Style.text;
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+}
+
+// The big round play/pause button.
+export component PlayButton inherits Rectangle {
+    in property <bool> playing;
+    in property <bool> enabled: true;
+    in property <image> play-icon;
+    in property <image> pause-icon;
+    callback clicked();
+
+    width: 52px;
+    height: 52px;
+    border-radius: self.width / 2;
+    background: root.enabled ? Style.accent : #ffffff33;
+    animate background { duration: Style.slow; }
+
+    Image {
+        width: 26px;
+        height: 26px;
+        source: root.playing ? root.pause-icon : root.play-icon;
+        colorize: #111114;
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        clicked => {
+            root.clicked();
+        }
+    }
+
+    states [
+        down when touch.pressed: {
+            width: 48px;
+            height: 48px;
+        }
+        over when touch.has-hover: {
+            width: 55px;
+            height: 55px;
+        }
+    ]
+    animate width, height { duration: Style.fast; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+}
+
+// Cover art; round for artists. The placeholder shows until the picture is there.
+export component Art inherits Rectangle {
+    in property <image> source;
+    in property <bool> round;
+    in property <length> corner: 6px;
+    in property <float> zoom: 1;
+
+    border-radius: root.round ? self.width / 2 : root.corner;
+    background: Style.placeholder;
+    clip: true;
+
+    Image {
+        width: parent.width * root.zoom;
+        height: parent.height * root.zoom;
+        x: (parent.width - self.width) / 2;
+        y: (parent.height - self.height) / 2;
+        source: root.source;
+        image-fit: cover;
+        opacity: root.source.width > 0 ? 1 : 0;
+        animate opacity { duration: Style.normal; easing: cubic-bezier(0.33, 1, 0.68, 1); }
+    }
+}
+
+// A thin line between groups.
+export component Separator inherits Rectangle {
+    height: 1px;
+    background: Style.line;
+}
+
+// A thin line with a knob under the pointer: the seek line and the volume.
+// value follows the model until the knob is pressed; moved() while dragging,
+// released() at the end, and the wheel steps by step.
+export component ThinSlider inherits Rectangle {
+    in property <float> value;
+    in property <float> minimum: 0;
+    in property <float> maximum: 1;
+    in property <float> step: 0;
+    in property <bool> enabled: true;
+    in property <color> fill: Style.text;
+    in property <length> thickness: 3px;
+    in property <length> active-thickness: 6px;
+    out property <bool> pressed: touch.pressed;
+    out property <bool> active: touch.has-hover || touch.pressed;
+    // the value under the knob while dragging, else the model's
+    out property <float> shown: touch.pressed ? root.dragged : root.value;
+    callback moved(float);
+    callback released(float);
+
+    private property <float> dragged;
+    private property <float> span: Math.max(root.maximum - root.minimum, 0.0001);
+    private property <float> fraction: Math.clamp((root.shown - root.minimum) / root.span, 0, 1);
+
+    height: 18px;
+    background: transparent;
+    opacity: root.enabled ? 1 : 0.5;
+
+    function at(x: length) -> float {
+        return Math.clamp(root.minimum + x / root.width * root.span, root.minimum, root.maximum);
+    }
+
+    track := Rectangle {
+        y: (parent.height - self.height) / 2;
+        height: root.active ? root.active-thickness : root.thickness;
+        border-radius: self.height / 2;
+        background: #ffffff26;
+        animate height { duration: Style.fast; }
+
+        Rectangle {
+            x: 0;
+            width: parent.width * root.fraction;
+            border-radius: parent.border-radius;
+            background: root.fill;
+        }
+    }
+    Rectangle {
+        x: root.width * root.fraction - self.width / 2;
+        y: (parent.height - self.height) / 2;
+        width: root.active ? 14px : 0px;
+        height: self.width;
+        border-radius: self.width / 2;
+        background: Style.text;
+        animate width { duration: Style.fast; easing: ease-out-back; }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: pointer;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                root.dragged = root.at(self.mouse-x);
+                root.moved(root.dragged);
+            }
+            if event.kind == PointerEventKind.up && event.button == PointerEventButton.left {
+                root.released(root.dragged);
+            }
+        }
+        moved => {
+            if self.pressed {
+                root.dragged = root.at(self.mouse-x);
+                root.moved(root.dragged);
+            }
+        }
+        scroll-event(event) => {
+            if root.step <= 0 || !root.enabled {
+                return reject;
+            }
+            let next = Math.clamp(root.value + (event.delta-y > 0 ? root.step : -root.step), root.minimum, root.maximum);
+            root.moved(next);
+            root.released(next);
+            return accept;
+        }
+    }
+}

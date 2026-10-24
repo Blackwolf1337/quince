@@ -15,8 +15,8 @@
 
 namespace bridge {
 
-using Window = slint::ComponentWeakHandle<MainWindow>;
-using Tray = slint::ComponentWeakHandle<TrayIcon>;
+using Window = slint::ComponentWeakHandle<ui::MainWindow>;
+using Tray = slint::ComponentWeakHandle<ui::TrayIcon>;
 
 // f(component) on the Slint thread, if the component still exists
 template<typename Component, typename F>

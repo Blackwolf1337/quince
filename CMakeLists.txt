@@ -94,6 +94,8 @@ qt_add_library(quince_core STATIC
     src/app/Language.cpp
     src/app/Settings.h
     src/app/Settings.cpp
+    src/app/TestCommands.h
+    src/app/TestCommands.cpp
     src/app/UiHost.h
     src/download/AudioFile.h
     src/download/AudioFile.cpp
@@ -372,10 +374,12 @@ if(QUINCE_SLINT)
         src/slint/ModelMirror.h
         src/slint/SlintHost.h
         src/slint/SlintHost.cpp
+        src/slint/TestDriver.h
+        src/slint/TestDriver.cpp
         src/slint/VideoRenderer.h
         src/slint/VideoRenderer.cpp
     )
-    slint_target_sources(quince-slint ui/main.slint)
+    slint_target_sources(quince-slint ui/main.slint NAMESPACE ui)
     set_property(TARGET quince-slint PROPERTY SLINT_EMBED_RESOURCES embed-files)
     target_include_directories(quince-slint PRIVATE src/slint)
     if(NOT MSVC)

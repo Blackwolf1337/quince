@@ -9,7 +9,7 @@ struct mpv_handle;
 struct mpv_render_context;
 
 // Draws mpv's picture under the Slint items, into the rect of the window's
-// video area (MainWindow.video-*). Slint's rendering notifier: runs on the
+// video area (ui::MainWindow.video-*). Slint's rendering notifier: runs on the
 // Slint thread with Slint's GL context current.
 //
 // On Linux mpv renders in an EGL context of its own that shares objects with
@@ -19,7 +19,7 @@ struct mpv_render_context;
 class VideoRenderer
 {
 public:
-    explicit VideoRenderer(slint::ComponentWeakHandle<MainWindow> window);
+    explicit VideoRenderer(slint::ComponentWeakHandle<ui::MainWindow> window);
     ~VideoRenderer();
 
     void operator()(slint::RenderingState state, slint::GraphicsAPI api);
@@ -38,15 +38,15 @@ private:
     };
     struct OwnContext;
 
-    Rect videoRect(const MainWindow &w) const;
-    bool ensureContext(const MainWindow &w);
+    Rect videoRect(const ui::MainWindow &w) const;
+    bool ensureContext(const ui::MainWindow &w);
     void freeContext();
     void ensureFbo(int w, int h);
     void render();
     // mpv into the video texture; leaves it bound for reading in Slint's context
     void renderInto(const Rect &r);
 
-    slint::ComponentWeakHandle<MainWindow> m_window;
+    slint::ComponentWeakHandle<ui::MainWindow> m_window;
     gl::Functions m_gl;
     bool m_glOk = false;
     OwnContext *m_own = nullptr;

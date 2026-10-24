@@ -1,0 +1,110 @@
+// The core's state as the views see it. src/slint/Bindings.cpp keeps these in
+// step with the core and hands the callbacks to the core thread.
+
+export struct QueueRow {
+    title: string,
+    subtitle: string,
+    art-url: string,
+    art: image,
+    duration: string,
+    // artist (round cover) or a track
+    kind: string,
+    explicit: bool,
+    unavailable: bool,
+    current: bool,
+}
+
+export struct PlaylistEntry {
+    title: string,
+    browse-id: string,
+}
+
+export global Player {
+    in property <string> title;
+    in property <string> subtitle;
+    in property <image> art;
+    in property <string> video-id;
+    // LIKE, DISLIKE or INDIFFERENT
+    in property <string> like-status;
+    in property <bool> paused: true;
+    in property <bool> idle: true;
+    in property <bool> buffering;
+    in property <bool> loading;
+    in property <float> position;
+    in property <float> duration;
+    // the settings' volume slider position, 0..100, and its step
+    in property <float> volume;
+    in property <float> volume-step: 5;
+    in property <bool> muted;
+    in property <bool> has-next;
+    in property <bool> video-playing;
+    in property <string> stream-info;
+    in property <float> speed: 1;
+    in property <string> error;
+    in property <[QueueRow]> queue;
+    in property <int> queue-current: -1;
+
+    callback toggle-pause();
+    callback next();
+    callback previous();
+    callback seek(float);
+    callback set-volume(float);
+    callback set-muted(bool);
+    callback set-speed(float);
+    callback play-index(int);
+    callback play-text(string);
+    callback rate(string);
+    callback shuffle-rest();
+    callback clear-rest();
+
+    // m:ss, or h:mm:ss from an hour on
+    public pure function time(seconds: float) -> string {
+        if seconds < 0 || seconds != seconds {
+            return "0:00";
+        }
+        let total = Math.floor(seconds);
+        let secs = Math.mod(total, 60);
+        let minutes = Math.floor(total / 60);
+        let tail = (secs < 10 ? ":0" : ":") + secs;
+        if minutes >= 60 {
+            let rest = Math.mod(minutes, 60);
+            return Math.floor(minutes / 60) + (rest < 10 ? ":0" : ":") + rest + tail;
+        }
+        return minutes + tail;
+    }
+}
+
+export global Account {
+    in property <bool> signed-in;
+    in property <string> name;
+    in property <string> handle;
+    in property <image> photo;
+    in property <[PlaylistEntry]> playlists;
+
+    callback sign-in();
+    callback sign-out();
+}
+
+// The window's own state and the settings it shows.
+export global App {
+    // the open section: home, explore, library, liked, history, downloads, or a playlist's browse id
+    in-out property <string> section: "home";
+    in-out property <bool> queue-open;
+    in-out property <int> queue-tab;
+
+    in property <bool> compact-sidebar;
+    in property <bool> colored-progress;
+    in property <bool> video-mode;
+    in property <int> downloads-running;
+    // empty while the clock is off
+    in property <string> clock;
+
+    // a short message above the player bar; serial changes with each one
+    in property <string> toast;
+    in property <bool> toast-error;
+    in property <int> toast-serial;
+
+    callback section-requested(string, string);
+    callback set-video-mode(bool);
+    callback request-dialog(string);
+}
