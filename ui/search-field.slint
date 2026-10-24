@@ -1,0 +1,18 @@
+// Area B: the search field with its suggestions (qml/SearchField.qml).
+// Stub until the port lands.
+
+import { LineEdit } from "std-widgets.slint";
+import { Browse } from "browse-view.slint";
+
+export component SearchField inherits LineEdit {
+    // the field takes the keyboard (Ctrl+F, /)
+    public function focus-search() {
+        self.focus();
+    }
+
+    placeholder-text: @tr("Search songs, albums, artists");
+    accepted(text) => {
+        Browse.search(text);
+        self.text = "";
+    }
+}

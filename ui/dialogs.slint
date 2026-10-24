@@ -1,0 +1,16 @@
+// Area D: the dialogs over the window (qml/SettingsDialog.qml,
+// EqualizerDialog.qml, SignInDialog.qml, PlaylistPicker.qml).
+// Stub until the port lands.
+
+import { App } from "globals.slint";
+
+export component DialogLayer inherits Rectangle {
+    visible: App.dialog != "";
+    background: #00000080;
+
+    TouchArea {
+        clicked => {
+            App.dialog = "";
+        }
+    }
+}

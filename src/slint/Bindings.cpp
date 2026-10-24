@@ -1,4 +1,5 @@
 #include "Bindings.h"
+#include "Areas.h"
 #include "ImageCache.h"
 #include "ModelMirror.h"
 #include "SlintHost.h"
@@ -16,6 +17,7 @@
 #include "ytm/Account.h"
 
 #include <QColor>
+#include <QHash>
 #include <QCoreApplication>
 #include <QLocale>
 #include <QTime>
@@ -157,7 +159,7 @@ void bindPlayer(AppController &app, const Window &window, ImageCache *images)
         });
     });
 
-    ModelMirror<QueueData, ui::QueueRow>::start(
+    ModelMirror<QueueData, ui::ListItem>::start(
         window, playback->queue(),
         [](const QModelIndex &index) {
             const QVariantMap item = index.data(Queue::ItemRole).toMap();
@@ -168,7 +170,7 @@ void bindPlayer(AppController &app, const Window &window, ImageCache *images)
                               index.data(Queue::CurrentRole).toBool() };
         },
         [](const QueueData &d) {
-            ui::QueueRow row;
+            ui::ListItem row;
             row.title = str(d.title);
             row.subtitle = str(d.subtitle);
             row.art_url = str(d.artUrl);
@@ -179,15 +181,15 @@ void bindPlayer(AppController &app, const Window &window, ImageCache *images)
             row.current = d.current;
             return row;
         },
-        [](ui::MainWindow &w, std::shared_ptr<slint::VectorModel<ui::QueueRow>> model) { w.global<ui::Player>().set_queue(model); },
-        [images](const std::shared_ptr<slint::VectorModel<ui::QueueRow>> &model, size_t, const QueueData &d) {
+        [](ui::MainWindow &w, std::shared_ptr<slint::VectorModel<ui::ListItem>> model) { w.global<ui::Player>().set_queue(model); },
+        [images](const std::shared_ptr<slint::VectorModel<ui::ListItem>> &model, size_t, const QueueData &d) {
             // rows move while the picture loads: it goes to every row with this cover
             images->get(d.artUrl, kRowArt * 2, [weak = std::weak_ptr(model), url = str(d.artUrl)](const slint::Image &image) {
                 auto m = weak.lock();
                 if (!m)
                     return;
                 for (size_t i = 0; i < m->row_count(); i++) {
-                    ui::QueueRow row = *m->row_data(i);
+                    ui::ListItem row = *m->row_data(i);
                     if (row.art_url == url) {
                         row.art = image;
                         m->set_row_data(i, row);
@@ -195,6 +197,14 @@ void bindPlayer(AppController &app, const Window &window, ImageCache *images)
                 }
             });
         });
+}
+
+void registerQueueItems(Queue *queue)
+{
+    // a: the row in the queue
+    registerItemSource(QStringLiteral("queue"), [queue](int row, int) {
+        return queue->index(row, 0).data(Queue::ItemRole).toMap();
+    });
 }
 
 void bindAccount(Account *account, const Window &window, ImageCache *images)
@@ -347,11 +357,6 @@ void connectCallbacks(AppController *app, const Window &window, const Tray &tray
 
         auto &appState = w.global<ui::App>();
         appState.on_set_video_mode([settings](bool on) { toCore(settings, [settings, on] { settings->setVideoMode(on); }); });
-        appState.on_section_requested([window](const slint::SharedString &name, const slint::SharedString &) {
-            // the pages come with the browse view; until then only the mark moves
-            if (auto ui = window.lock())
-                (*ui)->global<ui::App>().set_section(name);
-        });
         appState.on_request_dialog([app](const slint::SharedString &name) {
             toCore(app, [app, n = fromSlint(name)] { app->requestDialog(n); });
         });
@@ -380,14 +385,55 @@ void bindVideo(MpvPlayer *player, const Window &window, VideoRenderer *video)
 
 } // namespace
 
+namespace {
+QHash<QString, ItemLookup> s_itemSources; // core thread only
+} // namespace
+
+void registerItemSource(const QString &source, ItemLookup lookup)
+{
+    s_itemSources.insert(source, std::move(lookup));
+}
+
+QVariantMap lookupItem(const QString &source, int a, int b)
+{
+    const auto it = s_itemSources.constFind(source);
+    return it == s_itemSources.cend() ? QVariantMap() : (*it)(a, b);
+}
+
+namespace bridge {
+
+namespace {
+std::vector<std::function<void()>> s_uiShutdown; // Slint thread only
+} // namespace
+
+void atUiShutdown(std::function<void()> f)
+{
+    s_uiShutdown.push_back(std::move(f));
+}
+
+void runUiShutdown()
+{
+    auto all = std::move(s_uiShutdown);
+    s_uiShutdown.clear();
+    for (auto &f : all)
+        f();
+}
+
+} // namespace bridge
+
 void bindCore(AppController &app, const Window &window, const Tray &tray, ImageCache *images, VideoRenderer *video,
               SlintHost *host)
 {
     bindPlayer(app, window, images);
+    registerQueueItems(app.playback()->queue());
     bindAccount(app.account(), window, images);
     bindApp(app, window);
     bindTheme(app.theme(), window);
     bindTray(app.player(), app.playback(), tray);
     bindVideo(app.player(), window, video);
     connectCallbacks(&app, window, tray, host);
+    bindBrowse(app, window, images);
+    bindSearch(app, window, images);
+    bindNowPlaying(app, window, images, video);
+    bindDialogs(app, window, images, host);
 }

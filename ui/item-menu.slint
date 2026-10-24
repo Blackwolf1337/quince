@@ -1,0 +1,14 @@
+// Area B: the menu of a track, album, artist or playlist (qml/ItemMenu.qml),
+// opened by a right click on what it wraps. Stub until the port lands: it
+// only shows its children.
+//
+// source and a, b name the item for the core (src/slint/Areas.h,
+// lookupItem): "queue" with the row, "page" with row and card (-1 for none).
+
+export component ItemMenuArea inherits Rectangle {
+    in property <string> source;
+    in property <int> a: -1;
+    in property <int> b: -1;
+
+    @children
+}

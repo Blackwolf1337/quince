@@ -1,18 +1,23 @@
 // The main window of the Slint frontend (qml/Main.qml). The globals mirror
 // the core (globals.slint); src/slint/Bindings.cpp keeps them in step.
 
-import { LineEdit } from "std-widgets.slint";
 import { Style } from "style.slint";
 import { Icons } from "icons.slint";
-import { Art, ToolButton } from "widgets.slint";
+import { ToolButton } from "widgets.slint";
 import { Sidebar } from "sidebar.slint";
 import { PlayerBar } from "player-bar.slint";
 import { QueuePanel } from "queue-panel.slint";
-import { Account, App, Player, PlaylistEntry, QueueRow } from "globals.slint";
+import { Account, App, Player, PlaylistEntry, ListItem } from "globals.slint";
+// the areas, each ported in its own files
+import { Browse, BrowseView } from "browse-view.slint";
+import { SearchField } from "search-field.slint";
+import { NowPlaying } from "now-playing.slint";
+import { DialogLayer } from "dialogs.slint";
+import { DownloadsView } from "downloads-view.slint";
 
 import "../qml/fonts/InterVariable.ttf";
 
-export { Style, Account, App, Player, PlaylistEntry, QueueRow }
+export { Style, Account, App, Player, PlaylistEntry, ListItem, Browse }
 
 // errors and short messages, for a while above the player bar
 component Toast inherits Rectangle {
@@ -132,14 +137,13 @@ export component MainWindow inherits Window {
     default-font-family: "Inter Variable";
     default-font-size: 14px;
 
-    // the video area for src/slint/VideoRenderer.cpp
-    out property <bool> video-shown: Player.video-playing;
-    out property <length> video-x: video.absolute-position.x;
-    out property <length> video-y: video.absolute-position.y;
-    out property <length> video-width: video.width;
-    out property <length> video-height: video.height;
+    // the video area for src/slint/VideoRenderer.cpp (in the Now Playing view)
+    out property <bool> video-shown: now-playing.video-shown;
+    out property <length> video-x: now-playing.video-x;
+    out property <length> video-y: now-playing.video-y;
+    out property <length> video-width: now-playing.video-width;
+    out property <length> video-height: now-playing.video-height;
 
-    callback now-playing-requested();
     callback mini-player-requested();
 
     // the system clipboard through a hidden text field (Slint has no API for it)
@@ -177,7 +181,24 @@ export component MainWindow inherits Window {
                 return accept;
             }
             if (event.modifiers.control && (event.text == "f" || event.text == "F")) || event.text == "/" {
-                search.focus();
+                App.now-playing-open = false;
+                search.focus-search();
+                return accept;
+            }
+            if event.modifiers.control && (event.text == "p" || event.text == "P") {
+                App.now-playing-open = !App.now-playing-open;
+                return accept;
+            }
+            if event.modifiers.alt && event.text == Key.LeftArrow {
+                Browse.back();
+                return accept;
+            }
+            if event.modifiers.alt && event.text == Key.RightArrow {
+                Browse.forward();
+                return accept;
+            }
+            if event.text == Key.Escape && App.now-playing-open {
+                App.now-playing-open = false;
                 return accept;
             }
             if event.modifiers.control || event.modifiers.alt {
@@ -195,6 +216,10 @@ export component MainWindow inherits Window {
         }
 
         VerticalLayout {
+            // nothing under the open Now Playing view may draw: mpv's video
+            // lies under every Slint item
+            visible: !App.now-playing-open;
+
             // back and forward, search, clock
             HorizontalLayout {
                 height: 64px;
@@ -205,28 +230,28 @@ export component MainWindow inherits Window {
                 ToolButton {
                     y: (parent.height - self.height) / 2;
                     icon: Icons.back;
-                    enabled: false;
+                    enabled: Browse.can-back;
+                    clicked => {
+                        Browse.back();
+                    }
                 }
                 ToolButton {
                     y: (parent.height - self.height) / 2;
                     icon: Icons.back;
                     rotation: 180;
-                    enabled: false;
+                    enabled: Browse.can-forward;
+                    clicked => {
+                        Browse.forward();
+                    }
                 }
                 Rectangle {
                     horizontal-stretch: 1;
                 }
-                search := LineEdit {
+                search := SearchField {
                     horizontal-stretch: 6;
                     max-width: 560px;
                     height: 40px;
                     y: (parent.height - self.height) / 2;
-                    placeholder-text: @tr("Search songs, albums, artists");
-                    accepted(text) => {
-                        Player.play-text(text);
-                        self.text = "";
-                        keys.focus();
-                    }
                 }
                 Rectangle {
                     horizontal-stretch: 1;
@@ -258,41 +283,16 @@ export component MainWindow inherits Window {
                     border-radius: Style.radius-large;
                     border-width: 1px;
                     border-color: Style.line;
-                    // see-through where the video is (mpv draws under the items)
-                    background: Player.video-playing ? transparent : Style.surface.with-alpha(0.42);
+                    background: Style.surface.with-alpha(0.42);
                     clip: true;
 
-                    video := Rectangle {
-                        x: 16px;
-                        y: 16px;
-                        width: parent.width - 32px;
-                        height: parent.height - 32px;
+                    if App.section != "downloads": BrowseView {
+                        width: 100%;
+                        height: 100%;
                     }
-
-                    if !Player.video-playing: VerticalLayout {
-                        alignment: center;
-                        spacing: 16px;
-                        HorizontalLayout {
-                            alignment: center;
-                            Art {
-                                width: 320px;
-                                height: 320px;
-                                corner: 12px;
-                                source: Player.art;
-                            }
-                        }
-                        Text {
-                            text: Player.title;
-                            color: Style.text;
-                            font-size: 22px;
-                            font-weight: 700;
-                            horizontal-alignment: center;
-                        }
-                        Text {
-                            text: Player.subtitle;
-                            color: Style.text-dim;
-                            horizontal-alignment: center;
-                        }
+                    if App.section == "downloads": DownloadsView {
+                        width: 100%;
+                        height: 100%;
                     }
                 }
 
@@ -312,12 +312,17 @@ export component MainWindow inherits Window {
 
             PlayerBar {
                 now-playing-requested => {
-                    root.now-playing-requested();
+                    App.now-playing-open = !App.now-playing-open;
                 }
                 mini-player-requested => {
                     root.mini-player-requested();
                 }
             }
+        }
+
+        now-playing := NowPlaying {
+            width: 100%;
+            height: 100%;
         }
 
         Toast {
@@ -328,6 +333,11 @@ export component MainWindow inherits Window {
         VolumeHud {
             x: (parent.width - self.width) / 2;
             y: parent.height * 0.18;
+        }
+
+        DialogLayer {
+            width: 100%;
+            height: 100%;
         }
     }
 

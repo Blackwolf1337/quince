@@ -10,6 +10,7 @@
 #include <QObject>
 #include <QString>
 
+#include <functional>
 #include <string>
 #include <utility>
 
@@ -47,6 +48,12 @@ void bind(const slint::ComponentWeakHandle<Component> &component, Obj *obj, Sign
     QObject::connect(obj, signal, obj, push);
     push();
 }
+
+// Slint thread: runs f() when the window goes, before the core stops. For
+// Slint objects an area keeps on the Slint thread (models, images).
+void atUiShutdown(std::function<void()> f);
+// main(), Slint thread: runs and drops what atUiShutdown() collected
+void runUiShutdown();
 
 inline std::string utf8(const QString &text)
 {

@@ -1,7 +1,8 @@
 // The core's state as the views see it. src/slint/Bindings.cpp keeps these in
 // step with the core and hands the callbacks to the core thread.
 
-export struct QueueRow {
+// a track, album, artist or playlist as a list row
+export struct ListItem {
     title: string,
     subtitle: string,
     art-url: string,
@@ -12,6 +13,8 @@ export struct QueueRow {
     explicit: bool,
     unavailable: bool,
     current: bool,
+    // the track number on an album page
+    number: string,
 }
 
 export struct PlaylistEntry {
@@ -41,7 +44,7 @@ export global Player {
     in property <string> stream-info;
     in property <float> speed: 1;
     in property <string> error;
-    in property <[QueueRow]> queue;
+    in property <[ListItem]> queue;
     in property <int> queue-current: -1;
 
     callback toggle-pause();
@@ -103,6 +106,11 @@ export global App {
     in property <string> toast;
     in property <bool> toast-error;
     in property <int> toast-serial;
+
+    // the Now Playing view covers the window (area C)
+    in-out property <bool> now-playing-open;
+    // the dialog shown (settings, equalizer, signin, addToPlaylist), empty for none (area D)
+    in-out property <string> dialog;
 
     callback section-requested(string, string);
     callback set-video-mode(bool);

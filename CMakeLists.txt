@@ -364,6 +364,11 @@ if(QUINCE_SLINT)
 
     add_executable(quince-slint
         src/slint/main.cpp
+        src/slint/Areas.h
+        src/slint/BrowseBindings.cpp
+        src/slint/SearchBindings.cpp
+        src/slint/NowPlayingBindings.cpp
+        src/slint/DialogsBindings.cpp
         src/slint/Bindings.h
         src/slint/Bindings.cpp
         src/slint/Bridge.h

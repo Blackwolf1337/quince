@@ -1,0 +1,21 @@
+// Area A: any YouTube Music page (qml/BrowseView.qml and its rows), and the
+// page stack behind back and forward. Stub until the port lands.
+
+import { Style } from "style.slint";
+
+export global Browse {
+    in property <bool> can-back;
+    in property <bool> can-forward;
+
+    callback back();
+    callback forward();
+    // a search from the search field: a results page
+    callback search(string);
+}
+
+export component BrowseView inherits Rectangle {
+    Text {
+        text: "Pages";
+        color: Style.text-dim;
+    }
+}

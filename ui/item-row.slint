@@ -3,10 +3,10 @@
 import { Style } from "style.slint";
 import { Icons } from "icons.slint";
 import { Art } from "widgets.slint";
-import { QueueRow } from "globals.slint";
+import { ListItem } from "globals.slint";
 
 export component ItemRow inherits Rectangle {
-    in property <QueueRow> entry;
+    in property <ListItem> entry;
     in property <bool> current: root.entry.current;
     callback activated();
 

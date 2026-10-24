@@ -141,6 +141,7 @@ int main(int argc, char *argv[])
     // Slint's objects go first, on this thread: the window takes the mpv
     // render context with it while the core and its players still run
     windowState.stop();
+    bridge::runUiShutdown();
     (*window)->hide();
     window.reset();
     tray.reset();

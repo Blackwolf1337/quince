@@ -1,0 +1,54 @@
+// Area C: the Now Playing view over the window, with the video, lyrics and
+// the mini player (qml/NowPlaying.qml, LyricsView.qml, MiniPlayer.qml).
+// Stub until the port lands: the cover, or the video while one plays.
+
+import { Style } from "style.slint";
+import { Art } from "widgets.slint";
+import { App, Player } from "globals.slint";
+
+export component NowPlaying inherits Rectangle {
+    // where mpv draws (src/slint/VideoRenderer.cpp reads it through MainWindow)
+    out property <bool> video-shown: App.now-playing-open && Player.video-playing;
+    out property <length> video-x: video.absolute-position.x;
+    out property <length> video-y: video.absolute-position.y;
+    out property <length> video-width: video.width;
+    out property <length> video-height: video.height;
+
+    visible: App.now-playing-open;
+    // see-through where the video is: mpv draws under all Slint items
+    background: Player.video-playing ? transparent : Style.background;
+
+    video := Rectangle {
+        x: 24px;
+        y: 24px;
+        width: parent.width - 48px;
+        height: parent.height - 48px;
+    }
+
+    if !Player.video-playing: VerticalLayout {
+        alignment: center;
+        spacing: 16px;
+        HorizontalLayout {
+            alignment: center;
+            Art {
+                width: 320px;
+                height: 320px;
+                corner: 12px;
+                source: Player.art;
+            }
+        }
+        Text {
+            text: Player.title;
+            color: Style.text;
+            font-size: 22px;
+            font-weight: 700;
+            horizontal-alignment: center;
+        }
+    }
+
+    TouchArea {
+        clicked => {
+            App.now-playing-open = false;
+        }
+    }
+}
