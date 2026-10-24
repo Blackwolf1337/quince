@@ -7,6 +7,9 @@
 //   --hwdec=<mode>: mpv hwdec (default auto-safe)
 //   SPIKE_NOADV=1: render context without advanced control
 //   SPIKE_FINISH=1: glFinish between mpv's render and the blit
+//   SPIKE_RESET=1 / SPIKE_RESET_SAMPLERS=1: reset GL state before mpv renders
+//   SPIKE_SHAREDCTX=1: mpv renders in Slint's EGL context instead of its own
+//   SPIKE_NOQT=1, SPIKE_NOLOOP=1, SPIKE_VIDNO=1, SPIKE_MPV="k=v ...": bisect switches
 
 #include "ui.h"
 
@@ -35,6 +38,10 @@
 #else
 #include <dlfcn.h>
 #define GLAPI_CALL
+#endif
+#if !defined(_WIN32) && !defined(__APPLE__)
+#include <EGL/egl.h>
+#define SPIKE_EGL 1
 #endif
 
 // GL types and enums used here, so no GL headers are needed (mingw ships
@@ -77,6 +84,14 @@ constexpr GLenum GL_UNPACK_ALIGNMENT = 0x0CF5;
 constexpr GLenum GL_PACK_ALIGNMENT = 0x0D05;
 constexpr GLenum GL_VERSION = 0x1F02;
 constexpr GLenum GL_RENDERER = 0x1F01;
+constexpr GLenum GL_PIXEL_PACK_BUFFER = 0x88EB;
+constexpr GLenum GL_PIXEL_UNPACK_BUFFER = 0x88EC;
+constexpr GLenum GL_UNPACK_ROW_LENGTH = 0x0CF2;
+constexpr GLenum GL_UNPACK_SKIP_ROWS = 0x0CF3;
+constexpr GLenum GL_UNPACK_SKIP_PIXELS = 0x0CF4;
+constexpr GLenum GL_STENCIL_TEST = 0x0B90;
+constexpr GLenum GL_DEPTH_TEST = 0x0B71;
+constexpr GLenum GL_CULL_FACE = 0x0B44;
 
 static void *glProc(const char *name);
 
@@ -224,6 +239,47 @@ struct GlState
     }
 };
 
+#ifdef SPIKE_EGL
+// mpv's own GL context, sharing objects with Slint's: FemtoVG's GL state can
+// then not leak into mpv's rendering (and the reverse)
+struct OwnContext
+{
+    EGLDisplay dpy = EGL_NO_DISPLAY;
+    EGLContext ctx = EGL_NO_CONTEXT, slintCtx = EGL_NO_CONTEXT;
+    EGLSurface slintDraw = EGL_NO_SURFACE, slintRead = EGL_NO_SURFACE;
+
+    bool create()
+    {
+        dpy = eglGetCurrentDisplay();
+        slintCtx = eglGetCurrentContext();
+        EGLint cfgId = 0, clientVersion = 2;
+        eglQueryContext(dpy, slintCtx, EGL_CONFIG_ID, &cfgId);
+        eglQueryContext(dpy, slintCtx, EGL_CONTEXT_CLIENT_VERSION, &clientVersion);
+        EGLint cfgAttr[] = { EGL_CONFIG_ID, cfgId, EGL_NONE };
+        EGLConfig cfg;
+        EGLint n = 0;
+        eglChooseConfig(dpy, cfgAttr, &cfg, 1, &n);
+        EGLint attr[] = { EGL_CONTEXT_CLIENT_VERSION, clientVersion, EGL_NONE };
+        ctx = n ? eglCreateContext(dpy, cfg, slintCtx, attr) : EGL_NO_CONTEXT;
+        std::fprintf(stderr, "spike: own mpv context %s\n", ctx != EGL_NO_CONTEXT ? "created" : "failed");
+        return ctx != EGL_NO_CONTEXT;
+    }
+    void enter()
+    {
+        slintDraw = eglGetCurrentSurface(EGL_DRAW);
+        slintRead = eglGetCurrentSurface(EGL_READ);
+        eglMakeCurrent(dpy, EGL_NO_SURFACE, EGL_NO_SURFACE, ctx);
+    }
+    void leave() { eglMakeCurrent(dpy, slintDraw, slintRead, slintCtx); }
+    void destroy()
+    {
+        if (ctx != EGL_NO_CONTEXT)
+            eglDestroyContext(dpy, ctx);
+        ctx = EGL_NO_CONTEXT;
+    }
+};
+#endif
+
 // Draws mpv into an FBO the size of the video rect, then blits it into the
 // window's framebuffer at that rect. Runs on the Slint thread inside the
 // rendering notifier, with Slint's GL context current.
@@ -245,6 +301,10 @@ public:
             }
             m_glOk = gl.load();
             disableBlockingSwap();
+#if !defined(_WIN32) && !defined(__APPLE__)
+            if (auto w = m_win.lock())
+                std::fprintf(stderr, "spike: windowing %s\n", (*w)->window().wayland_display() ? "wayland" : "x11");
+#endif
             if (m_glOk) {
                 std::fprintf(stderr, "spike: GL %s on %s\n",
                              reinterpret_cast<const char *>(gl.GetString(GL_VERSION)),
@@ -267,6 +327,8 @@ public:
     }
 
     void requestReadBack() { m_readBack = true; }
+    // runs once the render context exists (the file is loaded then)
+    std::function<void()> m_onContext;
 
 private:
     struct Rect
@@ -307,7 +369,20 @@ private:
 #else
         (void)w;
 #endif
-        if (mpv_render_context_create(&m_ctx, *m_mpv, params) < 0) {
+#ifdef SPIKE_EGL
+        // FemtoVG's GL state breaks mpv's rendering of hardware frames (broken
+        // rows with nvdec and vaapi on NVIDIA), resetting single states is not
+        // enough: mpv gets its own context unless SPIKE_SHAREDCTX is set
+        m_own = !std::getenv("SPIKE_SHAREDCTX") && m_ownCtx.create();
+        if (m_own)
+            m_ownCtx.enter();
+#endif
+        int created = mpv_render_context_create(&m_ctx, *m_mpv, params);
+#ifdef SPIKE_EGL
+        if (m_own)
+            m_ownCtx.leave();
+#endif
+        if (created < 0) {
             std::fprintf(stderr, "spike: mpv_render_context_create failed\n");
             m_ctx = nullptr;
             return false;
@@ -320,8 +395,12 @@ private:
                     (*w)->window().request_redraw();
             });
         }, &m_win);
-        // video output only once a render context exists, like MpvVideoItem
-        mpv_set_property_string(*m_mpv, "vid", "auto");
+        if (std::getenv("SPIKE_VIDNO")) {
+            // video output only once a render context exists, like MpvVideoItem
+            mpv_set_property_string(*m_mpv, "vid", "auto");
+        } else if (m_onContext) {
+            m_onContext();
+        }
         return true;
     }
 
@@ -358,7 +437,63 @@ private:
 
         GlState state;
         state.save(m_hasVao);
+#ifdef SPIKE_EGL
+        if (m_own) {
+            m_ownCtx.enter();
+            ensureFbo(r.w, r.h);
+            mpv_render_context_update(m_ctx);
+            mpv_opengl_fbo fbo { GLint(m_fbo), r.w, r.h, 0 };
+            int flip = 0;
+            mpv_render_param params[] = {
+                { MPV_RENDER_PARAM_OPENGL_FBO, &fbo },
+                { MPV_RENDER_PARAM_FLIP_Y, &flip },
+                { MPV_RENDER_PARAM_INVALID, nullptr },
+            };
+            mpv_render_context_render(m_ctx, params);
+            // the texture is read in Slint's context next: finish it here
+            gl.Finish();
+            m_ownCtx.leave();
+            // FBOs are not shared: Slint's context reads the texture through its own
+            if (!m_blitFbo)
+                gl.GenFramebuffers(1, &m_blitFbo);
+            gl.BindFramebuffer(GL_READ_FRAMEBUFFER, m_blitFbo);
+            gl.FramebufferTexture2D(GL_READ_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, m_tex, 0);
+            gl.BindFramebuffer(GL_DRAW_FRAMEBUFFER, state.drawFbo);
+            gl.Disable(GL_SCISSOR_TEST);
+            gl.BlitFramebuffer(0, 0, r.w, r.h, r.x, r.y + r.h, r.x + r.w, r.y, GL_COLOR_BUFFER_BIT, GL_NEAREST);
+            state.restore(m_hasVao);
+            mpv_render_context_report_swap(m_ctx);
+            return;
+        }
+#endif
         ensureFbo(r.w, r.h);
+        if (std::getenv("SPIKE_RESET")) {
+            // a clean slate for mpv: FemtoVG's state stays bound otherwise
+            gl.BindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+            gl.BindBuffer(GL_PIXEL_PACK_BUFFER, 0);
+            gl.BindBuffer(GL_ARRAY_BUFFER, 0);
+            if (m_hasVao)
+                gl.BindVertexArray(0);
+            gl.UseProgram(0);
+            gl.PixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+            gl.PixelStorei(GL_UNPACK_SKIP_ROWS, 0);
+            gl.PixelStorei(GL_UNPACK_SKIP_PIXELS, 0);
+            gl.PixelStorei(GL_UNPACK_ALIGNMENT, 4);
+            if (std::getenv("SPIKE_RESET_SAMPLERS")) {
+                for (int i = 0; i < 16; i++) {
+                    gl.ActiveTexture(GL_TEXTURE0 + i);
+                    gl.BindTexture(GL_TEXTURE_2D, 0);
+                    gl.BindSampler(i, 0);
+                }
+            }
+            gl.ActiveTexture(GL_TEXTURE0);
+            gl.Disable(GL_BLEND);
+            gl.Disable(GL_SCISSOR_TEST);
+            gl.Disable(GL_STENCIL_TEST);
+            gl.Disable(GL_DEPTH_TEST);
+            gl.Disable(GL_CULL_FACE);
+            gl.ColorMask(1, 1, 1, 1);
+        }
         mpv_render_context_update(m_ctx);
         mpv_opengl_fbo fbo { GLint(m_fbo), r.w, r.h, 0 };
         int flip = 0;
@@ -420,6 +555,14 @@ private:
 
     void teardown()
     {
+#ifdef SPIKE_EGL
+        if (m_own) {
+            if (m_blitFbo)
+                gl.DeleteFramebuffers(1, &m_blitFbo);
+            m_blitFbo = 0;
+            m_ownCtx.enter();
+        }
+#endif
         if (m_ctx)
             mpv_render_context_free(m_ctx);
         m_ctx = nullptr;
@@ -428,13 +571,24 @@ private:
             gl.DeleteTextures(1, &m_tex);
         }
         m_fbo = m_tex = 0;
+#ifdef SPIKE_EGL
+        if (m_own) {
+            m_ownCtx.leave();
+            m_ownCtx.destroy();
+            m_own = false;
+        }
+#endif
     }
 
     slint::ComponentWeakHandle<SpikeWindow> m_win;
     mpv_handle **m_mpv;
     mpv_render_context *m_ctx = nullptr;
-    GLuint m_fbo = 0, m_tex = 0;
+    GLuint m_fbo = 0, m_tex = 0, m_blitFbo = 0;
     int m_fboW = 0, m_fboH = 0;
+    bool m_own = false;
+#ifdef SPIKE_EGL
+    OwnContext m_ownCtx;
+#endif
     bool m_glOk = false, m_hasVao = false, m_check = false;
     bool m_readBack = false, m_firstFrame = false;
 };
@@ -497,6 +651,10 @@ int main(int argc, char **argv)
     std::atomic<QCoreApplication *> qtApp = nullptr;
     std::function<void()> onQtReady;
     std::thread qtThread([&qtApp, &onQtReady, argv, weak = slint::ComponentWeakHandle(ui)] {
+        if (std::getenv("SPIKE_NOQT")) {
+            slint::invoke_from_event_loop([&onQtReady] { onQtReady(); });
+            return;
+        }
         int qargc = 1;
         QCoreApplication app(qargc, argv);
         qtApp = &app;
@@ -521,12 +679,28 @@ int main(int argc, char **argv)
         mpv = mpv_create();
         mpv_set_option_string(mpv, "vo", "libmpv");
         mpv_set_option_string(mpv, "hwdec", opts.hwdec.c_str());
-        mpv_set_option_string(mpv, "loop-file", "inf");
-        mpv_set_option_string(mpv, "vid", "no");
+        if (!std::getenv("SPIKE_NOLOOP"))
+            mpv_set_option_string(mpv, "loop-file", "inf");
+        if (std::getenv("SPIKE_VIDNO"))
+            mpv_set_option_string(mpv, "vid", "no");
         mpv_set_option_string(mpv, "terminal", "yes");
         mpv_set_option_string(mpv, "msg-level", "all=warn");
         if (!opts.ao.empty())
             mpv_set_option_string(mpv, "ao", opts.ao.c_str());
+        // SPIKE_MPV="key=value key=value": extra options for experiments
+        if (const char *extra = std::getenv("SPIKE_MPV")) {
+            std::string all = extra;
+            size_t pos = 0;
+            while (pos < all.size()) {
+                size_t end = all.find(' ', pos);
+                std::string kv = all.substr(pos, end == std::string::npos ? std::string::npos : end - pos);
+                if (size_t eq = kv.find('='); eq != std::string::npos)
+                    mpv_set_option_string(mpv, kv.substr(0, eq).c_str(), kv.substr(eq + 1).c_str());
+                if (end == std::string::npos)
+                    break;
+                pos = end + 1;
+            }
+        }
         if (mpv_initialize(mpv) < 0) {
             std::fprintf(stderr, "spike: mpv_initialize failed\n");
             return;
@@ -543,10 +717,16 @@ int main(int argc, char **argv)
             });
         }, new slint::ComponentWeakHandle(ui));
         g_mpv = mpv;
-        if (!opts.media.empty()) {
+        auto load = [&] {
+            if (opts.media.empty())
+                return;
             const char *cmd[] = { "loadfile", opts.media.c_str(), nullptr };
             mpv_command_async(mpv, 0, cmd);
-        }
+        };
+        if (std::getenv("SPIKE_VIDNO"))
+            load();
+        else
+            renderer->m_onContext = load;
         ui->window().request_redraw();
     };
     ui->on_ping_qt([&qtApp, weak = slint::ComponentWeakHandle(ui)] {
@@ -601,6 +781,11 @@ int main(int argc, char **argv)
     slint::Timer checkTimer;
     if (opts.check) {
         checkTimer.start(slint::TimerMode::SingleShot, std::chrono::seconds(4), [&] {
+            // the decoded frame as mpv has it, without the GL render path
+            if (mpv) {
+                const char *shot[] = { "screenshot-to-file", "spike-video.png", "video", nullptr };
+                mpv_command_async(mpv, 0, shot);
+            }
             renderer->requestReadBack();
             ui->window().request_redraw();
         });

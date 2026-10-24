@@ -74,5 +74,7 @@ elseif(APPLE)
 else()
     # static Slint finds system fonts through fontconfig but does not link it
     pkg_check_modules(FONTCONFIG REQUIRED IMPORTED_TARGET fontconfig)
-    target_link_libraries(quince-spike PRIVATE PkgConfig::FONTCONFIG ${CMAKE_DL_LIBS})
+    # SPIKE_OWNCTX: mpv's own EGL context
+    pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
+    target_link_libraries(quince-spike PRIVATE PkgConfig::FONTCONFIG PkgConfig::EGL ${CMAKE_DL_LIBS})
 endif()
