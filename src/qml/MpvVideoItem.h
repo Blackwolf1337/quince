@@ -12,6 +12,7 @@ class MpvPlayer;
 class MpvVideoItem : public QQuickFramebufferObject
 {
     Q_OBJECT
+    Q_MOC_INCLUDE("player/MpvPlayer.h")
     QML_ELEMENT
 
     Q_PROPERTY(MpvPlayer *player READ player WRITE setPlayer NOTIFY playerChanged)

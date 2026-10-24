@@ -1,4 +1,4 @@
-#include "app/ArtNetwork.h"
+#include "qml/ArtNetwork.h"
 
 #include <QAtomicInt>
 #include <QNetworkAccessManager>

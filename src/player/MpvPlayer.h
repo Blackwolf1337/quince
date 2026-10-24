@@ -8,7 +8,6 @@
 #include <QString>
 #include <QTimer>
 #include <QVariant>
-#include <QtQml/qqmlregistration.h>
 
 #include <atomic>
 #include <optional>
@@ -26,8 +25,6 @@ struct mpv_event;
 class MpvPlayer : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("The player is owned by App")
 
     Q_PROPERTY(double position READ position NOTIFY positionChanged)
     Q_PROPERTY(double duration READ duration NOTIFY durationChanged)

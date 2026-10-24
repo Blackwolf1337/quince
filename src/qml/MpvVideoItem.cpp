@@ -1,4 +1,4 @@
-#include "player/MpvVideoItem.h"
+#include "qml/MpvVideoItem.h"
 #include "player/MpvPlayer.h"
 
 #include <QGuiApplication>

@@ -1,5 +1,6 @@
 #include "integrations/Mpris.h"
 #include "app/Settings.h"
+#include "app/UiHost.h"
 #include "player/MpvPlayer.h"
 #include "player/Playback.h"
 #include "ytm/Parser.h"
@@ -9,7 +10,6 @@
 #include <QDBusMessage>
 #include <QLoggingCategory>
 #include <QRegularExpression>
-#include <QWindow>
 
 #include <cmath>
 
@@ -36,11 +36,12 @@ QDBusObjectPath trackPath(const QString &videoId)
 
 } // namespace
 
-Mpris::Mpris(Playback *playback, MpvPlayer *player, Settings *settings, QObject *parent)
+Mpris::Mpris(Playback *playback, MpvPlayer *player, Settings *settings, UiHost *host, QObject *parent)
     : QObject(parent)
     , m_playback(playback)
     , m_player(player)
     , m_settings(settings)
+    , m_host(host)
 {
     new MprisRoot(this);
     new MprisPlayer(this);
@@ -89,11 +90,6 @@ Mpris::~Mpris()
 {
     if (m_registered)
         QDBusConnection::sessionBus().unregisterObject(kPath);
-}
-
-void Mpris::setWindow(QWindow *window)
-{
-    m_window = window;
 }
 
 QString Mpris::playbackStatus() const
@@ -178,11 +174,8 @@ bool Mpris::canSeek() const
 
 void Mpris::raise()
 {
-    if (!m_window)
-        return;
-    m_window->show();
-    m_window->raise();
-    m_window->requestActivate();
+    if (m_host)
+        m_host->raiseWindow();
 }
 
 void Mpris::propertiesChanged(const QString &interface, const QVariantMap &changed)

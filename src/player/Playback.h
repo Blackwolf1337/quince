@@ -10,7 +10,6 @@
 #include <QString>
 #include <QTimer>
 #include <QVariantMap>
-#include <QtQml/qqmlregistration.h>
 
 #include <functional>
 #include <optional>
@@ -28,8 +27,6 @@ class StreamResolver;
 class Playback : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("Playback is owned by App")
     Q_MOC_INCLUDE("player/Queue.h")
 
     Q_PROPERTY(Queue *queue READ queue CONSTANT)

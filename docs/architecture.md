@@ -28,11 +28,12 @@ SponsorBlock lookups send only a 4 character hash prefix of the video id.
 
 ```
 src/ytm            InnerTube client, parser, pages, account, cookies, browser import
-src/player         libmpv player (two instances for crossfades), video item, stream resolver, JS solver, effects, queue, playback
+src/player         libmpv player (two instances for crossfades), stream resolver, JS solver, effects, queue, playback
 src/download       downloader and audio file writer
 src/lyrics         lyrics, romanization
-src/integrations   Discord, tray and notifications, MPRIS, global shortcuts, SponsorBlock
-src/app            controller, settings, language, colors
+src/integrations   Discord, notifications, MPRIS, global shortcuts, SponsorBlock
+src/app            controller, settings, language, colors, UiHost (what the core needs from a frontend)
+src/qml            the Qt Quick frontend: main, QML type registration, video item, tray, test driver
 qml                the interface
 cmake              Mecab.cmake (builds MeCab and the dictionary)
 login              quince-login
@@ -41,3 +42,5 @@ third_party/ejs    yt-dlp's challenge solver
 i18n               translations
 packaging          desktop file
 ```
+
+Everything under src except src/qml builds into the static library quince_core, which links no QtQml or QtQuick. The frontend registers the core's types for QML in src/qml/Registrations.h.

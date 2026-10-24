@@ -3,7 +3,6 @@
 #include <QObject>
 #include <QString>
 #include <QVariantMap>
-#include <QtQml/qqmlregistration.h>
 
 class Account;
 class AudioEffects;
@@ -11,19 +10,17 @@ class Downloader;
 class SponsorBlock;
 class AccountCookies;
 class ColorTheme;
-class Desktop;
+class Notifications;
 class Discord;
 class Lyrics;
 class Mpris;
-class QWindow;
 class InnerTube;
 class JsSolver;
 class MpvPlayer;
 class Playback;
 class Settings;
 class StreamResolver;
-class QJSEngine;
-class QQmlEngine;
+class UiHost;
 
 struct AppOptions
 {
@@ -32,7 +29,8 @@ struct AppOptions
     bool restoreSession = true;
 };
 
-// Owns the player and every service, and is the QML singleton "App".
+// Owns the player and every service. The QML frontend registers it as the
+// singleton "App" (qml/Registrations.h).
 class AppController : public QObject
 {
     Q_OBJECT
@@ -45,8 +43,6 @@ class AppController : public QObject
     Q_MOC_INCLUDE("app/Settings.h")
     Q_MOC_INCLUDE("app/ColorTheme.h")
     Q_MOC_INCLUDE("lyrics/Lyrics.h")
-    QML_NAMED_ELEMENT(App)
-    QML_SINGLETON
 
     Q_PROPERTY(MpvPlayer *player READ player CONSTANT)
     Q_PROPERTY(Playback *playback READ playback CONSTANT)
@@ -59,10 +55,10 @@ class AppController : public QObject
     Q_PROPERTY(SponsorBlock *sponsorBlock READ sponsorBlock CONSTANT)
 
 public:
-    explicit AppController(const AppOptions &options, QObject *parent = nullptr);
+    // host: the frontend's window, clipboard and notifications (outlives this)
+    AppController(const AppOptions &options, UiHost *host, QObject *parent = nullptr);
     ~AppController() override;
 
-    static AppController *create(QQmlEngine *qmlEngine, QJSEngine *jsEngine);
     static AppController *instance() { return s_instance; }
 
     MpvPlayer *player() const { return m_player; }
@@ -75,8 +71,6 @@ public:
     Downloader *downloads() const { return m_downloads; }
     SponsorBlock *sponsorBlock() const { return m_sponsorBlock; }
 
-    // the main window, for the tray icon
-    void setWindow(QWindow *window);
     InnerTube *innerTube() const { return m_innerTube; }
 
     // A click on an item: plays it or opens its page.
@@ -121,7 +115,8 @@ private:
     AudioEffects *m_effects = nullptr;
     Downloader *m_downloads = nullptr;
     SponsorBlock *m_sponsorBlock = nullptr;
-    Desktop *m_desktop = nullptr;
+    UiHost *m_host = nullptr;
+    Notifications *m_notifications = nullptr;
     Discord *m_discord = nullptr;
     Mpris *m_mpris = nullptr; // Linux only
     QString m_reportedPlay; // video whose play went into the history last

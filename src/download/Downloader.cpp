@@ -1,11 +1,11 @@
 #include "download/Downloader.h"
 #include "app/Settings.h"
+#include "app/UiHost.h"
 #include "ytm/InnerTube.h"
 #include "ytm/Parser.h"
 
 #include <QBuffer>
 #include <QCoreApplication>
-#include <QDesktopServices>
 #include <QDir>
 #include <QFileInfo>
 #include <QImage>
@@ -59,11 +59,13 @@ QString yearOf(const QString &text)
 
 } // namespace
 
-Downloader::Downloader(StreamResolver *resolver, InnerTube *innerTube, Settings *settings, QObject *parent)
+Downloader::Downloader(StreamResolver *resolver, InnerTube *innerTube, Settings *settings, UiHost *host,
+                       QObject *parent)
     : QAbstractListModel(parent)
     , m_resolver(resolver)
     , m_innerTube(innerTube)
     , m_settings(settings)
+    , m_host(host)
     , m_network(new QNetworkAccessManager(this))
 {
     connect(m_resolver, &StreamResolver::resolved, this, &Downloader::onResolved);
@@ -495,7 +497,8 @@ void Downloader::openFolder(int row)
     if (row >= 0 && row < m_jobs.size() && !m_jobs.at(row)->path.isEmpty())
         dir = QFileInfo(m_jobs.at(row)->path).absolutePath();
     QDir().mkpath(dir);
-    QDesktopServices::openUrl(QUrl::fromLocalFile(dir));
+    if (m_host)
+        m_host->openUrl(QUrl::fromLocalFile(dir));
 }
 
 void Downloader::changed(int row)

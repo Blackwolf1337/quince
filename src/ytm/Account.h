@@ -4,7 +4,6 @@
 #include <QString>
 #include <QUrl>
 #include <QVariantList>
-#include <QtQml/qqmlregistration.h>
 
 #include <functional>
 
@@ -17,8 +16,6 @@ class QProcess;
 class Account : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("The account is owned by App")
 
     Q_PROPERTY(bool signedIn READ signedIn NOTIFY signedInChanged)
     Q_PROPERTY(QString name READ name NOTIFY infoChanged)

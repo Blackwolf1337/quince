@@ -4,14 +4,11 @@
 #include <QSettings>
 #include <QSize>
 #include <QString>
-#include <QtQml/qqmlregistration.h>
 
 // User settings, kept in quince.conf in the config folder.
 class Settings : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("Settings are owned by App")
 
     // the slider position, 0..100; with exponentialVolume the heard volume is (slider/100)^3
     Q_PROPERTY(double volume READ volume WRITE setVolume NOTIFY changed)

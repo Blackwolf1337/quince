@@ -1,4 +1,4 @@
-#include "app/TestDriver.h"
+#include "qml/TestDriver.h"
 #include "app/AppController.h"
 #include "player/MpvPlayer.h"
 #include "player/Playback.h"

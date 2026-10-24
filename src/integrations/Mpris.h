@@ -3,14 +3,13 @@
 #include <QDBusAbstractAdaptor>
 #include <QDBusObjectPath>
 #include <QObject>
-#include <QPointer>
 #include <QStringList>
 #include <QVariantMap>
-#include <QWindow>
 
 class MpvPlayer;
 class Playback;
 class Settings;
+class UiHost;
 
 // MPRIS on the session bus (org.mpris.MediaPlayer2.quince), so media keys
 // bound to playerctl and desktop media widgets control Quince. Linux only.
@@ -19,15 +18,12 @@ class Mpris : public QObject
     Q_OBJECT
 
 public:
-    Mpris(Playback *playback, MpvPlayer *player, Settings *settings, QObject *parent = nullptr);
+    Mpris(Playback *playback, MpvPlayer *player, Settings *settings, UiHost *host, QObject *parent = nullptr);
     ~Mpris() override;
-
-    void setWindow(QWindow *window);
 
     Playback *playback() const { return m_playback; }
     MpvPlayer *player() const { return m_player; }
     Settings *settings() const { return m_settings; }
-    QWindow *window() const { return m_window; }
 
     QString playbackStatus() const;
     QVariantMap metadata() const;
@@ -49,7 +45,7 @@ private:
     Playback *m_playback = nullptr;
     MpvPlayer *m_player = nullptr;
     Settings *m_settings = nullptr;
-    QPointer<QWindow> m_window;
+    UiHost *m_host = nullptr;
     bool m_registered = false;
     double m_lastPosition = 0;
 };

@@ -4,7 +4,6 @@
 #include <QImage>
 #include <QObject>
 #include <QVariantAnimation>
-#include <QtQml/qqmlregistration.h>
 
 class Playback;
 class Settings;
@@ -15,8 +14,6 @@ class QNetworkAccessManager;
 class ColorTheme : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("The theme is owned by App")
 
     Q_PROPERTY(QColor accent READ accent NOTIFY colorsChanged)
     Q_PROPERTY(QColor background READ background NOTIFY colorsChanged)

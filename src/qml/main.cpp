@@ -1,8 +1,11 @@
 #include "app/AppController.h"
-#include "app/ArtNetwork.h"
+#include "qml/ArtNetwork.h"
 #include "app/Settings.h"
-#include "app/TestDriver.h"
+#include "qml/TestDriver.h"
 #include "player/MpvPlayer.h"
+#include "player/Playback.h"
+#include "qml/QmlHost.h"
+#include "qml/Tray.h"
 
 #include <QCommandLineParser>
 #include <QElapsedTimer>
@@ -89,7 +92,11 @@ int main(int argc, char *argv[])
     font.setPixelSize(14);
     QGuiApplication::setFont(font);
 
-    AppController controller(options);
+    // window, clipboard and notifications for the core; the window comes later
+    QmlHost host;
+    AppController controller(options, &host);
+    Tray tray(controller.playback(), controller.player(), controller.settings(), &host);
+    host.setTray(&tray);
     // 8 bits per channel: some EGL setups hand out 16-bit (RGB565) surfaces,
     // which turns the soft glows into visible bands
     QSurfaceFormat format = QSurfaceFormat::defaultFormat();
@@ -110,9 +117,10 @@ int main(int argc, char *argv[])
                      [] { QCoreApplication::exit(1); }, Qt::QueuedConnection);
     // a new language in the settings: every qsTr() binding again
     QObject::connect(&controller, &AppController::languageChanged, &engine, &QQmlEngine::retranslate);
+    QObject::connect(&controller, &AppController::languageChanged, &tray, &Tray::retranslate);
     engine.loadFromModule("Quince", "Main");
     if (auto *window = qobject_cast<QQuickWindow *>(engine.rootObjects().value(0))) {
-        controller.setWindow(window);
+        host.setWindow(window);
         QObject::connect(window, &QQuickWindow::frameSwapped, &app, [startup] {
             static bool first = true;
             if (first)

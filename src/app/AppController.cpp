@@ -2,8 +2,9 @@
 #include "app/ColorTheme.h"
 #include "app/Language.h"
 #include "app/Settings.h"
-#include "integrations/Desktop.h"
+#include "app/UiHost.h"
 #include "integrations/Discord.h"
+#include "integrations/Notifications.h"
 #include "integrations/SponsorBlock.h"
 #include "lyrics/Lyrics.h"
 #ifdef QUINCE_DBUS
@@ -21,9 +22,6 @@
 #include "ytm/InnerTube.h"
 #include "ytm/Parser.h"
 
-#include <QClipboard>
-#include <QGuiApplication>
-#include <QJSEngine>
 #include <QStandardPaths>
 #include <QTimer>
 
@@ -54,13 +52,14 @@ QString visualizerGraph(const QString &style)
 
 } // namespace
 
-AppController::AppController(const AppOptions &options, QObject *parent)
+AppController::AppController(const AppOptions &options, UiHost *host, QObject *parent)
     : QObject(parent)
     , m_player(new MpvPlayer(options.audioOutput, this))
     , m_innerTube(new InnerTube(this))
     , m_solver(new JsSolver(m_innerTube, this))
     , m_resolver(new StreamResolver(m_innerTube, m_solver, this))
     , m_playback(new Playback(m_player, m_resolver, m_innerTube, this))
+    , m_host(host)
 {
     Q_ASSERT(!s_instance);
     s_instance = this;
@@ -86,22 +85,21 @@ AppController::AppController(const AppOptions &options, QObject *parent)
     m_theme = new ColorTheme(m_playback, m_settings, this);
     m_lyrics = new Lyrics(m_playback, m_player, m_innerTube, m_settings, this);
     m_effects = new AudioEffects(m_player, m_playback, m_settings, this);
-    m_downloads = new Downloader(m_resolver, m_innerTube, m_settings, this);
+    m_downloads = new Downloader(m_resolver, m_innerTube, m_settings, m_host, this);
     m_sponsorBlock = new SponsorBlock(m_playback, m_player, m_settings, this);
-    m_desktop = new Desktop(m_playback, m_player, m_settings, this);
+    m_notifications = new Notifications(m_playback, m_player, m_settings, m_host, this);
     m_discord = new Discord(m_playback, m_player, m_settings, this);
-    connect(m_theme, &ColorTheme::coverReady, m_desktop, &Desktop::setCover);
+    connect(m_theme, &ColorTheme::coverReady, m_notifications, &Notifications::setCover);
     connect(language, &Language::changed, this, [this, language] {
         // pages loaded from now on come in the new language
         m_innerTube->setLanguage(language->code());
         m_player->retranslate();
-        m_desktop->retranslate();
         // the preset name comes from a call, not a qsTr() binding
         emit m_effects->changed();
         emit languageChanged();
     });
 #ifdef QUINCE_DBUS
-    m_mpris = new Mpris(m_playback, m_player, m_settings, this);
+    m_mpris = new Mpris(m_playback, m_player, m_settings, m_host, this);
     if (m_settings->globalShortcuts()) {
         auto *shortcuts = new GlobalShortcuts(this);
         shortcuts->add(QStringLiteral("play-pause"), tr("Play or pause"), [this] { m_player->togglePause(); });
@@ -155,13 +153,6 @@ AppController::~AppController()
     s_instance = nullptr;
 }
 
-AppController *AppController::create(QQmlEngine *, QJSEngine *)
-{
-    Q_ASSERT(s_instance);
-    QJSEngine::setObjectOwnership(s_instance, QJSEngine::CppOwnership);
-    return s_instance;
-}
-
 void AppController::open(const QVariantMap &item)
 {
     if (!item.value(QStringLiteral("videoId")).toString().isEmpty()) {
@@ -181,14 +172,6 @@ void AppController::open(const QVariantMap &item)
 void AppController::openBrowse(const QString &browseId, const QString &params)
 {
     emit navigateRequested({{QStringLiteral("browseId"), browseId}, {QStringLiteral("params"), params}});
-}
-
-void AppController::setWindow(QWindow *window)
-{
-    m_desktop->setWindow(window);
-#ifdef QUINCE_DBUS
-    m_mpris->setWindow(window);
-#endif
 }
 
 void AppController::applySettings()
@@ -231,7 +214,7 @@ void AppController::copyLink(const QVariantMap &item)
         link = base + QStringLiteral("browse/") + browseId;
     if (link.isEmpty())
         return;
-    QGuiApplication::clipboard()->setText(link);
+    m_host->setClipboard(link);
     emit message(tr("Link copied"));
 }
 

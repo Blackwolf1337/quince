@@ -4,14 +4,12 @@
 #include <QString>
 #include <QTimer>
 #include <QVariantList>
-#include <QtQml/qqmlregistration.h>
 
 // Suggestions while typing in the search field, fetched a moment after the
 // last key press.
 class SearchSuggestions : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
 
     Q_PROPERTY(QString input READ input WRITE setInput NOTIFY inputChanged)
     Q_PROPERTY(QVariantList queries READ queries NOTIFY resultsChanged)

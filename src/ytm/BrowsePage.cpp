@@ -86,7 +86,7 @@ QHash<int, QByteArray> BrowsePage::roleNames() const
     };
 }
 
-void BrowsePage::componentComplete()
+void BrowsePage::complete()
 {
     m_complete = true;
     reload();

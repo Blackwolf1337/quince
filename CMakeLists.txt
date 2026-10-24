@@ -78,8 +78,114 @@ include(cmake/Mecab.cmake)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
+# The player without a user interface: YouTube Music, playback, lyrics,
+# downloads, desktop integration. Links no QtQml/QtQuick, so another frontend
+# can sit on top of it; what it needs from one goes through app/UiHost.h.
+qt_add_library(quince_core STATIC
+    src/app/AppController.h
+    src/app/AppController.cpp
+    src/app/ColorTheme.h
+    src/app/ColorTheme.cpp
+    src/app/Language.h
+    src/app/Language.cpp
+    src/app/Settings.h
+    src/app/Settings.cpp
+    src/app/UiHost.h
+    src/download/AudioFile.h
+    src/download/AudioFile.cpp
+    src/download/Downloader.h
+    src/download/Downloader.cpp
+    src/integrations/Discord.h
+    src/integrations/Discord.cpp
+    src/integrations/Notifications.h
+    src/integrations/Notifications.cpp
+    src/integrations/SponsorBlock.h
+    src/integrations/SponsorBlock.cpp
+    src/lyrics/Lyrics.h
+    src/lyrics/Lyrics.cpp
+    src/lyrics/Romanizer.h
+    src/lyrics/Romanizer.cpp
+    src/player/AudioEffects.h
+    src/player/AudioEffects.cpp
+    src/player/JsSolver.h
+    src/player/JsSolver.cpp
+    src/player/MpvNode.h
+    src/player/MpvNode.cpp
+    src/player/MpvPlayer.h
+    src/player/MpvPlayer.cpp
+    src/player/Playback.h
+    src/player/Playback.cpp
+    src/player/Queue.h
+    src/player/Queue.cpp
+    src/player/StreamResolver.h
+    src/player/StreamResolver.cpp
+    src/ytm/Account.h
+    src/ytm/Account.cpp
+    src/ytm/AccountCookies.h
+    src/ytm/AccountCookies.cpp
+    src/ytm/BrowsePage.h
+    src/ytm/BrowsePage.cpp
+    src/ytm/BrowserCookies.h
+    src/ytm/BrowserCookies.cpp
+    src/ytm/InnerTube.h
+    src/ytm/InnerTube.cpp
+    src/ytm/Json.h
+    src/ytm/NetscapeCookies.h
+    src/ytm/NetscapeCookies.cpp
+    src/ytm/Parser.h
+    src/ytm/Parser.cpp
+    src/ytm/SearchSuggestions.h
+    src/ytm/SearchSuggestions.cpp
+)
+# the frontend registers core types for QML (QML_FOREIGN) from these
+qt_extract_metatypes(quince_core)
+
+# yt-dlp's challenge solver (yt-dlp/ejs, Unlicense; see third_party/ejs)
+qt_add_resources(quince_core ejs
+    PREFIX /ejs
+    BASE third_party/ejs
+    FILES
+        third_party/ejs/lib.min.js
+        third_party/ejs/core.min.js
+)
+
+# qmltyperegistrar includes QML-exposed headers by file name only
+target_include_directories(quince_core PUBLIC src src/app src/player src/ytm src/lyrics src/download src/integrations)
+target_compile_definitions(quince_core PUBLIC PROJECT_VERSION="${PROJECT_VERSION}")
+if(NOT MSVC)
+    target_compile_options(quince_core PRIVATE -Wall -Wextra)
+endif()
+target_link_libraries(quince_core
+    PUBLIC
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Network
+        Qt6::Sql
+    PRIVATE
+        PkgConfig::MPV
+        PkgConfig::FFMPEG
+        PkgConfig::ICU
+        qjs
+        mecab
+)
+if(TARGET OpenSSL::Crypto)
+    target_link_libraries(quince_core PRIVATE OpenSSL::Crypto)
+endif()
+if(TARGET Qt6::DBus)
+    # MPRIS and notifications over the session bus
+    target_sources(quince_core PRIVATE
+        src/integrations/GlobalShortcuts.h
+        src/integrations/GlobalShortcuts.cpp
+        src/integrations/Mpris.h
+        src/integrations/Mpris.cpp
+    )
+    target_link_libraries(quince_core PUBLIC Qt6::DBus)
+    target_compile_definitions(quince_core PUBLIC QUINCE_DBUS)
+endif()
+
+# The Qt Quick frontend
 qt_add_executable(quince
-    src/main.cpp
+    src/qml/main.cpp
 )
 
 set_source_files_properties(qml/Style.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
@@ -161,112 +267,34 @@ qt_add_qml_module(quince
         qml/icons/volume.svg
         qml/icons/volume-off.svg
     SOURCES
-        src/app/AppController.h
-        src/app/AppController.cpp
-        src/app/ArtNetwork.h
-        src/app/Settings.h
-        src/app/Settings.cpp
-        src/app/ColorTheme.h
-        src/app/ColorTheme.cpp
-        src/download/AudioFile.h
-        src/download/AudioFile.cpp
-        src/download/Downloader.h
-        src/download/Downloader.cpp
-        src/integrations/Desktop.h
-        src/integrations/Desktop.cpp
-        src/integrations/Discord.h
-        src/integrations/Discord.cpp
-        src/integrations/SponsorBlock.h
-        src/integrations/SponsorBlock.cpp
-        src/lyrics/Lyrics.h
-        src/lyrics/Lyrics.cpp
-        src/lyrics/Romanizer.h
-        src/app/Language.h
-        src/app/Language.cpp
-        src/lyrics/Romanizer.cpp
-        src/app/ArtNetwork.cpp
-        src/app/TestDriver.h
-        src/app/TestDriver.cpp
-        src/player/AudioEffects.h
-        src/player/AudioEffects.cpp
-        src/player/JsSolver.h
-        src/player/JsSolver.cpp
-        src/player/MpvNode.h
-        src/player/MpvNode.cpp
-        src/player/MpvPlayer.h
-        src/player/MpvPlayer.cpp
-        src/player/MpvVideoItem.h
-        src/player/MpvVideoItem.cpp
-        src/player/Playback.h
-        src/player/Playback.cpp
-        src/player/Queue.h
-        src/player/Queue.cpp
-        src/player/StreamResolver.h
-        src/player/StreamResolver.cpp
-        src/ytm/BrowsePage.h
-        src/ytm/BrowsePage.cpp
-        src/ytm/InnerTube.h
-        src/ytm/InnerTube.cpp
-        src/ytm/Account.h
-        src/ytm/Account.cpp
-        src/ytm/AccountCookies.h
-        src/ytm/AccountCookies.cpp
-        src/ytm/BrowserCookies.h
-        src/ytm/BrowserCookies.cpp
-        src/ytm/Json.h
-        src/ytm/NetscapeCookies.h
-        src/ytm/NetscapeCookies.cpp
-        src/ytm/Parser.h
-        src/ytm/Parser.cpp
-        src/ytm/SearchSuggestions.h
-        src/ytm/SearchSuggestions.cpp
+        src/qml/ArtNetwork.h
+        src/qml/ArtNetwork.cpp
+        src/qml/MpvVideoItem.h
+        src/qml/MpvVideoItem.cpp
+        src/qml/QmlBrowsePage.h
+        src/qml/QmlHost.h
+        src/qml/QmlHost.cpp
+        src/qml/Registrations.h
+        src/qml/TestDriver.h
+        src/qml/TestDriver.cpp
+        src/qml/Tray.h
+        src/qml/Tray.cpp
 )
 
-# yt-dlp's challenge solver (yt-dlp/ejs, Unlicense; see third_party/ejs)
-qt_add_resources(quince ejs
-    PREFIX /ejs
-    BASE third_party/ejs
-    FILES
-        third_party/ejs/lib.min.js
-        third_party/ejs/core.min.js
-)
-
-# qmltyperegistrar includes QML-exposed headers by file name only
-target_include_directories(quince PRIVATE src src/app src/player src/ytm src/lyrics src/download src/integrations)
-target_compile_definitions(quince PRIVATE PROJECT_VERSION="${PROJECT_VERSION}")
-
+target_include_directories(quince PRIVATE src/qml)
 if(NOT MSVC)
     target_compile_options(quince PRIVATE -Wall -Wextra)
 endif()
 
 target_link_libraries(quince PRIVATE
+    quince_core
     Qt6::Quick
     Qt6::QuickControls2
-    Qt6::Network
     Qt6::Widgets
-    Qt6::Sql
     Qt6::OpenGL
     PkgConfig::MPV
-    PkgConfig::FFMPEG
-    PkgConfig::ICU
-    qjs
-    mecab
 )
 add_dependencies(quince mecab-ipadic)
-if(TARGET OpenSSL::Crypto)
-    target_link_libraries(quince PRIVATE OpenSSL::Crypto)
-endif()
-if(TARGET Qt6::DBus)
-    # MPRIS and notifications over the session bus
-    target_sources(quince PRIVATE
-        src/integrations/GlobalShortcuts.h
-        src/integrations/GlobalShortcuts.cpp
-        src/integrations/Mpris.h
-        src/integrations/Mpris.cpp
-    )
-    target_link_libraries(quince PRIVATE Qt6::DBus)
-    target_compile_definitions(quince PRIVATE QUINCE_DBUS)
-endif()
 
 set_target_properties(quince PROPERTIES
     WIN32_EXECUTABLE ON
@@ -350,6 +378,8 @@ if(TARGET quince-login)
     list(APPEND QUINCE_TRANSLATED quince-login)
 endif()
 qt_add_translations(TARGETS ${QUINCE_TRANSLATED}
+    # the core's tr() texts land in quince's .qm
+    SOURCE_TARGETS ${QUINCE_TRANSLATED} quince_core
     TS_FILES i18n/quince_de.ts
     RESOURCE_PREFIX /i18n
     LUPDATE_OPTIONS -no-obsolete

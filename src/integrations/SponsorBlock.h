@@ -4,7 +4,6 @@
 #include <QObject>
 #include <QPair>
 #include <QString>
-#include <QtQml/qqmlregistration.h>
 
 class MpvPlayer;
 class Playback;
@@ -18,8 +17,6 @@ class QNetworkAccessManager;
 class SponsorBlock : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("SponsorBlock is owned by App")
 
 public:
     SponsorBlock(Playback *playback, MpvPlayer *player, Settings *settings, QObject *parent = nullptr);

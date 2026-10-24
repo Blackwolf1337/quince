@@ -3,11 +3,9 @@
 #include <QAbstractListModel>
 #include <QJsonObject>
 #include <QList>
-#include <QQmlParserStatus>
 #include <QString>
 #include <QVariantList>
 #include <QVariantMap>
-#include <QtQml/qqmlregistration.h>
 
 namespace ytm {
 struct Page;
@@ -18,11 +16,9 @@ struct Page;
 // one row per carousel. Flat rows keep a 5000 track playlist virtualized.
 //
 // rowType: header, chips, title, item, carousel, grid, card, text
-class BrowsePage : public QAbstractListModel, public QQmlParserStatus
+class BrowsePage : public QAbstractListModel
 {
     Q_OBJECT
-    Q_INTERFACES(QQmlParserStatus)
-    QML_ELEMENT
 
     Q_PROPERTY(QString browseId READ browseId WRITE setBrowseId NOTIFY requestChanged)
     Q_PROPERTY(QString params READ params WRITE setParams NOTIFY requestChanged)
@@ -56,8 +52,9 @@ public:
     QVariant data(const QModelIndex &index, int role) const override;
     QHash<int, QByteArray> roleNames() const override;
 
-    void classBegin() override {}
-    void componentComplete() override;
+    // loads the page; until then the request properties only collect (the
+    // QML frontend calls it once all of them are set)
+    void complete();
 
     Q_INVOKABLE void reload();
     Q_INVOKABLE void loadMore();

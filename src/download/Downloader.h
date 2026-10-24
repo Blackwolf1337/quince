@@ -8,7 +8,6 @@
 #include <QList>
 #include <QPointer>
 #include <QVariantMap>
-#include <QtQml/qqmlregistration.h>
 
 #include <memory>
 
@@ -16,6 +15,7 @@ class InnerTube;
 class QNetworkAccessManager;
 class QNetworkReply;
 class Settings;
+class UiHost;
 
 // downloader: tracks, albums and playlists as audio files with tags and
 // cover, into the music folder. Two downloads run at a time; the list is the
@@ -23,8 +23,6 @@ class Settings;
 class Downloader : public QAbstractListModel
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("The downloader is owned by App")
 
     Q_PROPERTY(int running READ running NOTIFY runningChanged)
     Q_PROPERTY(QString folder READ folder NOTIFY folderChanged)
@@ -41,7 +39,8 @@ public:
         ErrorRole,
     };
 
-    Downloader(StreamResolver *resolver, InnerTube *innerTube, Settings *settings, QObject *parent = nullptr);
+    Downloader(StreamResolver *resolver, InnerTube *innerTube, Settings *settings, UiHost *host,
+               QObject *parent = nullptr);
     ~Downloader() override;
 
     int rowCount(const QModelIndex &parent = {}) const override;
@@ -103,6 +102,7 @@ private:
     StreamResolver *m_resolver = nullptr;
     InnerTube *m_innerTube = nullptr;
     Settings *m_settings = nullptr;
+    UiHost *m_host = nullptr;
     QNetworkAccessManager *m_network = nullptr;
     QList<std::shared_ptr<Job>> m_jobs;
 };

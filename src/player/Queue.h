@@ -3,14 +3,11 @@
 #include <QAbstractListModel>
 #include <QVariantList>
 #include <QVariantMap>
-#include <QtQml/qqmlregistration.h>
 
 // The play queue: page items (maps, see ytm/Parser.h) and which one plays.
 class Queue : public QAbstractListModel
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("The queue is owned by App")
 
     Q_PROPERTY(int current READ current NOTIFY currentChanged)
     Q_PROPERTY(int count READ count NOTIFY countChanged)

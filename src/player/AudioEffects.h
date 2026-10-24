@@ -4,7 +4,6 @@
 #include <QString>
 #include <QStringList>
 #include <QVariantList>
-#include <QtQml/qqmlregistration.h>
 
 class MpvPlayer;
 class Playback;
@@ -16,8 +15,6 @@ class Settings;
 class AudioEffects : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("The effects are owned by App")
 
     Q_PROPERTY(bool equalizer READ equalizer WRITE setEqualizer NOTIFY changed)
     // dB per band, at bandFrequencies

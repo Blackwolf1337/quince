@@ -6,7 +6,6 @@
 #include <QStringList>
 #include <QVariantList>
 #include <QVariantMap>
-#include <QtQml/qqmlregistration.h>
 
 #include <optional>
 
@@ -22,8 +21,6 @@ class Romanizer;
 class Lyrics : public QObject
 {
     Q_OBJECT
-    QML_ELEMENT
-    QML_UNCREATABLE("Lyrics are owned by App")
 
     // [{time (seconds, -1 when not synced), text, romanized ("" none)}]
     Q_PROPERTY(QVariantList lines READ lines NOTIFY linesChanged)
