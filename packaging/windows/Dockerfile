@@ -11,3 +11,11 @@ RUN echo "Server = $MIRROR" > /etc/pacman.d/mirrorlist \
         qt6-base qt6-declarative qt6-tools qt6-shadertools wine \
         xorg-server-xvfb xorg-xauth mesa \
     && pacman -Scc --noconfirm
+# the Slint frontend (QUINCE_SLINT): Rust with the MinGW target, and a host C
+# compiler for the build scripts of Slint's crates; cargo's downloads go to
+# the cache (CARGO_HOME in cross-build.sh)
+ENV RUSTUP_HOME=/opt/rustup
+RUN pacman -Syu --noconfirm --needed gcc rustup \
+    && rustup default stable && rustup target add x86_64-pc-windows-gnu \
+    && chmod -R a+rX /opt/rustup \
+    && pacman -Scc --noconfirm

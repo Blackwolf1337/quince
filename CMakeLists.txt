@@ -433,6 +433,12 @@ if(QUINCE_SLINT)
         pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
         target_link_libraries(quince-slint PRIVATE PkgConfig::FONTCONFIG PkgConfig::EGL ${CMAKE_DL_LIBS})
     endif()
+
+    install(TARGETS quince-slint RUNTIME DESTINATION ${QUINCE_BIN_DESTINATION})
+    if(WIN32)
+        # Slint is a DLL on Windows (its headers always declare dllimport)
+        install(FILES $<TARGET_FILE:slint_cpp-shared> DESTINATION ${QUINCE_BIN_DESTINATION})
+    endif()
 endif()
 
 # Sign-in window. Built only when QtWebEngine is there; the player itself
