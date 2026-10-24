@@ -14,6 +14,7 @@ import { SearchField } from "search-field.slint";
 import { NowPlaying } from "now-playing.slint";
 import { DialogLayer } from "dialogs.slint";
 import { DownloadsView } from "downloads-view.slint";
+import { Backdrop } from "backdrop.slint";
 
 import "../qml/fonts/InterVariable.ttf";
 
@@ -187,6 +188,10 @@ export component MainWindow inherits Window {
                 search.focus-search();
                 return accept;
             }
+            if event.modifiers.control && event.modifiers.shift && (event.text == "m" || event.text == "M") {
+                root.mini-player-requested();
+                return accept;
+            }
             if event.modifiers.control && (event.text == "p" || event.text == "P") {
                 App.now-playing-open = !App.now-playing-open;
                 return accept;
@@ -215,6 +220,13 @@ export component MainWindow inherits Window {
                 return accept;
             }
             reject
+        }
+
+        // the window's own light; Now Playing has its own around the video
+        Backdrop {
+            width: 100%;
+            height: 100%;
+            visible: !App.now-playing-open;
         }
 
         VerticalLayout {
