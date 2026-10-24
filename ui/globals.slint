@@ -53,6 +53,12 @@ export struct MiniState {
     background: color,
 }
 
+// an artist or album name, with its page (empty browse-id: no page)
+export struct Link {
+    name: string,
+    browse-id: string,
+}
+
 export struct PlaylistEntry {
     title: string,
     browse-id: string,
@@ -63,6 +69,9 @@ export global Player {
     in property <string> subtitle;
     in property <image> art;
     in property <string> video-id;
+    // the artists and the album, as links to their pages
+    in property <[Link]> artists;
+    in property <Link> album-link;
     // LIKE, DISLIKE or INDIFFERENT
     in property <string> like-status;
     in property <bool> paused: true;
@@ -93,6 +102,8 @@ export global Player {
     callback play-index(int);
     callback play-text(string);
     callback rate(string);
+    // an artist's or album's page
+    callback open-link(string);
     callback shuffle-rest();
     callback clear-rest();
 

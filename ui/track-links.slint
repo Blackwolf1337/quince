@@ -1,0 +1,56 @@
+// "artist, artist • album" of the playing track, the names with a page
+// clickable (the QML labels' links, without an underline).
+
+import { Style } from "style.slint";
+import { Link, Player } from "globals.slint";
+
+component LinkText inherits Text {
+    in property <string> browse-id;
+    in property <color> base-color;
+
+    color: self.browse-id != "" && touch.has-hover ? Style.text : root.base-color;
+
+    touch := TouchArea {
+        enabled: root.browse-id != "";
+        mouse-cursor: root.browse-id != "" ? pointer : default;
+        clicked => {
+            Player.open-link(root.browse-id);
+        }
+    }
+}
+
+export component TrackLinks inherits Rectangle {
+    in property <length> font-size: 13px;
+    in property <color> text-color: Style.text-dim;
+
+    height: row.preferred-height;
+    clip: true;
+
+    row := HorizontalLayout {
+        alignment: start;
+        for artist[index] in Player.artists: HorizontalLayout {
+            if index > 0: Text {
+                text: ", ";
+                color: root.text-color;
+                font-size: root.font-size;
+            }
+            LinkText {
+                text: artist.name;
+                browse-id: artist.browse-id;
+                base-color: root.text-color;
+                font-size: root.font-size;
+            }
+        }
+        if Player.album-link.name != "" && Player.artists.length > 0: Text {
+            text: " • ";
+            color: root.text-color;
+            font-size: root.font-size;
+        }
+        if Player.album-link.name != "": LinkText {
+            text: Player.album-link.name;
+            browse-id: Player.album-link.browse-id;
+            base-color: root.text-color;
+            font-size: root.font-size;
+        }
+    }
+}

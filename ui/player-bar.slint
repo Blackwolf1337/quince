@@ -5,6 +5,7 @@ import { Style } from "style.slint";
 import { Icons } from "icons.slint";
 import { Art, Centered, PlayButton, ThinSlider, ToolButton } from "widgets.slint";
 import { Account, App, Player } from "globals.slint";
+import { TrackLinks } from "track-links.slint";
 
 export component PlayerBar inherits Rectangle {
     callback now-playing-requested();
@@ -122,11 +123,8 @@ export component PlayerBar inherits Rectangle {
                     }
                 }
             }
-            Text {
-                text: Player.subtitle;
-                color: Style.text-dim;
+            TrackLinks {
                 font-size: 13px;
-                overflow: elide;
             }
         }
 

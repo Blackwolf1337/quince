@@ -6,6 +6,7 @@
 // src/slint/VideoRenderer.cpp; nothing here draws over that rect while a
 // video shows, the backdrop leaves it free.
 
+import { TrackLinks } from "track-links.slint";
 import { Style } from "style.slint";
 import { Icons } from "icons.slint";
 import { ThinSlider, ToolButton } from "widgets.slint";
@@ -314,12 +315,8 @@ export component NowPlaying inherits Rectangle {
                     overflow: elide;
                 }
             }
-            Text {
-                text: Player.album != "" && Player.subtitle != "" ? Player.subtitle + " • " + Player.album
-                    : Player.subtitle + Player.album;
-                color: Style.text-dim;
+            TrackLinks {
                 font-size: 16px;
-                overflow: elide;
             }
 
             VerticalLayout {

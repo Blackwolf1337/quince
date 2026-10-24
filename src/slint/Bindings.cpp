@@ -47,6 +47,12 @@ struct QueueData
     bool current = false;
 };
 
+struct LinkData
+{
+    std::string name;
+    std::string browseId;
+};
+
 struct TrackData
 {
     std::string title;
@@ -54,6 +60,8 @@ struct TrackData
     std::string artUrl;
     std::string videoId;
     std::string likeStatus;
+    std::vector<LinkData> artists;
+    LinkData album;
 };
 
 struct PlaylistData
@@ -64,8 +72,18 @@ struct PlaylistData
 
 TrackData trackOf(const QVariantMap &track)
 {
-    return { text(track, "title"), utf8(Notifications::artistsOf(track)), text(track, "thumbnail"),
-             text(track, "videoId"), text(track, "likeStatus") };
+    TrackData t { text(track, "title"), utf8(Notifications::artistsOf(track)), text(track, "thumbnail"),
+                  text(track, "videoId"), text(track, "likeStatus"), {}, {} };
+    for (const QVariant &v : track.value(QStringLiteral("artists")).toList()) {
+        const QVariantMap artist = v.toMap();
+        t.artists.push_back({ text(artist, "name"), text(artist, "id") });
+    }
+    // no list of artists: their names as one, without a page
+    if (t.artists.empty() && !track.value(QStringLiteral("artistText")).toString().isEmpty())
+        t.artists.push_back({ text(track, "artistText"), {} });
+    const QVariantMap album = track.value(QStringLiteral("album")).toMap();
+    t.album = { text(album, "name"), text(album, "id") };
+    return t;
 }
 
 slint::Color color(const QColor &c)
@@ -138,6 +156,11 @@ void bindPlayer(AppController &app, const Window &window, ImageCache *images)
         p.set_subtitle(str(t.subtitle));
         p.set_video_id(str(t.videoId));
         p.set_like_status(str(t.likeStatus));
+        auto artists = std::make_shared<slint::VectorModel<ui::Link>>();
+        for (const LinkData &a : t.artists)
+            artists->push_back({ str(a.name), str(a.browseId) });
+        p.set_artists(artists);
+        p.set_album_link({ str(t.album.name), str(t.album.browseId) });
         if (*shownArt == t.artUrl)
             return;
         *shownArt = t.artUrl;
@@ -341,6 +364,9 @@ void connectCallbacks(AppController *app, const Window &window, const Tray &tray
         });
         p.on_rate([account, playback](const slint::SharedString &status) {
             toCore(account, [account, playback, s = fromSlint(status)] { account->rate(playback->videoId(), s); });
+        });
+        p.on_open_link([app](const slint::SharedString &id) {
+            toCore(app, [app, id = fromSlint(id)] { app->openBrowse(id); });
         });
         p.on_shuffle_rest([playback] { toCore(playback, [playback] { playback->queue()->shuffleRest(); }); });
         p.on_clear_rest([playback] { toCore(playback, [playback] { playback->queue()->clearRest(); }); });
