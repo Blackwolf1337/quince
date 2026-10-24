@@ -1,11 +1,7 @@
 #!/bin/bash
-# Shrinks ICU's data DLL in the portable folder (33 MB to a few) to what Qt
-# and Quince use: the transliterators of the lyrics' romanization
-# (src/lyrics/Romanizer.cpp: Han-Latin, Hans-Hant, Hant-Hans), Unicode's
-# properties and normalization, and the root, English and German locales. Out
-# go the converters, collation, word dictionaries and the names of languages,
-# regions, currencies, units and time zones. The data comes out of MSYS2's own
-# DLL, so it always matches its ICU.
+# Shrinks ICU's data DLL in the portable folder to what Qt and Quince use
+# (packaging/icu-trim.sh). The data comes out of MSYS2's own DLL, so it always
+# matches its ICU.
 # usage: trim-icu.sh <dist folder>
 set -euo pipefail
 dist=$1
@@ -15,10 +11,10 @@ symbol="icudt${dll//[!0-9]/}_dat"
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 
-# the data behind the DLL's only export, to the end of its section
-# icupkg wants the file named like the package in it (icudt78l)
+# named like the package in it (icudt78l), as icupkg wants
 package="icudt${dll//[!0-9]/}l"
 mkdir "$work/in" "$work/out"
+# the data behind the DLL's only export, to the end of its section
 python3 - "$dist/$dll" "$symbol" "$work/in/$package.dat" <<'EOF'
 import struct, sys
 path, symbol, out = sys.argv[1:4]
@@ -51,12 +47,7 @@ else:
     raise SystemExit(symbol + " not exported")
 EOF
 
-icupkg -l "$work/in/$package.dat" > "$work/items"
-# locale bundles look like de.res, sr_Latn_BA.res; the other top-level ones
-# (zoneinfo64, plurals, pool, ...) are shared data
-grep -E '^(brkitr|coll|curr|lang|rbnf|region|unit|zone)/|\.cnv$|^[a-z]{2,3}(_[A-Za-z0-9]+)*\.res$' "$work/items" \
-    | grep -vxE 'en\.res|de\.res' > "$work/remove.txt"
-icupkg -r "$work/remove.txt" "$work/in/$package.dat" "$work/out/$package.dat"
+"$(dirname "$0")/../icu-trim.sh" "$work/in/$package.dat" "$work/out/$package.dat"
 
 # a DLL with the same export (data, 16-byte aligned as ICU wants it)
 cat > "$work/icudt.c" <<EOF
@@ -64,5 +55,4 @@ __asm__(".section .rdata,\"dr\"\n.balign 16\n.globl $symbol\n$symbol:\n.incbin \
         ".section .drectve\n.ascii \" -export:$symbol,data\"\n");
 EOF
 $host-gcc -shared -s -o "$work/$dll" "$work/icudt.c"
-echo "$dll: $(stat -c %s "$dist/$dll") -> $(stat -c %s "$work/$dll") bytes, $(wc -l < "$work/remove.txt") of $(wc -l < "$work/items") items out"
 cp "$work/$dll" "$dist/$dll"

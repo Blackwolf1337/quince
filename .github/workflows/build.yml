@@ -96,6 +96,13 @@ jobs:
           fi
           left=$(brewdeps)
           if [ -n "$left" ]; then echo "$left" | head -40 | sed 's/^/::error::/'; exit 1; fi
+          packaging/macos/trim-icu.sh "$(ls "$app"/Contents/Frameworks/libicudata.*.dylib)"
+          # which files bring Qt Quick, QML and Widgets along (one annotation)
+          msg=$(find "$app" -type f | while read -r f; do
+              file "$f" | grep -q Mach-O || continue
+              otool -L "$f" | grep -qE "Qt(Quick|Qml|Widgets)" && echo "${f#"$app"/Contents/}"
+            done | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=Qt Quick users::$msg"
           codesign --force --deep --sign - "$app"
           codesign --verify --deep --strict "$app"
           ver=$(git describe --tags --always)
