@@ -35,14 +35,18 @@ jobs:
           ffmpeg -loglevel error -f lavfi -i testsrc2=size=1280x720:rate=30 -t 20 \
                  -c:v libx264 -pix_fmt yuv420p test.mp4
           cd build-spike
-          ./quince-spike ../test.mp4 --check --ao=null 2>&1 | tee run.log &
+          # no pipe: $! must be the spike itself, not tee
+          ./quince-spike ../test.mp4 --check --ao=null > run.log 2>&1 &
           pid=$!
           # the spike quits by itself after about 4 s of playback
           for i in $(seq 60); do kill -0 $pid 2>/dev/null || break; sleep 1; done
-          kill $pid 2>/dev/null || true
-          wait $pid; echo "exit $?"
-          # results as annotations: readable through the API without a login
-          grep -aE "spike:|check:|panicked|rror" run.log | head -20 | sed 's/%/%25/g; s/^/::notice::/' || true
+          kill $pid 2>/dev/null && echo "spike: killed after 60 s" >> run.log
+          # bash -e: a failing wait must not end the step
+          rc=0; wait $pid || rc=$?; echo "spike: exit code $rc" >> run.log
+          cat run.log
+          # one annotation (a step shows at most 10): readable through the API without a login
+          msg=$(grep -aE "spike:|check:|panicked|rror" run.log | grep -v "^\[ffmpeg" | head -30 | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=spike run::$msg"
       - name: Errors as annotations
         if: failure()
         run: |
