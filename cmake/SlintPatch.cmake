@@ -1,4 +1,4 @@
-# Run in Slint's source dir by FetchContent's PATCH_COMMAND (QUINCE_SLINT).
+# Run in Slint's source dir by FetchContent's PATCH_COMMAND.
 # Each change is applied once; a source that no longer has the line stops the
 # build, so a Slint upgrade cannot drop one silently.
 
@@ -22,8 +22,7 @@ slint_patch(internal/backends/winit/frame_throttle.rs
     ".and_then(|monitor| monitor.refresh_rate_millihertz()).filter(|r| *r > 0)"
     "the 0 Hz monitor")
 
-# a mouse wheel notch scrolls 110 px as in the QML frontend (qml/SmoothScroll.qml),
-# not 60, and notches closer than 90 ms build up to 3 steps each; quick notches
+# a mouse wheel notch scrolls 110 px, not 60, and notches closer than 90 ms build up to 3 steps each; quick notches
 # already add up in Slint's Flickable
 slint_patch(internal/backends/winit/winitwindowadapter.rs
     "winit::event::MouseScrollDelta::LineDelta(lx, ly) => (lx * 60., ly * 60.),"
@@ -45,7 +44,7 @@ slint_patch(internal/backends/winit/winitwindowadapter.rs
     "the wheel step")
 
 # a tooltip shows centered above its element, 24 px away, as Qt Quick's Material
-# ToolTip (and the QML frontend), not below the pointer
+# ToolTip, not below the pointer
 slint_patch(internal/compiler/passes/lower_tooltips.rs
 [=[    let tooltip_offset_expr = Expression::PropertyReference(tooltip_offset);
     let x_pointer = Expression::PropertyReference(pointer_x);
@@ -80,7 +79,7 @@ slint_patch(internal/compiler/passes/lower_tooltips.rs
     "the tooltip position")
 
 # a scroll bar hides until its view scrolls or the pointer is on it, and goes
-# 2.45 s later, as Qt Quick's Material ScrollBar (QML frontend); not when the
+# 2.45 s later, as Qt Quick's Material ScrollBar; not when the
 # view jumps back to the top (a new page)
 slint_patch(internal/compiler/widgets/fluent/scrollview.slint
 [=[    visible: (self.policy == ScrollBarPolicy.always-on) || (self.policy == ScrollBarPolicy.as-needed && self.maximum > 0);

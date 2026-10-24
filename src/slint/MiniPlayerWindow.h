@@ -11,7 +11,7 @@ struct mpv_handle;
 class VideoRenderer;
 
 // The mini player (ui/mini-player.slint): a second window that takes the
-// video over while the main window hides, like the QML frontend's. mpv has
+// video over while the main window hides. mpv has
 // one render context at a time, so the main window's renderer gives it up
 // (VideoRenderer::release) before the mini player's makes its own, and the
 // other way round. Slint thread only; made on the first open, gone with

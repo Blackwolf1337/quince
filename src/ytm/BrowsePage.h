@@ -53,7 +53,7 @@ public:
     QHash<int, QByteArray> roleNames() const override;
 
     // loads the page; until then the request properties only collect (the
-    // QML frontend calls it once all of them are set)
+    // user interface calls it once all of them are set)
     void complete();
 
     Q_INVOKABLE void reload();

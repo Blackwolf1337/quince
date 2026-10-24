@@ -1,5 +1,4 @@
-// Sections, the account's playlists, settings and who is signed in
-// (qml/Sidebar.qml). Compact, it shows the icons only.
+// Sections, the account's playlists, settings and who is signed in. Compact, it shows the icons only.
 
 import { ListView } from "std-widgets.slint";
 import { Style } from "style.slint";
@@ -141,7 +140,7 @@ export component Sidebar inherits VerticalLayout {
     }
 
     if Account.signed-in: Separator {
-        // the layout's padding plus this gives the QML margin of 16
+        // the layout's padding plus this gives a margin of 16
         width: parent.width - 12px;
         x: 6px;
     }

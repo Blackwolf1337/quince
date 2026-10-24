@@ -14,7 +14,7 @@
 class QNetworkAccessManager;
 
 // Covers as slint::Image. get() runs on the Slint thread; the download (with
-// the disk cache the QML frontend uses too) runs on the core thread, the
+// the disk cache) runs on the core thread, the
 // decoding on Qt's thread pool, the image is made on the Slint thread.
 class ImageCache
 {

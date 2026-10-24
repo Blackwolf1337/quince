@@ -18,7 +18,7 @@ namespace {
 // covers kept as images; the disk cache holds the rest
 constexpr size_t kMaxImages = 400;
 
-// blurred covers: downloaded this large, blurred small; the look of the QML
+// blurred covers: downloaded this large, blurred small; the look of the
 // backdrop's MultiEffect (a quarter more saturation, darker)
 constexpr int kBlurSource = 120;
 const BlurLook kCoverBlur { 96, 96, 2, 1.25f, -0.35f, false };

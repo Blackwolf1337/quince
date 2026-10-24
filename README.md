@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="qml/icons/quince.svg" width="112" alt="Quince logo">
+  <img src="ui/icons/quince.svg" width="112" alt="Quince logo">
 </p>
 
 <h1 align="center">Quince</h1>

@@ -4,7 +4,7 @@ name: build
 
 on:
   push:
-    branches: [master, packaging]
+    branches: [master, packaging, slint-frontend]
     tags: ['v*']
   workflow_dispatch:
 
@@ -33,10 +33,9 @@ jobs:
             mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-pkgconf
             mingw-w64-ucrt-x86_64-ntldd
+            mingw-w64-ucrt-x86_64-rust
             mingw-w64-ucrt-x86_64-qt6-base
-            mingw-w64-ucrt-x86_64-qt6-declarative
             mingw-w64-ucrt-x86_64-qt6-tools
-            mingw-w64-ucrt-x86_64-qt6-svg
             mingw-w64-ucrt-x86_64-qt6-imageformats
             mingw-w64-ucrt-x86_64-qt6-translations
             mingw-w64-ucrt-x86_64-mpv
@@ -55,8 +54,10 @@ jobs:
           dist="$PWD/dist/Quince"
           cmake --install build --prefix "$dist"
           deploy=$(command -v windeployqt6 || command -v windeployqt-qt6 || echo /ucrt64/share/qt6/bin/windeployqt.exe)
-          "$deploy" --release --qmldir qml --no-compiler-runtime "$dist/quince.exe"
-          # MSYS2's Qt would look for plugins and QML below share\qt6\
+          # the window is Slint's: no platform, style or icon plugins
+          "$deploy" --release --no-compiler-runtime --skip-plugin-types platforms,styles,iconengines,generic,platforminputcontexts \
+            "$dist/quince.exe"
+          # MSYS2's Qt would look for plugins below share\qt6\
           cp packaging/windows/qt.conf "$dist/qt.conf"
           # every DLL of the MSYS2 prefix that the exe and the Qt plugins load
           find "$dist" -name '*.exe' -o -name '*.dll' | while read -r f; do ntldd -R "$f"; done \
@@ -85,7 +86,9 @@ jobs:
         with:
           fetch-depth: 0
       - name: Dependencies
-        run: brew install cmake ninja pkgconf qt mpv ffmpeg icu4c dylibbundler
+        run: |
+          brew install cmake ninja pkgconf qt mpv ffmpeg icu4c dylibbundler
+          rustup update stable && rustup default stable
       - name: Build
         run: |
           export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH"
@@ -100,15 +103,21 @@ jobs:
           app=build/Quince.app
           # it also fails its own signature check after changing the files; the
           # checks below and the signing at the end decide instead
-          "$(brew --prefix qt)/bin/macdeployqt" "$app" -qmldir=qml -libpath="$(brew --prefix)/lib" \
+          "$(brew --prefix qt)/bin/macdeployqt" "$app" -libpath="$(brew --prefix)/lib" \
             || echo "::warning::macdeployqt reported errors"
+          # Slint's library (the build copies it to Frameworks): found there, not in the build tree
+          slint="$app/Contents/Frameworks/libslint_cpp.dylib"
+          install_name_tool -id @rpath/libslint_cpp.dylib "$slint"
+          old=$(otool -L "$app/Contents/MacOS/Quince" | awk '/libslint_cpp/ {print $1}')
+          new=@executable_path/../Frameworks/libslint_cpp.dylib
+          if [ "$old" != "$new" ]; then install_name_tool -change "$old" "$new" "$app/Contents/MacOS/Quince"; fi
           # Homebrew libraries a binary of the bundle still loads (its own id aside)
           brewdeps() {
             find "$app/Contents" -type f \( -name '*.dylib' -o -perm -u+x \) | while read -r f; do
               file "$f" | grep -q Mach-O || continue
               id=$(otool -D "$f" | tail -n +2)
               # no match is the good case: grep's status must not end the step
-              otool -L "$f" | tail -n +2 | awk '{print $1}' | grep -E '^(/opt/homebrew|/usr/local/(opt|Cellar))' \
+              otool -L "$f" | tail -n +2 | awk '{print $1}' | grep -E "^(/opt/homebrew|/usr/local/(opt|Cellar)|$PWD)" \
                 | grep -vxF "$id" | sed "s|^|$f -> |" || true
             done
           }
@@ -127,6 +136,22 @@ jobs:
           ver=$(git describe --tags --always)
           ditto -c -k --keepParent "$app" "Quince-$ver-macos-arm64.zip"
           ls -la Quince-*.zip
+      - name: Run
+        continue-on-error: true
+        run: |
+          # the packed app, briefly: it starts, plays and quits by itself
+          Quince.app/Contents/MacOS/Quince --ao=null --no-session --play=dQw4w9WgXcQ --quit-after=15000 > run.log 2>&1 &
+          pid=$!
+          for i in $(seq 60); do kill -0 $pid 2>/dev/null || break; sleep 1; done
+          kill $pid 2>/dev/null && echo "killed after 60 s" >> run.log
+          # bash -e: a failing wait must not end the step
+          rc=0; wait $pid || rc=$?; echo "exit code $rc" >> run.log
+          cat run.log
+          # one annotation (a step shows at most 10)
+          msg=$(grep -aE "test:|exit code|killed|panicked|rror|quince|Library not loaded" run.log | head -30 \
+            | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=Quince run::$msg"
+        working-directory: build
       - name: Errors as annotations
         if: failure()
         shell: bash
@@ -146,8 +171,8 @@ jobs:
     steps:
       - name: Dependencies
         run: |
-          pacman -Syu --noconfirm --needed base-devel git cmake ninja qt6-base qt6-declarative qt6-tools \
-            qt6-svg qt6-webengine mpv ffmpeg icu openssl
+          pacman -Syu --noconfirm --needed base-devel git cmake ninja rust qt6-base qt6-tools \
+            qt6-webengine mpv ffmpeg icu openssl fontconfig libglvnd
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0

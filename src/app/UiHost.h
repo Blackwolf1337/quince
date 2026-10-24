@@ -4,10 +4,10 @@
 #include <QString>
 #include <QUrl>
 
-// What the core needs from the user interface it runs under (the QML one, or
-// Slint later). The core calls it on its own thread; a frontend whose window
-// lives on another thread forwards the calls and answers windowInFront() from
-// a cached state.
+// What the core needs from the user interface it runs under (the Slint
+// one). The core calls it on its own thread; a frontend whose window lives on
+// another thread forwards the calls and answers windowInFront() from a cached
+// state.
 class UiHost
 {
 public:

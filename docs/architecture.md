@@ -4,7 +4,7 @@ How Quince gets its data and plays audio, and where the code lives.
 
 ## Overview
 
-Quince is written in C++23 with Qt 6 (Qt Quick/QML). It loads no web page. It talks to YouTube Music's internal API (InnerTube) directly and plays audio through libmpv. yt-dlp and deno are no longer used or needed. Stream URLs come from YouTube's player API directly, with two clients.
+Quince is written in C++23 with Qt 6 for the core and Slint for the interface. It loads no web page. It talks to YouTube Music's internal API (InnerTube) directly and plays audio through libmpv. yt-dlp and deno are no longer used or needed. Stream URLs come from YouTube's player API directly, with two clients.
 
 WEB_REMIX is YouTube Music's own client, used with the account. It gives loudness values, history tracking and, for Premium accounts, format 774 (256 kbit/s Opus). Its URLs need YouTube's signature and "n" puzzles solved. Quince runs yt-dlp's own solver script (yt-dlp/ejs, public domain) inside an embedded JavaScript engine (QuickJS-ng). A new YouTube player is solved once in the background (a few seconds) and cached.
 
@@ -32,19 +32,15 @@ src/player         libmpv player (two instances for crossfades), stream resolver
 src/download       downloader and audio file writer
 src/lyrics         lyrics, romanization
 src/integrations   Discord, notifications, MPRIS, global shortcuts, SponsorBlock
-src/app            controller, settings, language, colors, UiHost (what the core needs from a frontend)
-src/qml            the Qt Quick frontend: main, QML type registration, video item, tray, test driver
-qml                the interface
-src/slint          the Slint frontend (QUINCE_SLINT, work in progress): threads, bindings, images, video
-ui                 its interface
-cmake              Mecab.cmake (builds MeCab and the dictionary)
+src/app            controller, settings, language, colors, UiHost (what the core needs from the interface)
+src/slint          the Slint frontend: threads, bindings, images, video, test driver
+ui                 the interface (.slint files, icons, the Inter font)
+cmake              Mecab.cmake (builds MeCab and the dictionary), SlintPatch.cmake (patches Slint)
 login              quince-login
 tools              quince-parsedump, quince-romanize
 third_party/ejs    yt-dlp's challenge solver
-i18n               translations (the .ts files; i18n/slint made from them for the Slint frontend)
+i18n               translations (the .ts files for the core, i18n/slint for the .slint texts)
 packaging          desktop file
 ```
 
-Everything under src except src/qml builds into the static library quince_core, which links no QtQml or QtQuick. The frontend registers the core's types for QML in src/qml/Registrations.h.
-
-The Slint frontend runs Slint on the main thread and the core (QCoreApplication, AppController) on a second one. src/slint/Bridge.h has the rules for crossing: values cross as plain copies; Slint objects stay on the Slint thread, Qt objects on the core thread. mpv draws the video under the Slint items in an EGL context of its own, because FemtoVG's GL state breaks mpv's rendering of hardware decoded frames.
+Everything under src except src/slint builds into the static library quince_core. The interface is Slint 1.18.1 (C++ API, FemtoVG OpenGL renderer), which runs on the main thread, while the core (QCoreApplication, AppController) runs on a second one. src/slint/Bridge.h has the rules for crossing: values cross as plain copies; Slint objects stay on the Slint thread, Qt objects on the core thread. mpv draws the video into an OpenGL texture (src/slint/VideoRenderer.cpp) in a shared GL context of its own (EGL, WGL or CGL), because FemtoVG's GL state breaks mpv's rendering of hardware decoded frames.

@@ -94,6 +94,13 @@ int main(int argc, char *argv[])
             appId = arg.substr(9);
         else if (arg == "--app-id" && i + 1 < argc)
             appId = argv[i + 1];
+        // the parser prints these and exits: here, before there is a window
+        if (arg == "-h" || arg == "--help" || arg == "--help-all" || arg == "-v" || arg == "--version") {
+            QCoreApplication app(argc, argv);
+            QCoreApplication::setApplicationVersion(QStringLiteral(PROJECT_VERSION));
+            parseCommandLine(app);
+            return 0;
+        }
     }
     slint::set_xdg_app_id(appId);
     std::optional<slint::ComponentHandle<ui::MainWindow>> window(ui::MainWindow::create());

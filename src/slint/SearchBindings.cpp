@@ -67,7 +67,7 @@ QVariantMap firstArtist(const QVariantMap &item)
     return {};
 }
 
-// the conditions of qml/ItemMenu.qml
+// the conditions of the item menu
 Facts factsOf(const QVariantMap &item, int serial)
 {
     Facts f;

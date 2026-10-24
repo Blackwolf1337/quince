@@ -10,7 +10,7 @@
 class AppController;
 class BrowsePage;
 
-// The page stack of the main window, as qml/Main.qml keeps it: one
+// The page stack of the main window, as a stack: one
 // BrowsePage per page; the pages left by going back stay as requests for
 // going forward again. The downloads view sits at the bottom of the stack as
 // a place without a page. Core thread; knows nothing of Slint.

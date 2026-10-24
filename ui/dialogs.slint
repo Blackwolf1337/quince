@@ -50,7 +50,7 @@ export component DialogLayer inherits Rectangle {
         height: 0;
     }
 
-    // behind modal dialogs: the window, blurred and darkened (qml/GlassScrim.qml)
+    // behind modal dialogs: the window, blurred and darkened
     Frosted {
         visible: App.dialog != "" && !Frost.capturing;
         border-radius: 0;

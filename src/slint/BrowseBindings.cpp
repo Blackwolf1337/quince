@@ -1,5 +1,5 @@
-// Area A: the pages (qml/BrowseView.qml and its rows) and the page stack of
-// qml/Main.qml. Pages (core thread) holds the BrowsePages; each page's rows
+// Area A: the pages (BrowseView and its rows) and the page stack of
+// the main window. Pages (core thread) holds the BrowsePages; each page's rows
 // are mirrored into a Slint model of their own (Slint thread), and the open
 // page's model is Browse.rows.
 
@@ -111,7 +111,7 @@ ItemData itemOf(const QVariantMap &item)
     return d;
 }
 
-// the buttons of a header or the top search result (qml/PlayButtons.qml)
+// the buttons of a header or the top search result
 void buttonsOf(const QVariantMap &target, RowData &d)
 {
     d.canPlay = has(target, "playPlaylistId") || has(target, "playVideoId") || has(target, "videoId");
@@ -515,7 +515,7 @@ void connectCallbacks(AppController *app, Pages *pages, const Window &window, Im
     Playback *playback = app->playback();
     toUi(window, [=](ui::MainWindow &w) {
         auto &b = w.global<ui::Browse>();
-        // back first closes Now Playing, as in the QML frontend
+        // back first closes Now Playing
         b.on_back([window, pages] {
             if (auto ui = window.lock(); ui && (*ui)->global<ui::App>().get_now_playing_open()) {
                 (*ui)->global<ui::App>().set_now_playing_open(false);

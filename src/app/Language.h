@@ -8,7 +8,7 @@ class Settings;
 
 // Quince's texts and Qt's own (dialog buttons) in the language of the
 // settings: the system's, English or German. A change applies at once;
-// changed() tells the parts that keep texts (QML, the tray menu).
+// changed() tells the parts that keep texts (the user interface, the tray menu).
 class Language : public QObject
 {
     Q_OBJECT

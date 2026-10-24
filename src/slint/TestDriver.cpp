@@ -86,7 +86,7 @@ void TestDriver::run(const QString &line)
             w.window().dispatch_pointer_release_event(pos, button);
         });
     } else if (command == u"scroll") {
-        // like a mouse wheel: QML's notches of 120 as Slint's logical pixels
+        // like a mouse wheel: notches of 120 as Slint's logical pixels
         const slint::LogicalPosition pos({ parts.value(1).toFloat(), parts.value(2).toFloat() });
         const float dy = parts.value(3).toFloat() / 120.f * kNotch;
         bridge::toUi(m_window, [pos, dy](ui::MainWindow &w) {

@@ -5,7 +5,7 @@
 #include <QVariantList>
 #include <QVariantMap>
 
-// Turns InnerTube answers into plain maps for QML.
+// Turns InnerTube answers into plain maps for the user interface.
 //
 // The type of an item comes from its endpoint (page type of a browse
 // endpoint, music video type of a watch endpoint), never from the localized

@@ -16,7 +16,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 set(CMAKE_PREFIX_PATH ${MSYS2_SYSROOT}/ucrt64)
 
-# moc, rcc, qmlcachegen and lrelease of the host's Qt (the same version)
+# moc, rcc and lrelease of the host's Qt (the same version)
 set(QT_HOST_PATH /usr)
 
 # the .pc files say prefix=/ucrt64

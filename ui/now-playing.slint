@@ -1,4 +1,4 @@
-// Area C: the playing track over the whole window (qml/NowPlaying.qml): a
+// Area C: the playing track over the whole window: a
 // large cover with its light, or the video, the controls, and lyrics or the
 // queue beside it. The cover grows out of the player bar when it opens.
 //
@@ -252,8 +252,8 @@ export component NowPlaying inherits Rectangle {
         spacing: 56px;
         opacity: Math.max(0, root.progress * 1.4 - 0.4);
 
-        // both columns grow in proportion to their preferred widths, as with
-        // QML's RowLayout (Qt's layout engine without stretch factors); the
+        // both columns grow in proportion to their preferred widths, as in
+        // a layout without stretch factors; the
         // cover keeps its size at the left
         VerticalLayout {
             min-width: root.slot-width;
@@ -261,7 +261,7 @@ export component NowPlaying inherits Rectangle {
             horizontal-stretch: root.slot-width / 1px;
             spacing: 14px;
 
-            // centered between two spacers as in QML; when it does not fit, the
+            // centered between two spacers; when it does not fit, the
             // top one is gone and the rest runs off the bottom
             Rectangle {
                 vertical-stretch: 1;
@@ -290,8 +290,8 @@ export component NowPlaying inherits Rectangle {
                 font-size: 16px;
             }
 
-            // the track 24 px down as in Material's Slider, the times 28 px under
-            // it (measured on the QML frontend)
+            // the track 24 px down as in Qt Quick's Material Slider, the times 28 px under
+            // it
             VerticalLayout {
                 padding-top: 8px;
                 spacing: 0;
@@ -442,7 +442,7 @@ export component NowPlaying inherits Rectangle {
             }
         }
 
-        // QML's QueuePanel takes its preferred width from the lyrics (the
+        // the queue panel's preferred width comes from the lyrics (the
         // widest line); this is about what it comes to
         QueuePanel {
             min-width: 320px;
@@ -452,7 +452,7 @@ export component NowPlaying inherits Rectangle {
     }
 
     // the video (black around it), or the visualizer over the backdrop. No
-    // clip with round corners (QML has none either): FemtoVG keeps a clipped
+    // clip with round corners: FemtoVG keeps a clipped
     // item as a layer and would not see the texture change
     if root.video-shown: Rectangle {
         x: root.cover-x;

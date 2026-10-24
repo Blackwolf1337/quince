@@ -4,7 +4,7 @@ import { Style } from "style.slint";
 import { Glass } from "backdrop.slint";
 import { Tip, ToolButton } from "widgets.slint";
 
-// Cover art where a new cover fades in over the old one (qml/Art.qml).
+// Cover art where a new cover fades in over the old one.
 export component FadeArt inherits Rectangle {
     in property <image> source;
     in property <length> corner: 8px;
@@ -175,7 +175,7 @@ export component ChoiceItem inherits Rectangle {
     }
 }
 
-// A ToolButton that opens a menu on glass (qml/StyledMenu.qml) of its
+// A ToolButton that opens a menu on glass of its
 // children, ChoiceItems; a click closes it.
 export component MenuButton inherits Rectangle {
     in property <image> icon;

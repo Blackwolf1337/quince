@@ -6,13 +6,14 @@
 pkgname=quince-bin
 pkgver=0.1.1
 pkgrel=1
-pkgdesc='Native YouTube Music player (Qt Quick, libmpv), prebuilt'
+pkgdesc='Native YouTube Music player (Slint, libmpv), prebuilt'
 arch=('x86_64')
 url='https://github.com/Blackwolf1337/quince'
 # Quince; MeCab (BSD option); QuickJS-ng; the IPADIC dictionary
 license=('GPL-3.0-or-later' 'BSD-3-Clause' 'MIT' 'LicenseRef-IPADIC')
-depends=('qt6-base' 'qt6-declarative' 'qt6-svg' 'qt6-webengine' 'mpv' 'ffmpeg' 'icu' 'openssl'
-         'hicolor-icon-theme')
+# libxkbcommon, wayland and the X11 libraries: loaded by Slint's windowing at run time
+depends=('qt6-base' 'qt6-webengine' 'mpv' 'ffmpeg' 'icu' 'openssl' 'fontconfig' 'libglvnd' 'dbus'
+         'libxkbcommon' 'libxkbcommon-x11' 'wayland' 'libx11' 'libxi' 'hicolor-icon-theme')
 provides=('quince')
 conflicts=('quince')
 options=('!strip' '!debug')

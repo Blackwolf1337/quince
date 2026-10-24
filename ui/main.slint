@@ -1,4 +1,4 @@
-// The main window of the Slint frontend (qml/Main.qml). The globals mirror
+// The main window of the Quince window. The globals mirror
 // the core (globals.slint); src/slint/Bindings.cpp keeps them in step.
 
 import { Style } from "style.slint";
@@ -317,7 +317,7 @@ export component MainWindow inherits Window {
                     background: Style.surface.with-alpha(0.42);
                     clip: true;
 
-                    // a new page comes in as in qml/Main.qml's StackView: from the
+                    // a new page comes in from the
                     // right when opened, from the left when going back, rising
                     // for a section
                     page-area := Rectangle {

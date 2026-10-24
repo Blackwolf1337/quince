@@ -1,21 +1,20 @@
 #!/usr/bin/env python3
-# What windeployqt does, from Linux: the Qt plugins and QML modules Quince
-# uses, Qt's translations, and every DLL any of it loads from the MSYS2 tree.
-# usage: deploy.py <dist folder with quince.exe> <msys2 ucrt64 dir> <qml source dir>
-import json
+# What windeployqt does, from Linux: the Qt plugins Quince uses, Qt's
+# translations, and every DLL any of it loads from the MSYS2 tree.
+# usage: deploy.py <dist folder with quince.exe> <msys2 ucrt64 dir>
 import os
 import shutil
 import subprocess
 import sys
 
-dist, ucrt, qml_src = sys.argv[1:4]
+dist, ucrt = sys.argv[1:3]
 qt_plugins = os.path.join(ucrt, "share", "qt6", "plugins")
-qt_qml = os.path.join(ucrt, "share", "qt6", "qml")
 qt_translations = os.path.join(ucrt, "share", "qt6", "translations")
 
-# plugin folders a Quick app needs (sqldrivers: only SQLite)
-PLUGINS = ["platforms", "styles", "imageformats", "iconengines", "tls", "networkinformation",
-           "sqldrivers/qsqlite.dll"]
+# plugin folders the core needs: covers (imageformats), HTTPS, the cache
+# database (sqldrivers: only SQLite). The window is Slint's, so no platform
+# plugin.
+PLUGINS = ["imageformats", "tls", "networkinformation", "sqldrivers/qsqlite.dll"]
 
 
 def copy(src, dst):
@@ -31,24 +30,11 @@ for p in PLUGINS:
     if os.path.exists(src):
         copy(src, os.path.join(dist, p))
 
-# the QML modules the sources import, as qmlimportscanner finds them
-scan = subprocess.run(["/usr/lib/qt6/qmlimportscanner", "-rootPath", qml_src, "-importPath", qt_qml],
-                      check=True, capture_output=True, text=True)
-for module in json.loads(scan.stdout):
-    path = module.get("path")
-    if module.get("type") == "module" and path and path.startswith(qt_qml):
-        copy(path, os.path.join(dist, "qml", os.path.relpath(path, qt_qml)))
-# type info is for tools only
-for root, _, files in os.walk(os.path.join(dist, "qml")):
-    for f in files:
-        if f.endswith(".qmltypes"):
-            os.remove(os.path.join(root, f))
-
 # where Qt finds all this (MSYS2's Qt would look below share\qt6\)
 shutil.copy2(os.path.join(os.path.dirname(os.path.abspath(__file__)), "qt.conf"), os.path.join(dist, "qt.conf"))
 
 for f in os.listdir(qt_translations):
-    if f.startswith(("qtbase_", "qtdeclarative_")):
+    if f.startswith("qtbase_"):
         copy(os.path.join(qt_translations, f), os.path.join(dist, "translations", f))
 
 # every DLL from the MSYS2 tree that something in the folder loads

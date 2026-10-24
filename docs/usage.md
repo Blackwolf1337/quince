@@ -11,7 +11,7 @@ Command line options, environment variables, window rules, sign-in internals and
 --app-id <id>         Wayland app id / window class (default quince)
 ```
 
-Test options: `--quit-after <ms>`, `--screenshot <file>`, `--steps <file>` (replays clicks, typing and keys from a script, see `src/qml/TestDriver.h`).
+Test options: `--quit-after <ms>`, `--screenshot <file>`, `--steps <file>` (replays clicks, typing and keys from a script, see `src/slint/TestDriver.h`).
 
 ## Environment variables
 

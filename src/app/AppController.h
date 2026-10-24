@@ -30,8 +30,8 @@ struct AppOptions
     bool restoreSession = true;
 };
 
-// Owns the player and every service. The QML frontend registers it as the
-// singleton "App" (qml/Registrations.h).
+// Owns the player and every service. The user interface reaches it through
+// UiHost and the bindings.
 class AppController : public QObject
 {
     Q_OBJECT
@@ -93,7 +93,7 @@ public:
     Q_INVOKABLE void copyLink(const QVariantMap &item);
 
 signals:
-    // QML pushes a page for target {browseId, params}
+    // the UI pushes a page for target {browseId, params}
     void navigateRequested(const QVariantMap &target);
     void dialogRequested(const QString &name, const QVariantMap &data);
     void languageChanged();
