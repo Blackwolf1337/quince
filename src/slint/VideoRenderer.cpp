@@ -3,7 +3,9 @@
 #include <mpv/client.h>
 #include <mpv/render_gl.h>
 
+#include <chrono>
 #include <cstdio>
+#include <cstdlib>
 
 #if !defined(_WIN32) && !defined(__APPLE__)
 #include <EGL/egl.h>
@@ -117,9 +119,11 @@ void VideoRenderer::operator()(slint::RenderingState state, slint::GraphicsAPI a
             m_own = OwnContext::create();
         break;
     case slint::RenderingState::BeforeRendering:
+        frameStats(true);
         render();
         break;
     case slint::RenderingState::AfterRendering:
+        frameStats(false);
         break;
     case slint::RenderingState::RenderingTeardown:
         freeContext();
@@ -130,6 +134,31 @@ void VideoRenderer::operator()(slint::RenderingState state, slint::GraphicsAPI a
         m_own = nullptr;
         m_glOk = false;
         break;
+    }
+}
+
+// QUINCE_FPS=1: frames per second and the time Slint draws one, once a second
+void VideoRenderer::frameStats(bool before)
+{
+    static const bool on = std::getenv("QUINCE_FPS") != nullptr;
+    if (!on)
+        return;
+    using Clock = std::chrono::steady_clock;
+    static Clock::time_point second = Clock::now(), start;
+    static int frames = 0;
+    static double drawMs = 0;
+    const auto now = Clock::now();
+    if (before) {
+        start = now;
+        return;
+    }
+    frames++;
+    drawMs += std::chrono::duration<double, std::milli>(now - start).count();
+    if (now - second >= std::chrono::seconds(1)) {
+        std::fprintf(stderr, "quince: %d fps, %.1f ms per frame\n", frames, drawMs / frames);
+        frames = 0;
+        drawMs = 0;
+        second = now;
     }
 }
 

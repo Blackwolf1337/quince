@@ -77,6 +77,7 @@ private:
     void freeContext();
     void ensureFbo(int w, int h);
     void render();
+    void frameStats(bool before);
     // mpv into the video texture; leaves it bound for reading in Slint's context
     void renderInto(const Rect &r);
 
