@@ -11,7 +11,7 @@ cache=${1:-$HOME/.cache/quince-windows}
 mkdir -p "$cache/home/run" && chmod 700 "$cache/home/run"
 
 # the host's first mirror, else Arch's worldwide one
-mirror=$(sed -n 's/^Server *= *//p' /etc/pacman.d/mirrorlist 2>/dev/null | head -1)
+mirror=$(sed -n "s/^Server *= *//p" /etc/pacman.d/mirrorlist 2>/dev/null | head -1 || true)
 # the host's network: through Docker's bridge, downloads (cargo's crates) can
 # crawl until they time out
 docker build -q --network host -t quince-windows-cross ${mirror:+--build-arg "MIRROR=$mirror"} \
