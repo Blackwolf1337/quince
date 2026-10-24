@@ -4,7 +4,7 @@ name: build
 
 on:
   push:
-    branches: [master, packaging]
+    branches: [master, packaging, macos-media]
     tags: ['v*']
   workflow_dispatch:
 
@@ -45,14 +45,19 @@ jobs:
           fetch-depth: 0
       - name: Dependencies
         run: |
-          brew install cmake ninja pkgconf qt mpv ffmpeg icu4c dylibbundler
+          brew install cmake ninja meson nasm pkgconf qt dav1d lame libass icu4c dylibbundler
           rustup update stable && rustup default stable
+      - name: mpv and FFmpeg
+        run: |
+          # Quince's own (packaging/media.sh), in place of Homebrew's with every codec
+          set -o pipefail
+          packaging/macos/build-media.sh "$RUNNER_TEMP/media-src" "$PWD/media" 2>&1 | tee ci.log
       - name: Build
         run: |
-          export PKG_CONFIG_PATH="$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH"
+          export PKG_CONFIG_PATH="$PWD/media/lib/pkgconfig:$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH"
           set -o pipefail
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF \
-                -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" 2>&1 | tee ci.log
+                -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" 2>&1 | tee -a ci.log
           cmake --build build 2>&1 | tee -a ci.log
       - name: Package
         run: |
@@ -61,7 +66,7 @@ jobs:
           app=build/Quince.app
           # it also fails its own signature check after changing the files; the
           # checks below and the signing at the end decide instead
-          "$(brew --prefix qt)/bin/macdeployqt" "$app" -libpath="$(brew --prefix)/lib" \
+          "$(brew --prefix qt)/bin/macdeployqt" "$app" -libpath="$PWD/media/lib" -libpath="$(brew --prefix)/lib" \
             || echo "::warning::macdeployqt reported errors"
           # Slint's library (the build copies it to Frameworks): found there, not in the build tree
           slint="$app/Contents/Frameworks/libslint_cpp.dylib"
@@ -87,7 +92,7 @@ jobs:
           if [ ${#args[@]} -gt 0 ]; then
             # -s: where @rpath libraries are (it would ask on stdin otherwise)
             dylibbundler -of -b "${args[@]}" -d "$app/Contents/Frameworks" -p @executable_path/../Frameworks/ \
-                         -s "$(brew --prefix)/lib" -s "$(brew --prefix qt)/lib" < /dev/null
+                         -s "$PWD/media/lib" -s "$(brew --prefix)/lib" -s "$(brew --prefix qt)/lib" < /dev/null
           fi
           left=$(brewdeps)
           if [ -n "$left" ]; then echo "$left" | head -40 | sed 's/^/::error::/'; exit 1; fi
@@ -96,6 +101,10 @@ jobs:
           ver=$(git describe --tags --always)
           ditto -c -k --keepParent "$app" "Quince-$ver-macos-arm64.zip"
           ls -la Quince-*.zip
+          # what the bundle is made of (one annotation)
+          msg=$( (du -sh "$app"; find "$app" -type f -size +500k -exec du -h {} + | sort -rh | head -25) \
+            | sed "s|$app/Contents/||; s/%/%25/g" | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=Quince.app sizes::$msg"
       - name: Run
         continue-on-error: true
         run: |
