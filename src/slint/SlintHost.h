@@ -21,9 +21,8 @@ public:
     void raiseWindow() override;
     void setClipboard(const QString &text) override;
     void openUrl(const QUrl &url) override;
-    // Slint's tray has no bubbles: Windows and macOS notifications come with
-    // their own code (phase 6); Linux sends them over D-Bus in the core
-    void showNotification(const QString &, const QString &, const QImage &) override {}
+    // Windows and macOS (DesktopNotify); Linux sends them over D-Bus in the core
+    void showNotification(const QString &title, const QString &body, const QImage &cover) override;
 
 private:
     bridge::Window m_window;

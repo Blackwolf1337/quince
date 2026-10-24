@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.28)
 project(quince VERSION 0.1.1 LANGUAGES CXX)
+if(APPLE)
+    # the Slint frontend's notifications (src/slint/DesktopNotify.mm)
+    enable_language(OBJCXX)
+endif()
 if(WIN32)
     # the icon and version info of quince.exe
     enable_language(RC)
@@ -390,6 +394,7 @@ if(QUINCE_SLINT)
         src/slint/PropertyTable.h
         src/slint/Blur.h
         src/slint/Blur.cpp
+        src/slint/DesktopNotify.h
         src/slint/Frost.h
         src/slint/Frost.cpp
         src/slint/Bindings.h
@@ -423,13 +428,21 @@ if(QUINCE_SLINT)
     endif()
     target_link_libraries(quince-slint PRIVATE quince_core Slint::Slint PkgConfig::MPV nfd::nfd)
     add_dependencies(quince-slint mecab-ipadic)
+    if(APPLE)
+        target_sources(quince-slint PRIVATE src/slint/DesktopNotify.mm)
+    else()
+        target_sources(quince-slint PRIVATE src/slint/DesktopNotify.cpp)
+    endif()
     if(WIN32)
+        # the icon (also the notification's) and version info
+        target_sources(quince-slint PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/quince.rc)
         # ole32 and uuid: nfd's COM dialog, which its static library does not link
         target_link_libraries(quince-slint PRIVATE opengl32 shell32 ole32 uuid)
         set_target_properties(quince-slint PROPERTIES WIN32_EXECUTABLE ON)
     elseif(APPLE)
         # Gl.cpp looks the GL entry points up with dlsym(RTLD_DEFAULT)
-        target_link_libraries(quince-slint PRIVATE "-framework OpenGL")
+        target_link_libraries(quince-slint PRIVATE "-framework OpenGL" "-framework Foundation"
+                              "-framework UserNotifications")
     else()
         # static Slint finds fonts through fontconfig but does not link it;
         # mpv's own EGL context (VideoRenderer.cpp)

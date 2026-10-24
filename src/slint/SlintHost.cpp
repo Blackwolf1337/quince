@@ -1,4 +1,5 @@
 #include "SlintHost.h"
+#include "DesktopNotify.h"
 
 #if defined(_WIN32)
 #include <windows.h>
@@ -43,6 +44,11 @@ void SlintHost::raiseWindow()
 void SlintHost::setClipboard(const QString &text)
 {
     bridge::toUi(m_window, [text = bridge::utf8(text)](ui::MainWindow &w) { w.invoke_copy_text(bridge::str(text)); });
+}
+
+void SlintHost::showNotification(const QString &title, const QString &body, const QImage &cover)
+{
+    desktopNotify(title, body, cover);
 }
 
 void SlintHost::openUrl(const QUrl &url)
