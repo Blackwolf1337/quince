@@ -49,6 +49,29 @@ struct SavedState
 
 } // namespace
 
+namespace {
+
+#ifdef QUINCE_OWN_EGL
+// Slint swaps with interval 1. On Wayland winit already waits for the
+// compositor's frame callback before a frame, so a blocking swap waits for a
+// second one: half the display's rate (72 fps at 144 Hz). A hidden window gets
+// no frame callbacks, and a blocking swap then hangs the main thread until the
+// compositor reports it as not responding. Slint's context is current here.
+// QUINCE_SWAP=1 keeps the blocking swap (for comparisons).
+void unblockSwap()
+{
+    if (std::getenv("QUINCE_SWAP"))
+        return;
+    EGLDisplay dpy = eglGetCurrentDisplay();
+    if (dpy != EGL_NO_DISPLAY && !eglSwapInterval(dpy, 0))
+        std::fprintf(stderr, "quince: eglSwapInterval(0) failed\n");
+}
+#else
+void unblockSwap() {}
+#endif
+
+} // namespace
+
 #ifdef QUINCE_OWN_EGL
 // mpv's EGL context, sharing objects (the video texture) with Slint's
 struct VideoRenderer::OwnContext
@@ -115,6 +138,7 @@ void VideoRenderer::operator()(slint::RenderingState state, slint::GraphicsAPI a
             return;
         }
         m_glOk = load(m_gl);
+        unblockSwap();
         if (m_glOk && !m_own)
             m_own = OwnContext::create();
         break;
