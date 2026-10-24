@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.28)
 project(quince VERSION 0.1.1 LANGUAGES CXX)
 if(APPLE)
-    # the Slint frontend's notifications (src/slint/DesktopNotify.mm)
+    # notifications (src/slint/DesktopNotify.mm)
     enable_language(OBJCXX)
 endif()
 if(WIN32)
@@ -25,7 +25,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 endif()
 
-find_package(Qt6 6.8 REQUIRED COMPONENTS Quick QuickControls2 Network Widgets Sql OpenGL LinguistTools)
+find_package(Qt6 6.8 REQUIRED COMPONENTS Gui Network Sql LinguistTools)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Qt6 6.8 REQUIRED COMPONENTS DBus)
     # Chromium's cookie encryption (AES-128-CBC)
@@ -83,8 +83,8 @@ include(cmake/Mecab.cmake)
 qt_standard_project_setup(REQUIRES 6.8)
 
 # The player without a user interface: YouTube Music, playback, lyrics,
-# downloads, desktop integration. Links no QtQml/QtQuick, so another frontend
-# can sit on top of it; what it needs from one goes through app/UiHost.h.
+# downloads, desktop integration. What it needs from the user interface goes
+# through app/UiHost.h.
 qt_add_library(quince_core STATIC
     src/app/AppController.h
     src/app/AppController.cpp
@@ -147,9 +147,6 @@ qt_add_library(quince_core STATIC
     src/ytm/SearchSuggestions.h
     src/ytm/SearchSuggestions.cpp
 )
-# the frontend registers core types for QML (QML_FOREIGN) from these
-qt_extract_metatypes(quince_core)
-
 # yt-dlp's challenge solver (yt-dlp/ejs, Unlicense; see third_party/ejs)
 qt_add_resources(quince_core ejs
     PREFIX /ejs
@@ -159,7 +156,7 @@ qt_add_resources(quince_core ejs
         third_party/ejs/core.min.js
 )
 
-# qmltyperegistrar includes QML-exposed headers by file name only
+# the sources include each other's headers by file name
 target_include_directories(quince_core PUBLIC src src/app src/player src/ytm src/lyrics src/download src/integrations)
 target_compile_definitions(quince_core PUBLIC PROJECT_VERSION="${PROJECT_VERSION}")
 if(NOT MSVC)
@@ -193,128 +190,118 @@ if(TARGET Qt6::DBus)
     target_compile_definitions(quince_core PUBLIC QUINCE_DBUS)
 endif()
 
-# The Qt Quick frontend
-qt_add_executable(quince
-    src/qml/main.cpp
+# The user interface (Slint, see docs/architecture.md). Building Slint needs
+# a Rust toolchain, 1.92 or newer.
+#
+# FemtoVG (OpenGL) for the video underlay, the software renderer as a
+# fallback. Static on Linux only: Slint's headers always declare dllimport on
+# Windows, and a static libslint_cpp.a does not carry its macOS frameworks to
+# the final link.
+if(WIN32 OR APPLE)
+    set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
+else()
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+endif()
+set(SLINT_FEATURE_INTERPRETER OFF CACHE BOOL "" FORCE)
+set(SLINT_FEATURE_RENDERER_SKIA OFF CACHE BOOL "" FORCE)
+set(SLINT_FEATURE_RENDERER_FEMTOVG ON CACHE BOOL "" FORCE)
+set(SLINT_FEATURE_SYSTEM_TRAY ON CACHE BOOL "" FORCE)
+set(SLINT_STYLE "fluent-dark" CACHE STRING "Slint widget style")
+FetchContent_Declare(Slint
+    GIT_REPOSITORY https://github.com/slint-ui/slint.git
+    GIT_TAG v1.18.1
+    GIT_SHALLOW TRUE
+    SOURCE_SUBDIR api/cpp
+    PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/SlintPatch.cmake
+    UPDATE_DISCONNECTED TRUE
 )
+FetchContent_MakeAvailable(Slint)
+# the rest of the project builds its own libraries statically
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 
-set_source_files_properties(qml/Style.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
-
-qt_add_qml_module(quince
-    URI Quince
-    VERSION 1.0
-    QML_FILES
-        qml/Main.qml
-        qml/Style.qml
-        qml/Art.qml
-        qml/Backdrop.qml
-        qml/Glass.qml
-        qml/GlassScrim.qml
-        qml/Glow.qml
-        qml/MiniPlayer.qml
-        qml/NowPlaying.qml
-        qml/Skeleton.qml
-        qml/SmoothScroll.qml
-        qml/BrowseView.qml
-        qml/Card.qml
-        qml/CardRow.qml
-        qml/CarouselRow.qml
-        qml/ChipsRow.qml
-        qml/DownloadsView.qml
-        qml/EqualizerDialog.qml
-        qml/GridRow.qml
-        qml/HeaderRow.qml
-        qml/ItemMenu.qml
-        qml/ItemRow.qml
-        qml/LyricsView.qml
-        qml/NavButton.qml
-        qml/PlayButtons.qml
-        qml/PlayerBar.qml
-        qml/PlaylistPicker.qml
-        qml/QueuePanel.qml
-        qml/SearchField.qml
-        qml/SettingsDialog.qml
-        qml/Sidebar.qml
-        qml/StyledMenu.qml
-        qml/SignInDialog.qml
-        qml/TextRow.qml
-        qml/TitleRow.qml
-    RESOURCES
-        qml/fonts/InterVariable.ttf
-        qml/icons/account.svg
-        qml/icons/broadcast.svg
-        qml/icons/back.svg
-        qml/icons/captions.svg
-        qml/icons/chevron-left.svg
-        qml/icons/chevron-right.svg
-        qml/icons/chevron-down.svg
-        qml/icons/close.svg
-        qml/icons/dislike.svg
-        qml/icons/download.svg
-        qml/icons/explore.svg
-        qml/icons/heart.svg
-        qml/icons/history.svg
-        qml/icons/home.svg
-        qml/icons/library.svg
-        qml/icons/monitor.svg
-        qml/icons/like.svg
-        qml/icons/miniplayer.svg
-        qml/icons/more.svg
-        qml/icons/next.svg
-        qml/icons/palette.svg
-        qml/icons/pause.svg
-        qml/icons/play.svg
-        qml/icons/playlist.svg
-        qml/icons/previous.svg
-        qml/icons/queue.svg
-        qml/icons/quince.svg
-        qml/icons/radio.svg
-        qml/icons/search.svg
-        qml/icons/settings.svg
-        qml/icons/shuffle.svg
-        qml/icons/video.svg
-        qml/icons/visualizer.svg
-        qml/icons/volume.svg
-        qml/icons/volume-off.svg
-    SOURCES
-        src/qml/ArtNetwork.h
-        src/qml/ArtNetwork.cpp
-        src/qml/MpvVideoItem.h
-        src/qml/MpvVideoItem.cpp
-        src/qml/QmlBrowsePage.h
-        src/qml/QmlHost.h
-        src/qml/QmlHost.cpp
-        src/qml/Registrations.h
-        src/qml/TestDriver.h
-        src/qml/TestDriver.cpp
-        src/qml/Tray.h
-        src/qml/Tray.cpp
+# nativefiledialog-extended (zlib): the system's file and folder pickers. On
+# Linux through the xdg desktop portal over libdbus, without GTK; no parent
+# window is passed, so no X11 or Wayland glue.
+set(NFD_PORTAL ON CACHE BOOL "" FORCE)
+set(NFD_X11 OFF CACHE BOOL "" FORCE)
+set(NFD_WAYLAND OFF CACHE BOOL "" FORCE)
+set(NFD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(NFD_INSTALL OFF CACHE BOOL "" FORCE)
+FetchContent_Declare(nfd
+    URL https://github.com/btzy/nativefiledialog-extended/archive/refs/tags/v1.4.1.tar.gz
+    URL_HASH SHA256=4a01eafa921169f009f3e83bea8e287d9e5d0b94ca9064cf7f0a546652d7c884
+    EXCLUDE_FROM_ALL
+    SYSTEM
 )
+FetchContent_MakeAvailable(nfd)
 
-target_include_directories(quince PRIVATE src/qml)
+add_executable(quince
+    src/slint/main.cpp
+    src/slint/Areas.h
+    src/slint/BrowseBindings.cpp
+    src/slint/SearchBindings.cpp
+    src/slint/NowPlayingBindings.cpp
+    src/slint/DialogsBindings.cpp
+    src/slint/FilePicker.h
+    src/slint/FilePicker.cpp
+    src/slint/PropertyTable.h
+    src/slint/Blur.h
+    src/slint/Blur.cpp
+    src/slint/DesktopNotify.h
+    src/slint/Frost.h
+    src/slint/Frost.cpp
+    src/slint/Bindings.h
+    src/slint/Bindings.cpp
+    src/slint/Bridge.h
+    src/slint/Gl.h
+    src/slint/Gl.cpp
+    src/slint/ImageCache.h
+    src/slint/ImageCache.cpp
+    src/slint/MiniPlayerWindow.h
+    src/slint/MiniPlayerWindow.cpp
+    src/slint/ModelMirror.h
+    src/slint/Pages.h
+    src/slint/Pages.cpp
+    src/slint/SlintHost.h
+    src/slint/SlintHost.cpp
+    src/slint/TestDriver.h
+    src/slint/TestDriver.cpp
+    src/slint/VideoRenderer.h
+    src/slint/VideoRenderer.cpp
+)
+slint_target_sources(quince ui/main.slint NAMESPACE ui)
+# the mini player's window, with globals of its own
+slint_target_sources(quince ui/mini-player.slint NAMESPACE mini)
+set_property(TARGET quince PROPERTY SLINT_EMBED_RESOURCES embed-files)
+# i18n/slint/<lang>/LC_MESSAGES/quince.po (docs/building.md: translations)
+set_property(TARGET quince PROPERTY SLINT_BUNDLE_TRANSLATIONS ${CMAKE_CURRENT_SOURCE_DIR}/i18n/slint)
+target_include_directories(quince PRIVATE src/slint)
 if(NOT MSVC)
     target_compile_options(quince PRIVATE -Wall -Wextra)
 endif()
-
-target_link_libraries(quince PRIVATE
-    quince_core
-    Qt6::Quick
-    Qt6::QuickControls2
-    Qt6::Widgets
-    Qt6::OpenGL
-    PkgConfig::MPV
-)
+target_link_libraries(quince PRIVATE quince_core Slint::Slint PkgConfig::MPV nfd::nfd)
 add_dependencies(quince mecab-ipadic)
-
+if(APPLE)
+    target_sources(quince PRIVATE src/slint/DesktopNotify.mm)
+else()
+    target_sources(quince PRIVATE src/slint/DesktopNotify.cpp)
+endif()
 set_target_properties(quince PROPERTIES
     WIN32_EXECUTABLE ON
     MACOSX_BUNDLE ON
 )
 if(WIN32)
+    # the icon (also the notification's) and version info
     set(QUINCE_ICO ${CMAKE_CURRENT_SOURCE_DIR}/packaging/windows/quince.ico)
     configure_file(packaging/windows/quince.rc.in ${CMAKE_CURRENT_BINARY_DIR}/quince.rc @ONLY)
     target_sources(quince PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/quince.rc)
+    # ole32 and uuid: nfd's COM dialog, which its static library does not link
+    target_link_libraries(quince PRIVATE opengl32 shell32 ole32 uuid)
 elseif(APPLE)
+    # Gl.cpp looks the GL entry points up with dlsym(RTLD_DEFAULT)
+    target_link_libraries(quince PRIVATE "-framework OpenGL" "-framework Foundation"
+                          "-framework UserNotifications")
+    # the notification center needs a bundle identifier
     set(QUINCE_BUNDLE_ID "io.github.blackwolf1337.quince" CACHE STRING "Bundle identifier of Quince.app")
     target_sources(quince PRIVATE packaging/macos/quince.icns)
     set_source_files_properties(packaging/macos/quince.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
@@ -326,137 +313,34 @@ elseif(APPLE)
         MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
         MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION}
     )
-    # the dictionary and the licenses travel inside the bundle
+    # the dictionary, the licenses and Slint's library travel inside the bundle
     add_custom_command(TARGET quince POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy_directory ${MECAB_DIC_DIR}
                 $<TARGET_BUNDLE_CONTENT_DIR:quince>/Resources/mecab/ipadic
         COMMAND ${CMAKE_COMMAND} -E copy ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE ${MECAB_LICENSE_FILES}
                 $<TARGET_BUNDLE_CONTENT_DIR:quince>/Resources
+        COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_BUNDLE_CONTENT_DIR:quince>/Frameworks
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:slint_cpp-shared>
+                $<TARGET_BUNDLE_CONTENT_DIR:quince>/Frameworks/
         VERBATIM
     )
+else()
+    # static Slint finds fonts through fontconfig but does not link it;
+    # mpv's own EGL context (VideoRenderer.cpp)
+    pkg_check_modules(FONTCONFIG REQUIRED IMPORTED_TARGET fontconfig)
+    pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
+    target_link_libraries(quince PRIVATE PkgConfig::FONTCONFIG PkgConfig::EGL ${CMAKE_DL_LIBS})
 endif()
 
-# The Slint frontend (work in progress, see docs/architecture.md): needs a
-# Rust toolchain (1.92 or newer) to build Slint.
-option(QUINCE_SLINT "Build the Slint frontend quince-slint" OFF)
-if(QUINCE_SLINT)
-    # FemtoVG (OpenGL) for the video underlay, the software renderer as a
-    # fallback. Static on Linux only: Slint's headers always declare dllimport
-    # on Windows, and a static libslint_cpp.a does not carry its macOS
-    # frameworks to the final link.
-    if(WIN32 OR APPLE)
-        set(BUILD_SHARED_LIBS ON CACHE BOOL "" FORCE)
-    else()
-        set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-    endif()
-    set(SLINT_FEATURE_INTERPRETER OFF CACHE BOOL "" FORCE)
-    set(SLINT_FEATURE_RENDERER_SKIA OFF CACHE BOOL "" FORCE)
-    set(SLINT_FEATURE_RENDERER_FEMTOVG ON CACHE BOOL "" FORCE)
-    set(SLINT_FEATURE_SYSTEM_TRAY ON CACHE BOOL "" FORCE)
-    set(SLINT_STYLE "fluent-dark" CACHE STRING "Slint widget style of quince-slint")
-    FetchContent_Declare(Slint
-        GIT_REPOSITORY https://github.com/slint-ui/slint.git
-        GIT_TAG v1.18.1
-        GIT_SHALLOW TRUE
-        SOURCE_SUBDIR api/cpp
-        PATCH_COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/SlintPatch.cmake
-        UPDATE_DISCONNECTED TRUE
-    )
-    FetchContent_MakeAvailable(Slint)
-    # the rest of the project builds its own libraries statically
-    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
-
-    # nativefiledialog-extended (zlib): the system's file and folder pickers.
-    # On Linux through the xdg desktop portal over libdbus, without GTK; no
-    # parent window is passed, so no X11 or Wayland glue.
-    set(NFD_PORTAL ON CACHE BOOL "" FORCE)
-    set(NFD_X11 OFF CACHE BOOL "" FORCE)
-    set(NFD_WAYLAND OFF CACHE BOOL "" FORCE)
-    set(NFD_BUILD_TESTS OFF CACHE BOOL "" FORCE)
-    set(NFD_INSTALL OFF CACHE BOOL "" FORCE)
-    FetchContent_Declare(nfd
-        URL https://github.com/btzy/nativefiledialog-extended/archive/refs/tags/v1.4.1.tar.gz
-        URL_HASH SHA256=4a01eafa921169f009f3e83bea8e287d9e5d0b94ca9064cf7f0a546652d7c884
-        EXCLUDE_FROM_ALL
-        SYSTEM
-    )
-    FetchContent_MakeAvailable(nfd)
-
-    add_executable(quince-slint
-        src/slint/main.cpp
-        src/slint/Areas.h
-        src/slint/BrowseBindings.cpp
-        src/slint/SearchBindings.cpp
-        src/slint/NowPlayingBindings.cpp
-        src/slint/DialogsBindings.cpp
-        src/slint/FilePicker.h
-        src/slint/FilePicker.cpp
-        src/slint/PropertyTable.h
-        src/slint/Blur.h
-        src/slint/Blur.cpp
-        src/slint/DesktopNotify.h
-        src/slint/Frost.h
-        src/slint/Frost.cpp
-        src/slint/Bindings.h
-        src/slint/Bindings.cpp
-        src/slint/Bridge.h
-        src/slint/Gl.h
-        src/slint/Gl.cpp
-        src/slint/ImageCache.h
-        src/slint/ImageCache.cpp
-        src/slint/MiniPlayerWindow.h
-        src/slint/MiniPlayerWindow.cpp
-        src/slint/ModelMirror.h
-        src/slint/Pages.h
-        src/slint/Pages.cpp
-        src/slint/SlintHost.h
-        src/slint/SlintHost.cpp
-        src/slint/TestDriver.h
-        src/slint/TestDriver.cpp
-        src/slint/VideoRenderer.h
-        src/slint/VideoRenderer.cpp
-    )
-    slint_target_sources(quince-slint ui/main.slint NAMESPACE ui)
-    # the mini player's window, with globals of its own
-    slint_target_sources(quince-slint ui/mini-player.slint NAMESPACE mini)
-    set_property(TARGET quince-slint PROPERTY SLINT_EMBED_RESOURCES embed-files)
-    # i18n/slint/<lang>/LC_MESSAGES/quince-slint.po, made by tools/slint-po.py from the .ts files
-    set_property(TARGET quince-slint PROPERTY SLINT_BUNDLE_TRANSLATIONS ${CMAKE_CURRENT_SOURCE_DIR}/i18n/slint)
-    target_include_directories(quince-slint PRIVATE src/slint)
-    if(NOT MSVC)
-        target_compile_options(quince-slint PRIVATE -Wall -Wextra)
-    endif()
-    target_link_libraries(quince-slint PRIVATE quince_core Slint::Slint PkgConfig::MPV nfd::nfd)
-    add_dependencies(quince-slint mecab-ipadic)
-    if(APPLE)
-        target_sources(quince-slint PRIVATE src/slint/DesktopNotify.mm)
-    else()
-        target_sources(quince-slint PRIVATE src/slint/DesktopNotify.cpp)
-    endif()
-    if(WIN32)
-        # the icon (also the notification's) and version info
-        target_sources(quince-slint PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/quince.rc)
-        # ole32 and uuid: nfd's COM dialog, which its static library does not link
-        target_link_libraries(quince-slint PRIVATE opengl32 shell32 ole32 uuid)
-        set_target_properties(quince-slint PROPERTIES WIN32_EXECUTABLE ON)
-    elseif(APPLE)
-        # Gl.cpp looks the GL entry points up with dlsym(RTLD_DEFAULT)
-        target_link_libraries(quince-slint PRIVATE "-framework OpenGL" "-framework Foundation"
-                              "-framework UserNotifications")
-    else()
-        # static Slint finds fonts through fontconfig but does not link it;
-        # mpv's own EGL context (VideoRenderer.cpp)
-        pkg_check_modules(FONTCONFIG REQUIRED IMPORTED_TARGET fontconfig)
-        pkg_check_modules(EGL REQUIRED IMPORTED_TARGET egl)
-        target_link_libraries(quince-slint PRIVATE PkgConfig::FONTCONFIG PkgConfig::EGL ${CMAKE_DL_LIBS})
-    endif()
-
-    install(TARGETS quince-slint RUNTIME DESTINATION ${QUINCE_BIN_DESTINATION})
-    if(WIN32)
-        # Slint is a DLL on Windows (its headers always declare dllimport)
-        install(FILES $<TARGET_FILE:slint_cpp-shared> DESTINATION ${QUINCE_BIN_DESTINATION})
-    endif()
+install(TARGETS quince
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION ${QUINCE_BIN_DESTINATION}
+)
+if(WIN32)
+    # Slint is a DLL on Windows (its headers always declare dllimport)
+    install(FILES $<TARGET_FILE:slint_cpp-shared> DESTINATION ${QUINCE_BIN_DESTINATION})
 endif()
+
 
 # Sign-in window. Built only when QtWebEngine is there; the player itself
 # never loads Chromium.
@@ -504,18 +388,14 @@ target_link_libraries(quince-romanize PRIVATE Qt6::Core PkgConfig::ICU mecab)
 add_dependencies(quince-romanize mecab-ipadic)
 set_target_properties(quince-romanize PROPERTIES WIN32_EXECUTABLE OFF MACOSX_BUNDLE OFF)
 
-# UI texts; the language follows the system locale
+# UI texts; the language follows the system locale. The .ts files hold the
+# core's and quince-login's tr() texts; those of the .slint files are gettext
+# catalogs in i18n/slint (SLINT_BUNDLE_TRANSLATIONS above)
 set(QUINCE_TRANSLATED quince)
 if(TARGET quince-login)
     list(APPEND QUINCE_TRANSLATED quince-login)
 endif()
-# the Slint frontend needs the .qm for the core's texts (its own .slint texts
-# come from i18n/slint)
-set(QUINCE_QM_TARGETS ${QUINCE_TRANSLATED})
-if(TARGET quince-slint)
-    list(APPEND QUINCE_QM_TARGETS quince-slint)
-endif()
-qt_add_translations(TARGETS ${QUINCE_QM_TARGETS}
+qt_add_translations(TARGETS ${QUINCE_TRANSLATED}
     # the core's tr() texts land in quince's .qm
     SOURCE_TARGETS ${QUINCE_TRANSLATED} quince_core
     TS_FILES i18n/quince_de.ts
@@ -523,10 +403,6 @@ qt_add_translations(TARGETS ${QUINCE_QM_TARGETS}
     LUPDATE_OPTIONS -no-obsolete
 )
 
-install(TARGETS quince
-    BUNDLE DESTINATION .
-    RUNTIME DESTINATION ${QUINCE_BIN_DESTINATION}
-)
 if(TARGET quince-login)
     # found next to the player or on PATH
     install(TARGETS quince-login RUNTIME DESTINATION ${QUINCE_BIN_DESTINATION})
@@ -534,5 +410,5 @@ endif()
 install(FILES LICENSE DESTINATION ${QUINCE_LICENSE_DESTINATION})
 if(UNIX AND NOT APPLE)
     install(FILES packaging/quince.desktop DESTINATION ${CMAKE_INSTALL_DATADIR}/applications)
-    install(FILES qml/icons/quince.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
+    install(FILES ui/icons/quince.svg DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/scalable/apps)
 endif()
