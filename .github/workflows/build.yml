@@ -124,6 +124,18 @@ jobs:
             | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
           echo "::notice title=Quince run::$msg"
         working-directory: build
+      - name: Sign-in probe
+        continue-on-error: true
+        run: |
+          # does Google let WKWebView past the email step? ("Couldn't find" yes)
+          Quince.app/Contents/MacOS/quince-login --probe-email quince.probe.x7f3k2q9@gmail.com "$RUNNER_TEMP/c.txt" \
+            > login.log 2>&1 &
+          pid=$!
+          for i in $(seq 60); do kill -0 $pid 2>/dev/null || break; sleep 1; done
+          kill $pid 2>/dev/null && echo "killed after 60 s" >> login.log
+          msg=$(sed 's/%/%25/g' login.log | head -20 | awk '{printf "%s%%0A", $0}')
+          echo "::notice title=Sign-in probe::$msg"
+        working-directory: build
       - name: Errors as annotations
         if: failure()
         shell: bash
