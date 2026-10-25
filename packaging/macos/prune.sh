@@ -4,6 +4,8 @@
 #   platforminputcontexts  the virtual keyboard (QtQuick, QtQml and the rest)
 #   styles                 the macOS widget style (QtWidgets)
 #   tls/libqopensslbackend OpenSSL; TLS goes through Secure Transport
+#   iconengines            SVG icons (QtSvg)
+#   imageformats/libqpdf   PDF pictures (QtPdf); covers are JPEG, PNG, WebP
 # The window is Slint's; Qt only runs the core.
 # usage: prune.sh <Quince.app>
 set -euo pipefail
@@ -11,7 +13,8 @@ app=$1
 frameworks=$app/Contents/Frameworks
 
 rm -rf "$app/Contents/PlugIns/platforminputcontexts" "$app/Contents/PlugIns/styles" \
-    "$app/Contents/PlugIns/tls/libqopensslbackend.dylib"
+    "$app/Contents/PlugIns/tls/libqopensslbackend.dylib" "$app/Contents/PlugIns/iconengines" \
+    "$app/Contents/PlugIns/imageformats/libqpdf.dylib"
 
 # what a binary loads from Frameworks: QtCore.framework, libmpv.2.dylib, ...
 # The bundling tools write @executable_path/../Frameworks/, @rpath/ or, from
