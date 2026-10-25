@@ -41,7 +41,7 @@ hl.window_rule({ name = "quince-mini", match = { title = "^(Quince mini player)$
 
 ## Signing in, technical details
 
-"Sign in with Google" opens a small separate browser window (quince-login, QtWebEngine, profile only in memory) with Google's sign-in. When it reaches YouTube Music it hands the session cookies to Quince and closes. The player itself never loads a browser engine.
+"Sign in with Google" opens a small separate browser window (quince-login) with Google's sign-in. It uses the web view of the system: WebKitGTK 6 on Linux, WKWebView on macOS, Microsoft Edge WebView2 on Windows. The profile lives only in memory (Linux: ephemeral WebKit session, macOS: non-persistent data store, Windows: InPrivate mode with a temporary folder that is removed afterwards). When it reaches YouTube Music it hands the session cookies to Quince and closes. The password never reaches Quince. The player itself never loads a browser engine.
 
 Quince reads a browser's cookie database itself, without yt-dlp. The Firefox family (Firefox, Zen, LibreWolf, Floorp, Waterfox) works on all systems. The Chromium family (Chrome, Chromium, Brave, Vivaldi, Edge) works on Linux and macOS. On Linux the key comes from the Secret Service or KWallet. On Windows, Chrome's app-bound encryption (used since version 127) prevents it. Only browsers found on the machine are offered, and only YouTube and Google cookies are kept.
 

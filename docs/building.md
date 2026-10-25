@@ -8,12 +8,12 @@ Package names for Arch / EndeavourOS.
 
 Build: cmake, ninja, gcc or clang, a Rust toolchain 1.92 or newer with cargo (builds Slint), qt6-base (Core, Gui, Network, Sql and, on Linux, DBus), qt6-tools (translations), icu (icu-uc and icu-i18n through pkg-config; Qt already depends on it), mpv (libmpv), ffmpeg (libavformat, libavcodec, libswresample; mpv needs it anyway), and on Linux openssl (for the Chromium cookie import), fontconfig and the EGL development files (libglvnd).
 
-Optional for building: qt6-webengine, which gives the sign-in window quince-login. Without it, sign in by importing cookies. ccache and mold are used when present.
+Optional for building: webkitgtk-6.0, which gives the sign-in window quince-login (WebKitGTK 6). Without it, sign in by importing cookies. ccache and mold are used when present.
 
 Runtime: nothing beyond these libraries. There is no yt-dlp and no deno.
 
 ```
-sudo pacman -S --needed cmake ninja rust qt6-base qt6-tools qt6-webengine icu mpv ffmpeg fontconfig libglvnd
+sudo pacman -S --needed cmake ninja rust qt6-base qt6-tools webkitgtk-6.0 icu mpv ffmpeg fontconfig libglvnd
 ```
 
 ## Downloads during the build
@@ -60,11 +60,11 @@ sudo cmake --install build --prefix /usr
 
 The Windows build can be made on Linux with Docker: `packaging/windows/cross-build.sh`. It uses MSYS2's Windows libraries, keeps a cache of about 3 GB in `~/.cache/quince-windows` and puts the zip in the repo folder.
 
-On Windows, Slint is a shared library (`slint_cpp.dll`), shipped next to `quince.exe`. The Windows build has no sign-in window, because quince-login needs QtWebEngine, which it lacks. The Windows build makes its own mpv and FFmpeg with only what Quince uses (`packaging/windows/build-media.sh`), with MSYS2's libraries below them. The macOS download contains Homebrew's GPL builds of mpv and FFmpeg.
+On Windows, Slint is a shared library (`slint_cpp.dll`), shipped next to `quince.exe`. quince-login.exe and `WebView2Loader.dll` lie next to `quince.exe`. quince-login uses Microsoft Edge WebView2, the Edge engine that Windows 10 and 11 ship. The WebView2 SDK (NuGet package Microsoft.Web.WebView2 1.0.4314.35, BSD-3-Clause) is downloaded by `packaging/windows/fetch-webview2.sh` during the cross-build, and its license is installed as `licenses/WebView2-LICENSE.txt`. If WebView2 is missing on a PC, quince-login shows a message and exits. The Windows build makes its own mpv and FFmpeg with only what Quince uses (`packaging/windows/build-media.sh`), with MSYS2's libraries below them, and trims the data of ICU (`packaging/windows/trim-icu.sh`).
 
 ## macOS build
 
-macOS can only be built on a Mac, or by the GitHub workflow in `.github/workflows/build.yml`. The release is for Apple Silicon only. Slint is a shared library (`libslint_cpp.dylib`) inside `Quince.app/Contents/Frameworks`. The app is not notarized.
+macOS can only be built on a Mac, or by the GitHub workflow in `.github/workflows/build.yml`. The release is for Apple Silicon only. Slint is a shared library (`libslint_cpp.dylib`) inside `Quince.app/Contents/Frameworks`. The app is not notarized. quince-login lies in `Quince.app/Contents/MacOS` and uses WKWebView. Like Windows, macOS makes its own small mpv and FFmpeg (`packaging/macos/build-media.sh`, from the shared list `packaging/media.sh`). The package drops the Qt Quick, QML, Widgets and OpenSSL plugins and frameworks that Quince does not use (`packaging/macos/prune.sh`) and trims the data of ICU (`packaging/macos/trim-icu.sh`, `packaging/icu-trim.sh`).
 
 Homebrew builds from source with Homebrew's Qt and mpv (see the Install section of the README for the commands).
 

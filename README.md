@@ -101,7 +101,7 @@ Downloads are on the [releases page](https://github.com/Blackwolf1337/quince/rel
 | Arch Linux, EndeavourOS | [Arch tarball](https://github.com/Blackwolf1337/quince/releases/latest) | Files under usr/, built against Arch's libraries of the release day. No AUR package yet. |
 | Other Linux | [build from source](docs/building.md) | |
 
-On Windows the exe is not code-signed, so SmartScreen may warn on the first start ("More info", then "Run anyway"). The Windows build has no sign-in window; sign in by importing cookies from Firefox.
+On Windows the exe is not code-signed, so SmartScreen may warn on the first start ("More info", then "Run anyway"). The sign-in window needs Microsoft Edge WebView2, which Windows 10 and 11 ship.
 
 On macOS the app is not notarized, so the first start is blocked. Open System Settings, Privacy & Security, and click "Open Anyway" (or right-click the app and choose Open).
 
@@ -121,7 +121,7 @@ Start Quince. The home page loads from a cache and shows after about 0.7 s. On W
 
 You can play without an account. To use your library, liked songs and history, use "Sign in" in the sidebar. There are three ways.
 
-1. "Sign in with Google": a small separate window opens Google's sign-in. When it reaches YouTube Music, it hands the session to Quince and closes. This is not available in the Windows build.
+1. "Sign in with Google": a small separate window opens Google's sign-in. When it reaches YouTube Music, it hands the session to Quince and closes. It uses the web view of the system. On Linux it needs WebKitGTK 6 and is missing in builds made without it.
 2. Take the session of a browser where you are already signed in. The Firefox family works on all systems. The Chromium family works on Linux (on macOS it is written but untested), not on Windows.
 3. Import a cookies.txt file (Netscape format).
 
