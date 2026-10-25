@@ -364,25 +364,33 @@ if(WIN32)
 endif()
 
 
-# Sign-in window. Built only when QtWebEngine is there; the player itself
-# never loads Chromium.
-option(QUINCE_LOGIN "Build the sign-in window quince-login when QtWebEngine is found" ON)
-if(QUINCE_LOGIN)
-    find_package(Qt6 6.8 QUIET COMPONENTS WebEngineWidgets)
+# Sign-in window in the system's own web view (login/Browser.h): WebKitGTK on
+# Linux, built when it is there; the player itself never loads a browser.
+option(QUINCE_LOGIN "Build the sign-in window quince-login" ON)
+if(QUINCE_LOGIN AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    pkg_check_modules(WEBKIT IMPORTED_TARGET webkitgtk-6.0 gtk4)
+    if(WEBKIT_FOUND)
+        set(QUINCE_LOGIN_BROWSER login/BrowserGtk.cpp)
+        set(QUINCE_LOGIN_LIBS PkgConfig::WEBKIT)
+    else()
+        message(STATUS "WebKitGTK 6 not found: no quince-login, sign in by importing cookies")
+    endif()
 endif()
-if(Qt6WebEngineWidgets_FOUND)
+if(QUINCE_LOGIN_BROWSER)
     qt_add_executable(quince-login
         login/main.cpp
+        login/Browser.h
+        ${QUINCE_LOGIN_BROWSER}
         src/ytm/NetscapeCookies.cpp
     )
     target_include_directories(quince-login PRIVATE src)
     if(NOT MSVC)
         target_compile_options(quince-login PRIVATE -Wall -Wextra)
     endif()
-    target_link_libraries(quince-login PRIVATE Qt6::WebEngineWidgets Qt6::Network)
+    target_link_libraries(quince-login PRIVATE Qt6::Core Qt6::Network ${QUINCE_LOGIN_LIBS})
+    # GLib's headers use "signals" as a name
+    target_compile_definitions(quince-login PRIVATE QT_NO_KEYWORDS)
     set_target_properties(quince-login PROPERTIES WIN32_EXECUTABLE ON MACOSX_BUNDLE OFF)
-else()
-    message(STATUS "QtWebEngine not found: no quince-login, sign in by importing cookies")
 endif()
 
 # development aid: prints what the parser makes of a saved InnerTube answer

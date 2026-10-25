@@ -143,7 +143,7 @@ jobs:
       - name: Dependencies
         run: |
           pacman -Syu --noconfirm --needed base-devel git cmake ninja rust qt6-base qt6-tools \
-            qt6-webengine mpv ffmpeg icu openssl fontconfig libglvnd
+            webkitgtk-6.0 mpv ffmpeg icu openssl fontconfig libglvnd
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
