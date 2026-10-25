@@ -17,11 +17,25 @@ rm -rf "$app/Contents/PlugIns/platforminputcontexts" "$app/Contents/PlugIns/styl
     "$app/Contents/PlugIns/imageformats/libqpdf.dylib"
 
 # what a binary loads from Frameworks: QtCore.framework, libmpv.2.dylib, ...
-# The bundling tools write @executable_path/../Frameworks/, @rpath/ or, from
-# one library to the next, @loader_path/ (same folder)
+# The bundling tools write @executable_path/../Frameworks/..., @rpath/... or,
+# from one library to the next, @loader_path/... relative to the library
+# (from inside a framework: @loader_path/../../../libzstd.1.dylib)
 loads() {
-    otool -L "$1" | tail -n +2 | awk '{print $1}' \
-        | sed -nE 's#^@[a-z_]+/(.*/)?Frameworks/([^/]+).*#\2#p; s#^@(rpath|loader_path)/([^/]+).*#\2#p'
+    local dir ref path rel
+    dir=$(dirname "$1")
+    otool -L "$1" | tail -n +2 | awk '{print $1}' | while read -r ref; do
+        case $ref in
+            @executable_path/*) path="$app/Contents/MacOS/${ref#@executable_path/}" ;;
+            @loader_path/*) path="$dir/${ref#@loader_path/}" ;;
+            @rpath/*) path="$frameworks/${ref#@rpath/}" ;;
+            *) continue ;;
+        esac
+        path=$(python3 -c 'import os, sys; print(os.path.normpath(sys.argv[1]))' "$path")
+        rel=${path#"$frameworks"/}
+        if [ "$rel" != "$path" ]; then
+            echo "${rel%%/*}"
+        fi
+    done
 }
 binary_of() { # entry of Frameworks -> its Mach-O file
     case $1 in

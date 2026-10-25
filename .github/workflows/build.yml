@@ -109,7 +109,6 @@ jobs:
             | sed "s|$app/Contents/||; s/%/%25/g" | awk '{printf "%s%%0A", $0}')
           echo "::notice title=Quince.app sizes::$msg"
       - name: Run
-        continue-on-error: true
         run: |
           # the packed app, briefly: it starts, plays and quits by itself
           Quince.app/Contents/MacOS/Quince --ao=null --no-session --play=dQw4w9WgXcQ --quit-after=15000 > run.log 2>&1 &
@@ -123,6 +122,8 @@ jobs:
           msg=$(grep -aE "test:|exit code|killed|panicked|rror|quince|Library not loaded" run.log | head -30 \
             | sed 's/%/%25/g' | awk '{printf "%s%%0A", $0}')
           echo "::notice title=Quince run::$msg"
+          # a bundle that does not start fails the job (playback may fail on the network)
+          if grep -q "Library not loaded" run.log; then echo "::error::Quince.app does not start"; exit 1; fi
         working-directory: build
       - name: Sign-in probe
         continue-on-error: true
