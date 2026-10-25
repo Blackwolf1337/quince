@@ -4,7 +4,7 @@ name: build
 
 on:
   push:
-    branches: [master, packaging]
+    branches: [master, packaging, login-webview]
     tags: ['v*']
   workflow_dispatch:
 
@@ -56,7 +56,7 @@ jobs:
         run: |
           export PKG_CONFIG_PATH="$PWD/media/lib/pkgconfig:$(brew --prefix icu4c)/lib/pkgconfig:$PKG_CONFIG_PATH"
           set -o pipefail
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF \
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release \
                 -DCMAKE_PREFIX_PATH="$(brew --prefix qt)" 2>&1 | tee -a ci.log
           cmake --build build 2>&1 | tee -a ci.log
       - name: Package
@@ -66,7 +66,8 @@ jobs:
           app=build/Quince.app
           # it also fails its own signature check after changing the files; the
           # checks below and the signing at the end decide instead
-          "$(brew --prefix qt)/bin/macdeployqt" "$app" -libpath="$PWD/media/lib" -libpath="$(brew --prefix)/lib" \
+          "$(brew --prefix qt)/bin/macdeployqt" "$app" -executable="$app/Contents/MacOS/quince-login" \
+            -libpath="$PWD/media/lib" -libpath="$(brew --prefix)/lib" \
             || echo "::warning::macdeployqt reported errors"
           # Slint's library (the build copies it to Frameworks): found there, not in the build tree
           slint="$app/Contents/Frameworks/libslint_cpp.dylib"

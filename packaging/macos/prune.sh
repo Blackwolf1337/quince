@@ -28,7 +28,8 @@ binary_of() { # entry of Frameworks -> its Mach-O file
 # macOS's bash 3.2: no associative arrays, so the set is a list in a file
 used=$(mktemp)
 trap 'rm -f "$used"' EXIT
-todo=("$app/Contents/MacOS/Quince")
+todo=()
+while IFS= read -r program; do todo+=("$program"); done < <(find "$app/Contents/MacOS" -type f)
 while IFS= read -r plugin; do todo+=("$plugin"); done < <(find "$app/Contents/PlugIns" -name '*.dylib')
 i=0
 while [ $i -lt ${#todo[@]} ]; do

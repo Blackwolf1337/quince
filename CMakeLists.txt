@@ -364,10 +364,15 @@ if(WIN32)
 endif()
 
 
-# Sign-in window in the system's own web view (login/Browser.h): WebKitGTK on
-# Linux, built when it is there; the player itself never loads a browser.
+# Sign-in window in the system's own web view (login/Browser.h): WKWebView on
+# macOS, WebKitGTK on Linux (built when it is there); the player itself never
+# loads a browser.
 option(QUINCE_LOGIN "Build the sign-in window quince-login" ON)
-if(QUINCE_LOGIN AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+if(QUINCE_LOGIN AND APPLE)
+    set(QUINCE_LOGIN_BROWSER login/BrowserMac.mm)
+    set(QUINCE_LOGIN_LIBS "-framework WebKit" "-framework AppKit")
+    set_source_files_properties(login/BrowserMac.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+elseif(QUINCE_LOGIN AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
     pkg_check_modules(WEBKIT IMPORTED_TARGET webkitgtk-6.0 gtk4)
     if(WEBKIT_FOUND)
         set(QUINCE_LOGIN_BROWSER login/BrowserGtk.cpp)
@@ -391,6 +396,14 @@ if(QUINCE_LOGIN_BROWSER)
     # GLib's headers use "signals" as a name
     target_compile_definitions(quince-login PRIVATE QT_NO_KEYWORDS)
     set_target_properties(quince-login PROPERTIES WIN32_EXECUTABLE ON MACOSX_BUNDLE OFF)
+    if(APPLE)
+        # next to the player inside Quince.app, where Account looks for it
+        add_dependencies(quince-login quince)
+        add_custom_command(TARGET quince-login POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:quince-login> $<TARGET_BUNDLE_CONTENT_DIR:quince>/MacOS/
+            VERBATIM
+        )
+    endif()
 endif()
 
 # development aid: prints what the parser makes of a saved InnerTube answer
