@@ -14,9 +14,11 @@ rm -rf "$app/Contents/PlugIns/platforminputcontexts" "$app/Contents/PlugIns/styl
     "$app/Contents/PlugIns/tls/libqopensslbackend.dylib"
 
 # what a binary loads from Frameworks: QtCore.framework, libmpv.2.dylib, ...
+# The bundling tools write @executable_path/../Frameworks/, @rpath/ or, from
+# one library to the next, @loader_path/ (same folder)
 loads() {
     otool -L "$1" | tail -n +2 | awk '{print $1}' \
-        | sed -nE 's#^(@rpath|@executable_path/\.\./Frameworks|@loader_path(/\.\.)*/Frameworks)/([^/]+).*#\3#p'
+        | sed -nE 's#^@[a-z_]+/(.*/)?Frameworks/([^/]+).*#\2#p; s#^@(rpath|loader_path)/([^/]+).*#\2#p'
 }
 binary_of() { # entry of Frameworks -> its Mach-O file
     case $1 in
@@ -52,3 +54,16 @@ for entry in "$frameworks"/*; do
         rm -rf "$entry"
     fi
 done
+
+# nothing left may load what went
+missing=0
+while IFS= read -r file; do
+    file "$file" | grep -q Mach-O || continue
+    while IFS= read -r entry; do
+        if [ ! -e "$frameworks/$entry" ]; then
+            echo "prune: ${file#"$app"/} loads $entry, which is gone" >&2
+            missing=1
+        fi
+    done < <(loads "$file")
+done < <(find "$app/Contents" -type f \( -perm -u+x -o -name '*.dylib' \))
+exit $missing
