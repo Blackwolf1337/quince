@@ -3,3 +3,4 @@ build/
 compile_commands.json
 *.user
 Quince-*-windows-x64.zip
+build-*/
