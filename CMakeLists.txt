@@ -368,7 +368,19 @@ endif()
 # macOS, WebKitGTK on Linux (built when it is there); the player itself never
 # loads a browser.
 option(QUINCE_LOGIN "Build the sign-in window quince-login" ON)
-if(QUINCE_LOGIN AND APPLE)
+set(QUINCE_WEBVIEW2_SDK "" CACHE PATH "Windows: build/native of the WebView2 SDK (NuGet Microsoft.Web.WebView2)")
+if(QUINCE_LOGIN AND WIN32 AND QUINCE_WEBVIEW2_SDK)
+    set(QUINCE_LOGIN_BROWSER login/BrowserWin.cpp)
+    set(QUINCE_LOGIN_LIBS ole32)
+    # the SDK includes "EventToken.h", MinGW has eventtoken.h (a case-sensitive file system)
+    file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/webview2-shim/EventToken.h "#include <eventtoken.h>\n")
+    set(QUINCE_LOGIN_INCLUDES ${QUINCE_WEBVIEW2_SDK}/include ${CMAKE_CURRENT_BINARY_DIR}/webview2-shim)
+    # the SDK's header carries MSVC's #pragma warning
+    set_source_files_properties(login/BrowserWin.cpp PROPERTIES COMPILE_OPTIONS -Wno-unknown-pragmas)
+    install(FILES ${QUINCE_WEBVIEW2_SDK}/x64/WebView2Loader.dll DESTINATION ${QUINCE_BIN_DESTINATION})
+    install(FILES ${QUINCE_WEBVIEW2_SDK}/../../LICENSE.txt DESTINATION ${QUINCE_LICENSE_DESTINATION}
+            RENAME WebView2-LICENSE.txt)
+elseif(QUINCE_LOGIN AND APPLE)
     set(QUINCE_LOGIN_BROWSER login/BrowserMac.mm)
     set(QUINCE_LOGIN_LIBS "-framework WebKit" "-framework AppKit")
     set_source_files_properties(login/BrowserMac.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
@@ -388,9 +400,12 @@ if(QUINCE_LOGIN_BROWSER)
         ${QUINCE_LOGIN_BROWSER}
         src/ytm/NetscapeCookies.cpp
     )
-    target_include_directories(quince-login PRIVATE src)
+    target_include_directories(quince-login PRIVATE src ${QUINCE_LOGIN_INCLUDES})
     if(NOT MSVC)
         target_compile_options(quince-login PRIVATE -Wall -Wextra)
+    endif()
+    if(WIN32)
+        target_sources(quince-login PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/quince.rc)
     endif()
     target_link_libraries(quince-login PRIVATE Qt6::Core Qt6::Network ${QUINCE_LOGIN_LIBS})
     # GLib's headers use "signals" as a name

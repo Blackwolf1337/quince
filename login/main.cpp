@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
     options.url = kSignInUrl;
     options.appId = QStringLiteral("quince");
     options.languages = QLocale::system().uiLanguages();
+    options.noBrowser = QObject::tr("Signing in needs Microsoft Edge WebView2, which is not installed.");
     QString probeEmail;
     for (int i = 1; i + 1 < args.size();) {
         if (args.at(i) == u"--probe-email") {

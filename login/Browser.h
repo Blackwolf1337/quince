@@ -21,6 +21,8 @@ struct Options
     QString appId;
     // Accept-Language, most wanted first
     QStringList languages;
+    // the message when the system has no web view for it (Windows: WebView2)
+    QString noBrowser;
 };
 
 class Window

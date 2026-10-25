@@ -42,8 +42,9 @@ for lang in languages:
     if os.path.exists(os.path.join(qt_translations, f)):
         copy(os.path.join(qt_translations, f), os.path.join(dist, "translations", f))
 
-for f in ("quince.exe", "slint_cpp.dll"):
-    subprocess.run(["x86_64-w64-mingw32-strip", "--strip-unneeded", os.path.join(dist, f)], check=True)
+for f in ("quince.exe", "quince-login.exe", "slint_cpp.dll"):
+    if os.path.exists(os.path.join(dist, f)):
+        subprocess.run(["x86_64-w64-mingw32-strip", "--strip-unneeded", os.path.join(dist, f)], check=True)
 
 # every DLL from the MSYS2 tree that something in the folder loads
 bin_dir = os.path.join(ucrt, "bin")

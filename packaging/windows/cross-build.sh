@@ -23,8 +23,9 @@ docker run --rm --network host -u "$(id -u):$(id -g)" -e HOME=/cache/home -e XDG
 python3 packaging/windows/fetch-msys2.py /cache /cache/msys \
     qt6-base qt6-imageformats qt6-translations icu libiconv dav1d lame libass zlib
 packaging/windows/build-media.sh /cache /cache/msys
-cmake -S . -B /cache/build -G Ninja -DCMAKE_BUILD_TYPE=Release -DQUINCE_LOGIN=OFF \
-    -DRust_CARGO_TARGET=x86_64-pc-windows-gnu \
+packaging/windows/fetch-webview2.sh /cache/webview2
+cmake -S . -B /cache/build -G Ninja -DCMAKE_BUILD_TYPE=Release \
+    -DRust_CARGO_TARGET=x86_64-pc-windows-gnu -DQUINCE_LOGIN=ON -DQUINCE_WEBVIEW2_SDK=/cache/webview2/build/native \
     -DCMAKE_TOOLCHAIN_FILE=/src/packaging/windows/mingw-toolchain.cmake -DMSYS2_SYSROOT=/cache/msys
 cmake --build /cache/build
 rm -rf /cache/dist && cmake --install /cache/build --prefix /cache/dist/Quince
