@@ -169,6 +169,9 @@ int main(int argc, char *argv[])
     windowState.start(slint::TimerMode::Repeated, kWindowStateInterval, [&] {
         const slint::Window &w = (*window)->window();
         host.setWindowState(w.is_visible(), w.is_minimized());
+#ifdef _WIN32
+        host.setNativeWindow(w.win32_hwnd());
+#endif
         const float scale = w.scale_factor();
         const slint::LogicalSize size({ float(w.size().width) / scale, float(w.size().height) / scale });
         if (w.is_visible() && !w.is_maximized() && !w.is_minimized() && size.width == lastSize.width

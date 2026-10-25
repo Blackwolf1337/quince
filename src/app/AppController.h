@@ -13,6 +13,7 @@ class ColorTheme;
 class Notifications;
 class Discord;
 class Lyrics;
+class MediaControls;
 class Mpris;
 class InnerTube;
 class JsSolver;
@@ -123,5 +124,6 @@ private:
     Notifications *m_notifications = nullptr;
     Discord *m_discord = nullptr;
     Mpris *m_mpris = nullptr; // Linux only
+    MediaControls *m_mediaControls = nullptr; // Windows and macOS
     QString m_reportedPlay; // video whose play went into the history last
 };

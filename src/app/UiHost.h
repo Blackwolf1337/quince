@@ -24,4 +24,7 @@ public:
     virtual void openUrl(const QUrl &url) = 0;
     // a track notification where the core has no way of its own (no D-Bus)
     virtual void showNotification(const QString &title, const QString &body, const QImage &cover) = 0;
+    // the main window's native handle once it exists (Windows: its HWND, for
+    // the media controls), else nullptr
+    virtual void *nativeWindow() const { return nullptr; }
 };

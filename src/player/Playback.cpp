@@ -351,11 +351,7 @@ void Playback::lookupCounterpart(const QVariantMap &item, std::function<void()> 
     if (m_lookingUp.contains(id))
         return;
     m_lookingUp.insert(id);
-    QStringList artists;
-    for (const QVariant &a : item.value(QStringLiteral("artists")).toList())
-        artists.append(a.toMap().value(QStringLiteral("name")).toString());
-    if (artists.isEmpty() && !item.value(QStringLiteral("artistText")).toString().isEmpty())
-        artists.append(item.value(QStringLiteral("artistText")).toString());
+    const QStringList artists = ytm::artistNames(item);
     const QString title = item.value(QStringLiteral("title")).toString();
     const QJsonObject body{
         {QStringLiteral("query"), (artists.value(0) + u' ' + title).trimmed()},

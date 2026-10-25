@@ -7,6 +7,9 @@
 #include "integrations/Notifications.h"
 #include "integrations/SponsorBlock.h"
 #include "lyrics/Lyrics.h"
+#if defined(_WIN32) || defined(__APPLE__)
+#include "integrations/MediaControls.h"
+#endif
 #ifdef QUINCE_DBUS
 #include "integrations/GlobalShortcuts.h"
 #include "integrations/Mpris.h"
@@ -98,6 +101,9 @@ AppController::AppController(const AppOptions &options, UiHost *host, QObject *p
         emit m_effects->changed();
         emit languageChanged();
     });
+#if defined(_WIN32) || defined(__APPLE__)
+    m_mediaControls = new MediaControls(m_playback, m_player, m_host, this);
+#endif
 #ifdef QUINCE_DBUS
     m_mpris = new Mpris(m_playback, m_player, m_settings, m_host, this);
     if (m_settings->globalShortcuts()) {

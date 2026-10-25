@@ -178,6 +178,24 @@ target_link_libraries(quince_core
 if(TARGET OpenSSL::Crypto)
     target_link_libraries(quince_core PRIVATE OpenSSL::Crypto)
 endif()
+# the system's media controls where there is no MPRIS
+if(WIN32)
+    target_sources(quince_core PRIVATE
+        src/integrations/MediaControls.h
+        src/integrations/MediaControls.cpp
+        src/integrations/MediaControlsWin.cpp
+    )
+    # RoGetActivationFactory and the HSTRING functions
+    target_link_libraries(quince_core PRIVATE runtimeobject)
+elseif(APPLE)
+    target_sources(quince_core PRIVATE
+        src/integrations/MediaControls.h
+        src/integrations/MediaControls.cpp
+        src/integrations/MediaControlsMac.mm
+    )
+    set_source_files_properties(src/integrations/MediaControlsMac.mm PROPERTIES COMPILE_OPTIONS -fobjc-arc)
+    target_link_libraries(quince_core PRIVATE "-framework MediaPlayer" "-framework AppKit")
+endif()
 if(TARGET Qt6::DBus)
     # MPRIS and notifications over the session bus
     target_sources(quince_core PRIVATE

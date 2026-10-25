@@ -3,6 +3,7 @@
 #include "app/UiHost.h"
 #include "player/MpvPlayer.h"
 #include "player/Playback.h"
+#include "ytm/Parser.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -29,13 +30,7 @@ constexpr int kCoverWaitMs = 1500;
 
 QString Notifications::artistsOf(const QVariantMap &track)
 {
-    QString text = track.value(QStringLiteral("artistText")).toString();
-    if (text.isEmpty()) {
-        QStringList names;
-        for (const QVariant &a : track.value(QStringLiteral("artists")).toList())
-            names.append(a.toMap().value(QStringLiteral("name")).toString());
-        text = names.join(QStringLiteral(", "));
-    }
+    const QString text = ytm::artistNames(track).join(QStringLiteral(", "));
     const QString album = track.value(QStringLiteral("album")).toMap().value(QStringLiteral("name")).toString();
     return album.isEmpty() ? text : text + QStringLiteral(" • ") + album;
 }

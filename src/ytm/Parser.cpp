@@ -1102,6 +1102,17 @@ QVariantMap parseSuggestions(const QJsonObject &response)
     return {{QStringLiteral("queries"), queries}, {QStringLiteral("items"), items}};
 }
 
+QStringList artistNames(const QVariantMap &item)
+{
+    QStringList names;
+    for (const QVariant &a : item.value(QStringLiteral("artists")).toList())
+        names.append(a.toMap().value(QStringLiteral("name")).toString());
+    const QString text = item.value(QStringLiteral("artistText")).toString();
+    if (names.isEmpty() && !text.isEmpty())
+        names.append(text);
+    return names;
+}
+
 QString artUrl(const QString &url, int pixels)
 {
     static const QRegularExpression sized(QStringLiteral("=w(\\d+)-h(\\d+)([^/=]*)$"));

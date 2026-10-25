@@ -65,4 +65,8 @@ QVariantMap parseSuggestions(const QJsonObject &response);
 // Square googleusercontent pictures are served in any size; others unchanged.
 QString artUrl(const QString &url, int pixels);
 
+// The artists of an item (track, album, video): their names, else the item's
+// artistText as the one name, else none.
+QStringList artistNames(const QVariantMap &item);
+
 } // namespace ytm

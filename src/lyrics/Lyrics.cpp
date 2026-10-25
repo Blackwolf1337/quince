@@ -48,10 +48,7 @@ constexpr double kLead = 0.25;
 
 QString firstArtist(const QVariantMap &track)
 {
-    const QVariantList artists = track.value(QStringLiteral("artists")).toList();
-    if (!artists.isEmpty())
-        return artists.first().toMap().value(QStringLiteral("name")).toString();
-    return track.value(QStringLiteral("artistText")).toString();
+    return ytm::artistNames(track).value(0);
 }
 
 } // namespace

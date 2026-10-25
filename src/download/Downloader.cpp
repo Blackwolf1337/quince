@@ -30,12 +30,7 @@ constexpr int kMaxPages = 60;
 
 QString artistsOf(const QVariantMap &item)
 {
-    QStringList names;
-    for (const QVariant &a : item.value(QStringLiteral("artists")).toList())
-        names.append(a.toMap().value(QStringLiteral("name")).toString());
-    if (names.isEmpty())
-        return item.value(QStringLiteral("artistText")).toString();
-    return names.join(u", ");
+    return ytm::artistNames(item).join(u", ");
 }
 
 // a file or folder name: no path separators or characters Windows refuses

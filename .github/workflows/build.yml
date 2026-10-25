@@ -4,7 +4,7 @@ name: build
 
 on:
   push:
-    branches: [master, packaging]
+    branches: [master, packaging, media-controls]
     tags: ['v*']
   workflow_dispatch:
 

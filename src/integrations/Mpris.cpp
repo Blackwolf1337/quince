@@ -106,11 +106,7 @@ QVariantMap Mpris::metadata() const
     if (videoId.isEmpty())
         return {{QStringLiteral("mpris:trackid"), QVariant::fromValue(trackPath({}))}};
 
-    QStringList artists;
-    for (const QVariant &a : track.value(QStringLiteral("artists")).toList())
-        artists.append(a.toMap().value(QStringLiteral("name")).toString());
-    if (artists.isEmpty() && !track.value(QStringLiteral("artistText")).toString().isEmpty())
-        artists.append(track.value(QStringLiteral("artistText")).toString());
+    const QStringList artists = ytm::artistNames(track);
 
     double length = m_player->duration();
     if (length <= 0)
