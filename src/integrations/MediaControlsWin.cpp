@@ -172,6 +172,7 @@ MediaControls::System *MediaControls::open(MediaControls *owner, void *window)
         system->controls2->add_PlaybackPositionChangeRequested(seek, &system->seekToken);
         seek->Release();
     }
+    qCInfo(lcMediaControls) << "media controls ready";
     return system;
 }
 

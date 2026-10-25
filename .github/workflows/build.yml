@@ -4,7 +4,7 @@ name: build
 
 on:
   push:
-    branches: [master, packaging]
+    branches: [master, packaging, windows-test]
     tags: ['v*']
   workflow_dispatch:
 
@@ -36,6 +36,68 @@ jobs:
         with:
           name: windows
           path: Quince-*-windows-x64.zip
+
+  windows-test:
+    # the zip from above on a real Windows: it starts and plays, Windows lists
+    # its media session (what the media overlay shows), Google's sign-in lets
+    # WebView2 past the email step
+    needs: windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: windows
+      - name: Unpack
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          Expand-Archive -Path Quince-*-windows-x64.zip -DestinationPath app
+          # no GPU and only OpenGL 1.1 on the runner: Mesa's (llvmpipe) next to the program
+          gh release download --repo pal1000/mesa-dist-win --pattern '*-release-msvc.7z' --output mesa.7z
+          7z x -omesa mesa.7z | Out-Null
+          Copy-Item mesa\x64\*.dll app\Quince\
+      - name: Run
+        run: |
+          $env:QT_FORCE_STDERR_LOGGING = "1"
+          $p = Start-Process app\Quince\quince.exe -PassThru -RedirectStandardError run.log -RedirectStandardOutput out.log `
+            -ArgumentList "--ao=null", "--no-session", "--play=dQw4w9WgXcQ", "--quit-after=45000"
+          Start-Sleep -Seconds 25
+          # the sessions Windows knows: app, title, artist, status (Windows PowerShell for WinRT)
+          powershell -NoProfile -Command {
+            Add-Type -AssemblyName System.Runtime.WindowsRuntime
+            $asTask = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object {
+              $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and
+              $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation`1' } | Select-Object -First 1
+            function Await($op, [Type]$type) {
+              $task = $asTask.MakeGenericMethod($type).Invoke($null, @($op)); $task.Wait(-1) | Out-Null; $task.Result
+            }
+            $m = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionManager, Windows.Media.Control, ContentType = WindowsRuntime]
+            $props = [Windows.Media.Control.GlobalSystemMediaTransportControlsSessionMediaProperties, Windows.Media.Control, ContentType = WindowsRuntime]
+            $manager = Await ($m::RequestAsync()) $m
+            foreach ($s in $manager.GetSessions()) {
+              $info = Await ($s.TryGetMediaPropertiesAsync()) $props
+              "session: {0} | {1} | {2} | {3}" -f $s.SourceAppUserModelId, $info.Title, $info.Artist, $s.GetPlaybackInfo().PlaybackStatus
+            }
+          } 2>&1 | Tee-Object -FilePath smtc.log
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); "killed after 85 s" | Add-Content run.log }
+          "exit code $($p.ExitCode)" | Add-Content run.log
+          Get-Content run.log, out.log
+          $msg = (Get-Content run.log, smtc.log | Select-String "test:|exit code|killed|panicked|rror|mediacontrols|media controls|session:" |
+            Select-Object -First 30 | ForEach-Object { $_.Line -replace '%', '%25' }) -join '%0A'
+          "::notice title=Quince run::$msg"
+          # a program that does not start fails the job (playback may fail on the network)
+          if (-not (Select-String -Quiet "test: position" run.log)) { "::error::quince.exe did not run"; exit 1 }
+      - name: Sign-in probe
+        continue-on-error: true
+        run: |
+          # does Google let WebView2 past the email step? ("Couldn't find" yes)
+          $p = Start-Process app\Quince\quince-login.exe -PassThru -RedirectStandardError login.log -RedirectStandardOutput out.log `
+            -ArgumentList "--probe-email", "quince.probe.x7f3k2q9@gmail.com", "$env:RUNNER_TEMP\c.txt"
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); "killed after 60 s" | Add-Content login.log }
+          "exit code $($p.ExitCode)" | Add-Content login.log
+          Get-Content login.log
+          $msg = (Get-Content login.log | Select-Object -First 20 | ForEach-Object { $_ -replace '%', '%25' }) -join '%0A'
+          "::notice title=Sign-in probe::$msg"
 
   macos:
     runs-on: macos-14
