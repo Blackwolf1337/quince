@@ -4,7 +4,7 @@ name: build
 
 on:
   push:
-    branches: [master, packaging, windows-test]
+    branches: [master, packaging]
     tags: ['v*']
   workflow_dispatch:
 
@@ -59,6 +59,8 @@ jobs:
       - name: Run
         run: |
           $env:QT_FORCE_STDERR_LOGGING = "1"
+          # straight to the software renderer (Zink first finds no Vulkan)
+          $env:GALLIUM_DRIVER = "llvmpipe"
           $p = Start-Process app\Quince\quince.exe -PassThru -RedirectStandardError run.log -RedirectStandardOutput out.log `
             -ArgumentList "--ao=null", "--no-session", "--play=dQw4w9WgXcQ", "--quit-after=45000"
           Start-Sleep -Seconds 25
