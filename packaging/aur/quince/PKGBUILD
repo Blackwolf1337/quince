@@ -1,7 +1,7 @@
 # Maintainer: MAINTAINER
 
 pkgname=quince
-pkgver=0.1.1
+pkgver=0.2.0
 pkgrel=1
 pkgdesc='Native YouTube Music player (Slint, libmpv)'
 arch=('x86_64' 'aarch64')
@@ -25,7 +25,7 @@ source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz"
         "slint-$_slint.tar.gz::https://github.com/slint-ui/slint/archive/refs/tags/v$_slint.tar.gz"
         "corrosion-$_corrosion.tar.gz::https://github.com/corrosion-rs/corrosion/archive/refs/tags/v$_corrosion.tar.gz"
         "nfd-$_nfd.tar.gz::https://github.com/btzy/nativefiledialog-extended/archive/refs/tags/v$_nfd.tar.gz")
-sha256sums=('5bf2bcc9ac48939d56a2b33f9c8ca473e42010c9501521282441b50a40763ccc'
+sha256sums=('521e448ed4fff0f35decf13c0d47a5221112b27e57ce714a98150c8c1eaaa336'
             '3da28541062d6d1cfbb92ab09481779f2ad735c89705d981eb66f072ef776538'
             '74130f44264ce5b8cfa51e498b99345f71d2f854b74a9e9dfb6489e13e479e67'
             '559bc4c420475e55c7ab4510adbc562f55d7524d75e8e89d79ce4bb02f5687d9'

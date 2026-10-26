@@ -2,8 +2,8 @@
 class Quince < Formula
   desc "Native YouTube Music player (Slint, libmpv)"
   homepage "https://github.com/Blackwolf1337/quince"
-  url "https://github.com/Blackwolf1337/quince/archive/refs/tags/v0.1.1.tar.gz"
-  sha256 "5bf2bcc9ac48939d56a2b33f9c8ca473e42010c9501521282441b50a40763ccc"
+  url "https://github.com/Blackwolf1337/quince/archive/refs/tags/v0.2.0.tar.gz"
+  sha256 "521e448ed4fff0f35decf13c0d47a5221112b27e57ce714a98150c8c1eaaa336"
   # Quince; MeCab (BSD option); QuickJS-ng; the IPADIC dictionary has its own terms
   license all_of: ["GPL-3.0-or-later", "BSD-3-Clause", "MIT"]
   head "https://github.com/Blackwolf1337/quince.git", branch: "master"
