@@ -647,5 +647,14 @@ void bindBrowse(AppController &app, const Window &window, ImageCache *images)
     });
     // pages and the home cache belong to the account they were loaded for
     QObject::connect(app.account(), &Account::signedInChanged, pages, [pages] { pages->goStart(); });
+    // the open playlist changed or went away
+    QObject::connect(app.account(), &Account::playlistEdited, pages, [pages](const QString &id) {
+        if (BrowsePage *page = pages->current(); page && page->browseId() == id)
+            page->reload();
+    });
+    QObject::connect(app.account(), &Account::playlistDeleted, pages, [pages](const QString &id) {
+        if (BrowsePage *page = pages->current(); page && page->browseId() == id)
+            pages->goStart();
+    });
     pages->goStart();
 }

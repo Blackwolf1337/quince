@@ -1,0 +1,66 @@
+// Renames or deletes one of the account's own playlists (App.edited-playlist),
+// from the sidebar's playlist menu.
+
+import { Style } from "style.slint";
+import { Account, App } from "globals.slint";
+import { Button, DialogFrame, TextField } from "dialog-widgets.slint";
+
+export component PlaylistEdit inherits DialogFrame {
+    in property <bool> deleting;
+    callback done();
+
+    title: root.deleting ? @tr("Delete playlist") : @tr("Rename playlist");
+    button-text: @tr("Cancel");
+
+    function rename() {
+        if new-title.text.replace-all(" ", "") != "" && new-title.text != App.edited-playlist.title {
+            Account.rename-playlist(App.edited-playlist.browse-id, new-title.text);
+            root.done();
+        }
+    }
+
+    init => {
+        if !root.deleting {
+            new-title.focus-field();
+        }
+    }
+
+    if root.deleting: Text {
+        text: @tr("\"{}\" will be deleted from your account. This cannot be undone.", App.edited-playlist.title);
+        color: Style.text;
+        font-size: 14px;
+        wrap: word-wrap;
+    }
+    if root.deleting: HorizontalLayout {
+        alignment: end;
+        Button {
+            text: @tr("Delete");
+            highlighted: true;
+            clicked => {
+                Account.delete-playlist(App.edited-playlist.browse-id, App.edited-playlist.title);
+                root.done();
+            }
+        }
+    }
+
+    HorizontalLayout {
+        visible: !root.deleting;
+        height: root.deleting ? 0px : self.preferred-height;
+        spacing: 8px;
+        new-title := TextField {
+            horizontal-stretch: 1;
+            text: App.edited-playlist.title;
+            accepted => {
+                root.rename();
+            }
+        }
+        Button {
+            text: @tr("Save");
+            raised: true;
+            enabled: new-title.text.replace-all(" ", "") != "" && new-title.text != App.edited-playlist.title;
+            clicked => {
+                root.rename();
+            }
+        }
+    }
+}

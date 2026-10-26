@@ -4,6 +4,7 @@
 #include "download/Downloader.h"
 #include "player/Playback.h"
 #include "player/Queue.h"
+#include "ytm/Account.h"
 #include "ytm/SearchSuggestions.h"
 
 using namespace bridge;
@@ -49,6 +50,7 @@ struct Facts
     bool album = false;
     bool artist = false;
     std::string artistName;
+    bool removable = false;
 };
 
 QString field(const QVariantMap &map, const char *key)
@@ -83,6 +85,7 @@ Facts factsOf(const QVariantMap &item, int serial)
     const QVariantMap artist = firstArtist(item);
     f.artist = !artist.isEmpty();
     f.artistName = text(artist, "name");
+    f.removable = f.track && !field(item, "editPlaylistId").isEmpty();
     return f;
 }
 
@@ -102,6 +105,8 @@ void act(AppController &app, const QString &action, const QString &source, int a
         app.requestDialog(QStringLiteral("addToPlaylist"), { { QStringLiteral("item"), item } });
     else if (action == u"download")
         app.downloads()->download(item);
+    else if (action == u"removeFromPlaylist")
+        app.account()->removeFromPlaylist(field(item, "editPlaylistId"), field(item, "videoId"), field(item, "setVideoId"));
     else if (action == u"remove") {
         if (source == u"queue" && a != playback->queue()->current())
             playback->queue()->remove(a);
@@ -130,6 +135,7 @@ void bindItemMenu(AppController &app, const Window &window)
                     facts.album = f.album;
                     facts.artist = f.artist;
                     facts.artist_name = str(f.artistName);
+                    facts.removable = f.removable;
                     w.global<ui::ItemMenu>().set_facts(facts);
                 });
             });

@@ -277,23 +277,84 @@ void Account::rateAll(const QStringList &videoIds, const QString &status)
     (*step)(0);
 }
 
-void Account::addToPlaylist(const QString &playlistId, const QString &videoId, const QString &title)
+void Account::editPlaylist(const QString &playlistId, const QJsonArray &actions,
+                           std::function<void(const QString &error)> done)
 {
-    const QString id = playlistId.startsWith(u"VL") ? playlistId.mid(2) : playlistId;
     const QJsonObject body{
-        {QStringLiteral("playlistId"), id},
-        {QStringLiteral("actions"), QJsonArray{QJsonObject{
-             {QStringLiteral("action"), QStringLiteral("ACTION_ADD_VIDEO")},
-             {QStringLiteral("addedVideoId"), videoId},
-         }}},
+        {QStringLiteral("playlistId"), playlistId.startsWith(u"VL") ? playlistId.mid(2) : playlistId},
+        {QStringLiteral("actions"), actions},
     };
     m_innerTube->post(QStringLiteral("browse/edit_playlist"), body, this,
-                      [this, title](const QJsonObject &response, const QString &error) {
-        if (!error.isEmpty() || !response.value(u"status").toString().contains(u"SUCCEEDED")) {
+                      [done = std::move(done)](const QJsonObject &response, const QString &error) {
+        if (error.isEmpty() && !response.value(u"status").toString().contains(u"SUCCEEDED"))
+            done(response.value(u"status").toString());
+        else
+            done(error);
+    });
+}
+
+void Account::addToPlaylist(const QString &playlistId, const QString &videoId, const QString &title)
+{
+    const QJsonArray actions{QJsonObject{
+        {QStringLiteral("action"), QStringLiteral("ACTION_ADD_VIDEO")},
+        {QStringLiteral("addedVideoId"), videoId},
+    }};
+    editPlaylist(playlistId, actions, [this, title](const QString &error) {
+        if (!error.isEmpty()) {
             emit message(tr("Could not add to \"%1\". %2").arg(title, error));
             return;
         }
         emit message(tr("Added to \"%1\"").arg(title));
+    });
+}
+
+void Account::removeFromPlaylist(const QString &playlistId, const QString &videoId, const QString &setVideoId)
+{
+    const QJsonArray actions{QJsonObject{
+        {QStringLiteral("action"), QStringLiteral("ACTION_REMOVE_VIDEO")},
+        {QStringLiteral("setVideoId"), setVideoId},
+        {QStringLiteral("removedVideoId"), videoId},
+    }};
+    editPlaylist(playlistId, actions, [this, playlistId](const QString &error) {
+        if (!error.isEmpty()) {
+            emit message(tr("Could not remove the track. %1").arg(error));
+            return;
+        }
+        emit message(tr("Removed from the playlist"));
+        emit playlistEdited(playlistId);
+    });
+}
+
+void Account::renamePlaylist(const QString &playlistId, const QString &title)
+{
+    const QJsonArray actions{QJsonObject{
+        {QStringLiteral("action"), QStringLiteral("ACTION_SET_PLAYLIST_NAME")},
+        {QStringLiteral("playlistName"), title},
+    }};
+    editPlaylist(playlistId, actions, [this, title](const QString &error) {
+        if (!error.isEmpty()) {
+            emit message(tr("Could not rename the playlist. %1").arg(error));
+            return;
+        }
+        emit message(tr("Renamed to \"%1\"").arg(title));
+        reloadPlaylists();
+    });
+}
+
+void Account::deletePlaylist(const QString &playlistId, const QString &title)
+{
+    const QJsonObject body{
+        {QStringLiteral("playlistId"), playlistId.startsWith(u"VL") ? playlistId.mid(2) : playlistId},
+    };
+    m_innerTube->post(QStringLiteral("playlist/delete"), body, this,
+                      [this, playlistId, title](const QJsonObject &, const QString &error) {
+        if (!error.isEmpty()) {
+            emit message(tr("Could not delete \"%1\". %2").arg(title, error));
+            return;
+        }
+        emit message(tr("Deleted \"%1\"").arg(title));
+        emit playlistDeleted(playlistId);
+        reloadPlaylists();
     });
 }
 

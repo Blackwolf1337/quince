@@ -252,7 +252,7 @@ void bindAccount(AppController &app, const Window &window)
          [](ui::MainWindow &w, const std::vector<ChoiceData> &own) {
         auto model = std::make_shared<slint::VectorModel<ui::PlaylistEntry>>();
         for (const ChoiceData &p : own)
-            model->push_back(ui::PlaylistEntry{ str(p.name), str(p.id) });
+            model->push_back(ui::PlaylistEntry{ str(p.name), str(p.id), true });
         w.global<ui::Account>().set_own_playlists(model);
     });
 
@@ -290,6 +290,16 @@ void bindAccount(AppController &app, const Window &window)
         a.on_create_playlist([account, picked](const slint::SharedString &title) {
             toCore(account, [account, picked, t = fromSlint(title).trimmed()] {
                 account->createPlaylist(t, picked->item.value(QStringLiteral("videoId")).toString());
+            });
+        });
+        a.on_rename_playlist([account](const slint::SharedString &browseId, const slint::SharedString &title) {
+            toCore(account, [account, id = fromSlint(browseId), t = fromSlint(title).trimmed()] {
+                account->renamePlaylist(id, t);
+            });
+        });
+        a.on_delete_playlist([account](const slint::SharedString &browseId, const slint::SharedString &title) {
+            toCore(account, [account, id = fromSlint(browseId), t = fromSlint(title)] {
+                account->deletePlaylist(id, t);
             });
         });
     });

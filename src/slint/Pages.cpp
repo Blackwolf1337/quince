@@ -112,8 +112,15 @@ QVariantMap Pages::item(int row, int card) const
     const QVariantMap data = this->row(row);
     if (card >= 0)
         return mapAt(data.value(QStringLiteral("items")).toList(), card);
-    if (type == u"item" || type == u"card")
-        return data.value(QStringLiteral("item")).toMap();
+    if (type == u"item" || type == u"card") {
+        QVariantMap item = data.value(QStringLiteral("item")).toMap();
+        // a track of the account's own playlist can go out of it
+        const BrowsePage *page = current();
+        if (page && page->header().value(QStringLiteral("editable")).toBool()
+            && item.contains(QStringLiteral("setVideoId")))
+            item.insert(QStringLiteral("editPlaylistId"), page->browseId());
+        return item;
+    }
     if (type == u"header")
         return data;
     return {};

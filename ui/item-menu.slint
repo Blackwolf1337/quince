@@ -22,6 +22,8 @@ export struct ItemFacts {
     // the first artist with a page
     artist: bool,
     artist-name: string,
+    // a track of the account's own playlist, on its page
+    removable: bool,
 }
 
 export global ItemMenu {
@@ -30,8 +32,8 @@ export global ItemMenu {
     in-out property <int> serial;
 
     callback look-up(serial: int, source: string, a: int, b: int);
-    // playNext, addToQueue, startRadio, addToPlaylist, download, remove,
-    // copyLink, album, artist
+    // playNext, addToQueue, startRadio, addToPlaylist, removeFromPlaylist,
+    // download, remove, copyLink, album, artist
     callback act(action: string, source: string, a: int, b: int);
 }
 
@@ -101,6 +103,12 @@ export component ItemMenuArea inherits TouchArea {
                 enabled: root.known && Account.signed-in && ItemMenu.facts.track;
                 activated => {
                     root.act("addToPlaylist");
+                }
+            }
+            if root.known && ItemMenu.facts.removable: MenuItem {
+                title: @tr("Remove from playlist");
+                activated => {
+                    root.act("removeFromPlaylist");
                 }
             }
             MenuItem {

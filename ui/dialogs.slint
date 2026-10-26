@@ -1,6 +1,6 @@
 // Area D: the dialogs over the window. App.dialog names the open one
-// (settings, equalizer, signin, addToPlaylist); src/slint/DialogsBindings.cpp
-// sets it when the core asks for a dialog.
+// (settings, equalizer, signin, addToPlaylist, renamePlaylist, deletePlaylist);
+// src/slint/DialogsBindings.cpp sets it when the core asks for a dialog.
 
 import { Frost, Frosted } from "frost.slint";
 import { Style } from "style.slint";
@@ -9,6 +9,7 @@ import { SettingsDialog } from "settings-dialog.slint";
 import { EqualizerDialog } from "equalizer.slint";
 import { SignInDialog } from "sign-in.slint";
 import { PlaylistPicker } from "playlist-picker.slint";
+import { PlaylistEdit } from "playlist-edit.slint";
 
 export component DialogLayer inherits Rectangle {
     // the settings' open category, kept while they are closed
@@ -109,6 +110,19 @@ export component DialogLayer inherits Rectangle {
                 x: (root.width - self.width) / 2;
                 y: (root.height - self.height) / 2;
                 close => {
+                    root.close();
+                }
+            }
+            if App.dialog == "renamePlaylist" || App.dialog == "deletePlaylist": PlaylistEdit {
+                width: 420px;
+                height: self.preferred-height;
+                x: (root.width - self.width) / 2;
+                y: (root.height - self.height) / 2;
+                deleting: App.dialog == "deletePlaylist";
+                close => {
+                    root.close();
+                }
+                done => {
                     root.close();
                 }
             }

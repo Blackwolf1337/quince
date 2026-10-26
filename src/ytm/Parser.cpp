@@ -817,10 +817,12 @@ QVariantMap parseHeader(const QJsonObject &o)
     if (const QJsonObject r = o.value(u"musicResponsiveHeaderRenderer").toObject(); !r.isEmpty())
         return parseResponsiveHeader(r);
     if (const QJsonObject r = o.value(u"musicEditablePlaylistDetailHeaderRenderer").toObject(); !r.isEmpty()) {
+        // the account's own playlist
         const QJsonObject inner = at(r, {"header", "musicResponsiveHeaderRenderer"}).toObject();
-        if (!inner.isEmpty())
-            return parseResponsiveHeader(inner);
-        return parseOldDetailHeader(at(r, {"header", "musicDetailHeaderRenderer"}).toObject());
+        QVariantMap header = !inner.isEmpty() ? parseResponsiveHeader(inner)
+                                              : parseOldDetailHeader(at(r, {"header", "musicDetailHeaderRenderer"}).toObject());
+        header.insert(QStringLiteral("editable"), true);
+        return header;
     }
     if (const QJsonObject r = o.value(u"musicImmersiveHeaderRenderer").toObject(); !r.isEmpty())
         return parseImmersiveHeader(r);

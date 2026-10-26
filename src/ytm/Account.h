@@ -1,5 +1,6 @@
 #pragma once
 
+#include <QJsonArray>
 #include <QObject>
 #include <QString>
 #include <QUrl>
@@ -52,6 +53,10 @@ public:
     Q_INVOKABLE void rateAll(const QStringList &videoIds, const QString &status);
     Q_INVOKABLE void addToPlaylist(const QString &playlistId, const QString &videoId, const QString &title);
     Q_INVOKABLE void createPlaylist(const QString &title, const QString &videoId);
+    // own playlists only; setVideoId is the track's place in the playlist
+    Q_INVOKABLE void removeFromPlaylist(const QString &playlistId, const QString &videoId, const QString &setVideoId);
+    Q_INVOKABLE void renamePlaylist(const QString &playlistId, const QString &title);
+    Q_INVOKABLE void deletePlaylist(const QString &playlistId, const QString &title);
     Q_INVOKABLE void reloadPlaylists();
 
     // counts a play in the account's history, like the site does; trackingUrl
@@ -64,11 +69,16 @@ signals:
     void busyChanged();
     void playlistsChanged();
     void rated(const QString &videoId, const QString &status);
+    // tracks went out of a playlist (its id as passed in)
+    void playlistEdited(const QString &playlistId);
+    void playlistDeleted(const QString &playlistId);
     // short feedback for the user ("Added to ...", errors)
     void message(const QString &text);
 
 private:
     void setBusy(bool busy);
+    // browse/edit_playlist; error is empty when it went through
+    void editPlaylist(const QString &playlistId, const QJsonArray &actions, std::function<void(const QString &error)> done);
     void postRating(const QString &videoId, const QString &status, std::function<void(const QString &error)> done);
     void onSignedInChanged();
     void loadInfo();
