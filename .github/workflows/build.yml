@@ -58,6 +58,9 @@ jobs:
           Copy-Item mesa\x64\*.dll app\Quince\
       - name: Run
         run: |
+          # errors go into the notes below; the check at the end decides
+          $ErrorActionPreference = "Continue"
+          $PSNativeCommandUseErrorActionPreference = $false
           $env:QT_FORCE_STDERR_LOGGING = "1"
           # straight to the software renderer (Zink first finds no Vulkan)
           $env:GALLIUM_DRIVER = "llvmpipe"
