@@ -1,5 +1,21 @@
 # Changelog
 
+## Unreleased
+
+### Selecting tracks
+
+- Pages with tracks (playlists, albums, search results and others) support multi-select. Ctrl+click selects or unselects a track, Shift+click selects the tracks from the last Ctrl+clicked one to this one, Ctrl+A selects every track of the page and Esc clears the selection. A plain click plays as before and clears it. On macOS, Ctrl here is the Command key.
+- The right-click menu of a selected track acts on all selected tracks (its first line shows how many): play next, add to queue, add to playlist, download and remove from playlist. Start radio, copy link, go to album and go to artist are for one track only. Tracks added to an empty queue become the queue.
+
+### Playlists
+
+- The right-click menu of a track on the page of one of your own playlists has "Remove from playlist".
+- Right-clicking one of your own playlists in the sidebar gives "Rename" and "Delete". Delete asks first.
+
+### Fixes
+
+- In rows that mix albums or playlists with videos (for example "Listen again" when signed in), the square covers were cut off and the titles under them were missing.
+
 ## 0.2.0
 
 The interface was rebuilt with Slint, downloads are much smaller, and media controls and sign-in now work on Windows and macOS too.

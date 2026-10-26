@@ -151,13 +151,36 @@ export component Sidebar inherits VerticalLayout {
     ListView {
         vertical-stretch: 1;
         visible: !root.compact;
-        for playlist in Account.playlists: SideButton {
+        for playlist in Account.playlists: Rectangle {
             height: 38px;
-            text: playlist.title;
-            font-size: 13px;
-            selected: App.section == playlist.browse-id;
-            clicked => {
-                App.section-requested(playlist.browse-id, playlist.browse-id);
+            SideButton {
+                text: playlist.title;
+                font-size: 13px;
+                selected: App.section == playlist.browse-id;
+                clicked => {
+                    App.section-requested(playlist.browse-id, playlist.browse-id);
+                }
+            }
+            // the account's own playlists can be renamed and deleted
+            ContextMenuArea {
+                Menu {
+                    MenuItem {
+                        title: @tr("Rename");
+                        enabled: playlist.owned;
+                        activated => {
+                            App.edited-playlist = playlist;
+                            App.dialog = "renamePlaylist";
+                        }
+                    }
+                    MenuItem {
+                        title: @tr("Delete");
+                        enabled: playlist.owned;
+                        activated => {
+                            App.edited-playlist = playlist;
+                            App.dialog = "deletePlaylist";
+                        }
+                    }
+                }
             }
         }
     }

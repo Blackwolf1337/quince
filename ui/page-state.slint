@@ -10,6 +10,8 @@ export struct PageCard {
     video-id: string,
     // a 16:9 cover
     wide: bool,
+    // the wide cards before it in its row (places it in a mixed carousel)
+    wide-before: int,
     // has a play button
     playable: bool,
     // the stripe of a mood or genre button, transparent for none
@@ -34,6 +36,8 @@ export struct PageRow {
     // header, chips, title, item, carousel, grid, card, text; footer for the
     // end of the list (loading, errors)
     type: string,
+    // a track row picked with Ctrl or Shift for the item menu
+    selected: bool,
     // header: detail, artist or title
     style: string,
     title: string,
@@ -51,7 +55,8 @@ export struct PageRow {
     playable: bool,
     // carousel and grid
     cards: [PageCard],
-    any-wide: bool,
+    // the cards with a 16:9 cover
+    wide-count: int,
     compact: bool,
     buttons: bool,
     // title and carousel: a "More" link
@@ -113,4 +118,7 @@ export global Browse {
     callback retry();
     // the row came into view: its cover is wanted
     callback load-art(int);
+    // the selected track rows: toggle or range at a row, all, clear
+    in property <int> selected-count;
+    callback select(int, string);
 }

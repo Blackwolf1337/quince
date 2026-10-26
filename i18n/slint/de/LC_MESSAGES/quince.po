@@ -104,6 +104,11 @@ msgctxt "ItemMenuArea"
 msgid "Play next"
 msgstr "Als Nächstes abspielen"
 
+#: ui/item-menu.slint:84
+msgctxt "ItemMenuArea"
+msgid "{} selected"
+msgstr "{} ausgewählt"
+
 #: ui/item-menu.slint:86
 msgctxt "ItemMenuArea"
 msgid "Add to queue"
@@ -123,6 +128,11 @@ msgstr "Zu Playlist hinzufügen"
 msgctxt "ItemMenuArea"
 msgid "Download"
 msgstr "Herunterladen"
+
+#: ui/item-menu.slint:109
+msgctxt "ItemMenuArea"
+msgid "Remove from playlist"
+msgstr "Aus Playlist entfernen"
 
 #: ui/item-menu.slint:114
 msgctxt "ItemMenuArea"
@@ -1200,3 +1210,43 @@ msgstr "cookies.txt mit einer YouTube-Sitzung"
 msgctxt "SignInDialog"
 msgid "Cookie files (*.txt)"
 msgstr "Cookie-Dateien (*.txt)"
+
+#: ui/sidebar.slint:168
+msgctxt "Sidebar"
+msgid "Rename"
+msgstr "Umbenennen"
+
+#: ui/sidebar.slint:176
+msgctxt "Sidebar"
+msgid "Delete"
+msgstr "Löschen"
+
+#: ui/playlist-edit.slint:12
+msgctxt "PlaylistEdit"
+msgid "Delete playlist"
+msgstr "Playlist löschen"
+
+#: ui/playlist-edit.slint:12
+msgctxt "PlaylistEdit"
+msgid "Rename playlist"
+msgstr "Playlist umbenennen"
+
+#: ui/playlist-edit.slint:13
+msgctxt "PlaylistEdit"
+msgid "Cancel"
+msgstr "Abbrechen"
+
+#: ui/playlist-edit.slint:29
+msgctxt "PlaylistEdit"
+msgid "\"{}\" will be deleted from your account. This cannot be undone."
+msgstr "„{}“ wird aus deinem Konto gelöscht. Das kann nicht rückgängig gemacht werden."
+
+#: ui/playlist-edit.slint:37
+msgctxt "PlaylistEdit"
+msgid "Delete"
+msgstr "Löschen"
+
+#: ui/playlist-edit.slint:58
+msgctxt "PlaylistEdit"
+msgid "Save"
+msgstr "Speichern"

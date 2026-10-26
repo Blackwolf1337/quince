@@ -62,6 +62,8 @@ export struct Link {
 export struct PlaylistEntry {
     title: string,
     browse-id: string,
+    // the account's own: it can be renamed and deleted
+    owned: bool,
 }
 
 export global Player {
@@ -166,6 +168,9 @@ export global Account {
     // title), or into a new one (title)
     callback add-to-playlist(string, string);
     callback create-playlist(string);
+    // the sidebar's playlist menu: browse id and the new or old title
+    callback rename-playlist(string, string);
+    callback delete-playlist(string, string);
 }
 
 // The window's own state and the settings it shows.
@@ -189,8 +194,11 @@ export global App {
 
     // the Now Playing view covers the window (area C)
     in-out property <bool> now-playing-open;
-    // the dialog shown (settings, equalizer, signin, addToPlaylist), empty for none (area D)
+    // the dialog shown (settings, equalizer, signin, addToPlaylist,
+    // renamePlaylist, deletePlaylist), empty for none (area D)
     in-out property <string> dialog;
+    // the playlist renamePlaylist and deletePlaylist are about
+    in-out property <PlaylistEntry> edited-playlist;
 
     // area C: the look and lyrics settings of the Now Playing view
     in property <color> glow: #ffc83d;

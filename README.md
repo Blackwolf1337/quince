@@ -142,7 +142,9 @@ Search or pick something on the home page and click a track. Click the cover or 
 | <kbd>Alt</kbd> + <kbd>→</kbd> or the mouse forward button | forward |
 | <kbd>Ctrl</kbd> + <kbd>L</kbd> | lyrics |
 | <kbd>Ctrl</kbd> + <kbd>P</kbd> | Now Playing view |
-| <kbd>Esc</kbd> | close the Now Playing view |
+| <kbd>Esc</kbd> | close the Now Playing view, or clear the selection |
+| <kbd>Ctrl</kbd> + <kbd>A</kbd> | select every track of the page |
+| <kbd>Ctrl</kbd> + click / <kbd>Shift</kbd> + click | select tracks (the right-click menu then acts on all) |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | mini player |
 
 Media keys work system-wide on all three systems: through MPRIS on Linux, the media overlay on Windows and Now Playing on macOS. Global shortcuts on Linux are described in [docs/usage.md](docs/usage.md).

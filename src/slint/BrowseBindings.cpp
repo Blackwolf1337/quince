@@ -42,6 +42,7 @@ struct ItemData
     bool explicitContent = false;
     bool unavailable = false;
     bool wide = false;
+    int wideBefore = 0; // wide cards before this one in its row
     bool playable = false;
 };
 
@@ -77,7 +78,7 @@ struct RowData
     std::string sortTitle;
     std::vector<std::string> sortOptions;
     int sortSelected = -1;
-    bool anyWide = false;
+    int wideCount = 0;
     bool compact = false;
     bool buttons = false;
     bool more = false;
@@ -176,7 +177,8 @@ RowData rowOf(const QString &type, const QVariantMap &row)
             return d;
         for (const QVariant &v : row.value(QStringLiteral("items")).toList()) {
             d.cards.push_back(itemOf(v.toMap()));
-            d.anyWide = d.anyWide || d.cards.back().wide;
+            d.cards.back().wideBefore = d.wideCount;
+            d.wideCount += d.cards.back().wide;
         }
     }
     return d;
@@ -210,6 +212,7 @@ ui::PageRow makeRow(const RowData &d)
 {
     ui::PageRow row;
     row.type = str(d.type);
+    row.selected = false;
     row.style = str(d.style);
     row.title = str(d.title);
     row.subtitle = str(d.subtitle);
@@ -228,11 +231,12 @@ ui::PageRow makeRow(const RowData &d)
         card.entry = listItem(c);
         card.video_id = str(c.videoId);
         card.wide = c.wide;
+        card.wide_before = c.wideBefore;
         card.playable = c.playable;
         card.color = slint::Color::from_argb_encoded(c.color);
         return card;
     });
-    row.any_wide = d.anyWide;
+    row.wide_count = d.wideCount;
     row.compact = d.compact;
     row.buttons = d.buttons;
     row.more = d.more;
@@ -313,6 +317,8 @@ struct UiPages
         // the row on top of the list when the page was left, and how far past it
         int topRow = 0;
         float topOffset = 0;
+        // where a shift click selects from
+        int anchor = -1;
     };
 
     std::unordered_map<int, Page> pages;
@@ -329,6 +335,53 @@ UiPages &uiPages()
 {
     static UiPages pages; // Slint thread only, emptied by atUiShutdown()
     return pages;
+}
+
+// The selection is the selected flag of a page's track rows (Slint thread).
+bool selectable(const ui::PageRow &row)
+{
+    return row.type == "item" && !row.video_id.empty();
+}
+
+void selectRows(UiPages::Page &page, int index, std::string_view mode)
+{
+    if (!page.rows)
+        return;
+    RowVector &rows = *page.rows;
+    const int count = int(rows.row_count());
+    auto set = [&rows](int i, bool on) {
+        std::optional<ui::PageRow> row = rows.row_data(size_t(i));
+        if (!row || row->selected == on || (on && !selectable(*row)))
+            return;
+        row->selected = on;
+        rows.set_row_data(size_t(i), *row);
+    };
+    if (mode == "toggle" && index >= 0 && index < count) {
+        set(index, !rows.row_data(size_t(index))->selected);
+        page.anchor = index;
+    } else if (mode == "range" && index >= 0 && index < count) {
+        const int from = page.anchor >= 0 && page.anchor < count ? page.anchor : index;
+        for (int i = std::min(from, index); i <= std::max(from, index); i++)
+            set(i, true);
+        page.anchor = from;
+    } else if (mode == "all") {
+        for (int i = 0; i < count; i++)
+            set(i, true);
+    } else {
+        for (int i = 0; i < count; i++)
+            set(i, false);
+        page.anchor = -1;
+    }
+}
+
+int selectedCount(const UiPages::Page *page)
+{
+    int n = 0;
+    if (page && page->rows) {
+        for (size_t i = 0; i < page->rows->row_count(); i++)
+            n += page->rows->row_data(i)->selected;
+    }
+    return n;
 }
 
 // The cover arrived: into the row at index, or wherever that row went since.
@@ -377,7 +430,7 @@ void loadCardArt(ImageCache *images, const ui::PageRow &row, float scale)
 {
     if (row.buttons)
         return;
-    const int pixels = int((row.compact ? kRowArt : row.any_wide ? kWideCardArt : kCardArt) * scale);
+    const int pixels = int((row.compact ? kRowArt : row.wide_count > 0 ? kWideCardArt : kCardArt) * scale);
     std::weak_ptr<slint::Model<ui::PageCard>> weak = row.cards;
     for (size_t i = 0; i < row.cards->row_count(); i++) {
         const ui::PageCard card = *row.cards->row_data(i);
@@ -445,8 +498,12 @@ void show(ui::MainWindow &w, const Shown &s)
         left->topRow = browse.get_list_row();
         left->topOffset = browse.get_list_offset();
     }
+    // a selection stays with its page while that is open
+    if (UiPages::Page *left = pages.find(pages.current); left && pages.current != s.id)
+        selectRows(*left, -1, "clear");
     pages.current = s.id;
     UiPages::Page *page = pages.find(s.id);
+    browse.set_selected_count(selectedCount(page));
     browse.set_rows(page ? std::shared_ptr<RowModel>(page->view) : std::make_shared<RowVector>());
     browse.set_restore_row(page ? page->topRow : 0);
     browse.set_restore_offset(page ? page->topOffset : 0);
@@ -530,6 +587,10 @@ void connectCallbacks(AppController *app, Pages *pages, const Window &window, Im
             toCore(pages, [pages, q = fromSlint(query)] { pages->openPage({ {}, {}, q }); });
         });
 
+        b.on_select([window](int row, const slint::SharedString &mode) {
+            if (auto ui = window.lock())
+                selectPageRows(**ui, row, std::string_view(mode));
+        });
         b.on_activate([app, pages](int row, int card) {
             toCore(pages, [app, pages, row, card] { app->open(pages->item(row, card)); });
         });
@@ -644,5 +705,41 @@ void bindBrowse(AppController &app, const Window &window, ImageCache *images)
     });
     // pages and the home cache belong to the account they were loaded for
     QObject::connect(app.account(), &Account::signedInChanged, pages, [pages] { pages->goStart(); });
+    // the open playlist changed or went away
+    QObject::connect(app.account(), &Account::playlistEdited, pages, [pages](const QString &id) {
+        if (BrowsePage *page = pages->current(); page && page->browseId() == id)
+            page->reload();
+    });
+    QObject::connect(app.account(), &Account::playlistDeleted, pages, [pages](const QString &id) {
+        if (BrowsePage *page = pages->current(); page && page->browseId() == id)
+            pages->goStart();
+    });
     pages->goStart();
+}
+
+std::vector<int> selectedPageRows(ui::MainWindow &, int row)
+{
+    UiPages &pages = uiPages();
+    const UiPages::Page *page = pages.find(pages.current);
+    std::vector<int> rows;
+    if (!page || !page->rows || row < 0 || size_t(row) >= page->rows->row_count()
+        || !page->rows->row_data(size_t(row))->selected)
+        return rows;
+    for (size_t i = 0; i < page->rows->row_count(); i++) {
+        if (page->rows->row_data(i)->selected)
+            rows.push_back(int(i));
+    }
+    if (rows.size() < 2)
+        rows.clear();
+    return rows;
+}
+
+void selectPageRows(ui::MainWindow &w, int row, std::string_view mode)
+{
+    UiPages &pages = uiPages();
+    UiPages::Page *page = pages.find(pages.current);
+    if (!page)
+        return;
+    selectRows(*page, row, mode);
+    w.global<ui::Browse>().set_selected_count(selectedCount(page));
 }

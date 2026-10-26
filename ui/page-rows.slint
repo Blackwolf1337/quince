@@ -373,6 +373,14 @@ export component TitleRow inherits HorizontalLayout {
     }
 }
 
+// The cover height of a carousel's or grid's cards: a row of only videos is
+// lower, a mixed row as high as its square covers.
+global Cards {
+    public pure function cover-height(entry: PageRow) -> length {
+        entry.wide-count > 0 && entry.wide-count == entry.cards.length ? Style.wide-card-width * 9 / 16 : Style.card-width
+    }
+}
+
 // A titled shelf scrolled sideways: cards, columns of small rows (quick
 // picks) or columns of genre buttons.
 export component CarouselRow inherits VerticalLayout {
@@ -384,12 +392,15 @@ export component CarouselRow inherits VerticalLayout {
     private property <length> compact-width: 380px;
     private property <int> button-rows: 3;
 
-    private property <length> card-width: root.entry.any-wide ? Style.wide-card-width : Style.card-width;
+    // cards keep their own width (a video is wider than an album); a card is
+    // placed by the wide ones before it
+    private property <length> widen: Style.wide-card-width - Style.card-width;
     private property <length> step: root.entry.compact ? root.compact-width + 12px : root.entry.buttons ? 196px + 18px
-        : root.card-width + 18px;
+        : Style.card-width + 18px;
     private property <int> columns: root.entry.compact ? Math.ceil(root.entry.cards.length / root.compact-rows)
         : root.entry.buttons ? Math.ceil(root.entry.cards.length / root.button-rows) : root.entry.cards.length;
     private property <length> content-width: 2 * Style.margin + root.columns * root.step
+        + (root.entry.compact || root.entry.buttons ? 0 : root.entry.wide-count * root.widen)
         - (root.entry.compact ? 12px : 18px);
     private property <length> max-offset: max(0px, root.content-width - root.width);
     private property <length> offset;
@@ -453,7 +464,7 @@ export component CarouselRow inherits VerticalLayout {
     // sideways by the buttons or a sideways wheel; a plain wheel scrolls the page
     TouchArea {
         height: root.entry.compact ? root.compact-rows * 60px : root.entry.buttons ? root.button-rows * 60px
-            : (root.entry.any-wide ? Style.wide-card-width * 9 / 16 : Style.card-width) + 70px;
+            : (Cards.cover-height(root.entry) + 70px);
 
         scroll-event(event) => {
             if event.delta-x == 0 {
@@ -473,9 +484,8 @@ export component CarouselRow inherits VerticalLayout {
 
                 if !root.entry.compact && !root.entry.buttons: Rectangle {
                     for card[i] in root.entry.cards: Card {
-                        x: Style.margin + i * root.step;
+                        x: Style.margin + i * root.step + card.wide-before * root.widen;
                         y: 0;
-                        width: root.card-width;
                         card: card;
                         row-index: root.index;
                         index: i;
@@ -557,9 +567,9 @@ export component GridRow inherits VerticalLayout {
     // lines of title and two of subtitle.
     grid := Rectangle {
         private property <length> cell-width: root.entry.buttons ? 196px
-            : root.entry.any-wide ? Style.wide-card-width : Style.card-width;
+            : root.entry.wide-count > 0 ? Style.wide-card-width : Style.card-width;
         private property <length> cell-height: root.entry.buttons ? 48px
-            : (root.entry.any-wide ? Style.wide-card-width * 9 / 16 : Style.card-width) + 8px + 2 * 17px + 8px + 2 * 16px;
+            : Cards.cover-height(root.entry) + 8px + 2 * 17px + 8px + 2 * 16px;
         private property <length> gap: root.entry.buttons ? 12px : 18px;
         private property <int> columns: max(1, floor((self.width + self.gap) / (self.cell-width + self.gap)));
 
@@ -578,7 +588,6 @@ export component GridRow inherits VerticalLayout {
             for card[i] in root.entry.cards: Card {
                 x: mod(i, grid.columns) * (grid.cell-width + grid.gap);
                 y: floor(i / grid.columns) * (grid.cell-height + grid.gap);
-                width: grid.cell-width;
                 card: card;
                 row-index: root.index;
                 index: i;

@@ -22,6 +22,8 @@ export struct ItemFacts {
     // the first artist with a page
     artist: bool,
     artist-name: string,
+    // a track of the account's own playlist, on its page
+    removable: bool,
 }
 
 export global ItemMenu {
@@ -30,8 +32,8 @@ export global ItemMenu {
     in-out property <int> serial;
 
     callback look-up(serial: int, source: string, a: int, b: int);
-    // playNext, addToQueue, startRadio, addToPlaylist, download, remove,
-    // copyLink, album, artist
+    // playNext, addToQueue, startRadio, addToPlaylist, removeFromPlaylist,
+    // download, remove, copyLink, album, artist
     callback act(action: string, source: string, a: int, b: int);
 }
 
@@ -41,6 +43,9 @@ export component ItemMenuArea inherits TouchArea {
     in property <string> source;
     in property <int> a: -1;
     in property <int> b: -1;
+    // the selected tracks the menu acts on; the entries for one item are off
+    // for more
+    in property <int> group: 1;
 
     private property <int> asked: -1;
     private property <bool> known: ItemMenu.facts.serial == root.asked;
@@ -75,6 +80,11 @@ export component ItemMenuArea inherits TouchArea {
 
     ContextMenuArea {
         Menu {
+            if root.group > 1: MenuItem {
+                title: @tr("{} selected", root.group);
+                enabled: false;
+            }
+            if root.group > 1: MenuSeparator { }
             MenuItem {
                 title: @tr("Play next");
                 enabled: root.known && ItemMenu.facts.queueable;
@@ -91,7 +101,7 @@ export component ItemMenuArea inherits TouchArea {
             }
             MenuItem {
                 title: @tr("Start radio");
-                enabled: root.known && ItemMenu.facts.radio;
+                enabled: root.known && ItemMenu.facts.radio && root.group == 1;
                 activated => {
                     root.act("startRadio");
                 }
@@ -101,6 +111,12 @@ export component ItemMenuArea inherits TouchArea {
                 enabled: root.known && Account.signed-in && ItemMenu.facts.track;
                 activated => {
                     root.act("addToPlaylist");
+                }
+            }
+            if root.known && ItemMenu.facts.removable: MenuItem {
+                title: @tr("Remove from playlist");
+                activated => {
+                    root.act("removeFromPlaylist");
                 }
             }
             MenuItem {
@@ -120,21 +136,21 @@ export component ItemMenuArea inherits TouchArea {
             MenuSeparator { }
             MenuItem {
                 title: @tr("Copy link");
-                enabled: root.known && ItemMenu.facts.link;
+                enabled: root.known && ItemMenu.facts.link && root.group == 1;
                 activated => {
                     root.act("copyLink");
                 }
             }
             MenuItem {
                 title: @tr("Go to album");
-                enabled: root.known && ItemMenu.facts.album;
+                enabled: root.known && ItemMenu.facts.album && root.group == 1;
                 activated => {
                     root.act("album");
                 }
             }
             MenuItem {
                 title: root.known && ItemMenu.facts.artist ? @tr("Go to {}", ItemMenu.facts.artist-name) : @tr("Go to artist");
-                enabled: root.known && ItemMenu.facts.artist;
+                enabled: root.known && ItemMenu.facts.artist && root.group == 1;
                 activated => {
                     root.act("artist");
                 }

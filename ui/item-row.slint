@@ -13,11 +13,19 @@ export component ItemRow inherits Rectangle {
     in property <bool> show-index;
     // the play mark under the pointer
     in property <bool> playable: true;
+    // picked for the item menu (Ctrl or Shift click)
+    in property <bool> selected;
     callback activated();
+    // a click with Ctrl (toggle) or Shift (range)
+    callback select(string);
+
+    private property <bool> control;
+    private property <bool> shift;
 
     height: 60px;
     border-radius: Style.radius;
-    background: root.current ? Style.accent.with-alpha(0.1) : touch.has-hover ? Style.hover : transparent;
+    background: root.selected ? Style.accent.with-alpha(touch.has-hover ? 0.24 : 0.18)
+        : root.current ? Style.accent.with-alpha(0.1) : touch.has-hover ? Style.hover : transparent;
     opacity: root.entry.unavailable ? 0.4 : 1;
     animate background { duration: Style.fast; }
 
@@ -104,8 +112,20 @@ export component ItemRow inherits Rectangle {
 
     touch := TouchArea {
         mouse-cursor: pointer;
+        pointer-event(event) => {
+            if event.kind == PointerEventKind.down && event.button == PointerEventButton.left {
+                root.control = event.modifiers.control;
+                root.shift = event.modifiers.shift;
+            }
+        }
         clicked => {
-            root.activated();
+            if root.control {
+                root.select("toggle");
+            } else if root.shift {
+                root.select("range");
+            } else {
+                root.activated();
+            }
         }
     }
 }

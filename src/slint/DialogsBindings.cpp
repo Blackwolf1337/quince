@@ -106,7 +106,8 @@ struct DownloadData
 struct PickerItem : QObject
 {
     using QObject::QObject;
-    QVariantMap item;
+    // the tracks the picker was opened for
+    QStringList videoIds;
 };
 
 std::vector<ChoiceData> choicesOf(const QVariantList &list, const char *idKey, const char *nameKey)
@@ -252,7 +253,7 @@ void bindAccount(AppController &app, const Window &window)
          [](ui::MainWindow &w, const std::vector<ChoiceData> &own) {
         auto model = std::make_shared<slint::VectorModel<ui::PlaylistEntry>>();
         for (const ChoiceData &p : own)
-            model->push_back(ui::PlaylistEntry{ str(p.name), str(p.id) });
+            model->push_back(ui::PlaylistEntry{ str(p.name), str(p.id), true });
         w.global<ui::Account>().set_own_playlists(model);
     });
 
@@ -262,7 +263,15 @@ void bindAccount(AppController &app, const Window &window)
     QObject::connect(&app, &AppController::dialogRequested, &app,
                      [window, account, player, picked](const QString &name, const QVariantMap &data) {
         if (name == u"addToPlaylist") {
-            picked->item = data.value(QStringLiteral("item")).toMap();
+            QVariantList items = data.value(QStringLiteral("items")).toList();
+            if (items.isEmpty())
+                items.append(data.value(QStringLiteral("item")));
+            picked->videoIds.clear();
+            for (const QVariant &item : items) {
+                const QString videoId = item.toMap().value(QStringLiteral("videoId")).toString();
+                if (!videoId.isEmpty())
+                    picked->videoIds.append(videoId);
+            }
             account->reloadPlaylists();
         } else if (name == u"settings")
             player->watchAudioDevices();
@@ -284,12 +293,22 @@ void bindAccount(AppController &app, const Window &window)
         });
         a.on_add_to_playlist([account, picked](const slint::SharedString &browseId, const slint::SharedString &title) {
             toCore(account, [account, picked, id = fromSlint(browseId), t = fromSlint(title)] {
-                account->addToPlaylist(id, picked->item.value(QStringLiteral("videoId")).toString(), t);
+                account->addToPlaylist(id, picked->videoIds, t);
             });
         });
         a.on_create_playlist([account, picked](const slint::SharedString &title) {
             toCore(account, [account, picked, t = fromSlint(title).trimmed()] {
-                account->createPlaylist(t, picked->item.value(QStringLiteral("videoId")).toString());
+                account->createPlaylist(t, picked->videoIds);
+            });
+        });
+        a.on_rename_playlist([account](const slint::SharedString &browseId, const slint::SharedString &title) {
+            toCore(account, [account, id = fromSlint(browseId), t = fromSlint(title).trimmed()] {
+                account->renamePlaylist(id, t);
+            });
+        });
+        a.on_delete_playlist([account](const slint::SharedString &browseId, const slint::SharedString &title) {
+            toCore(account, [account, id = fromSlint(browseId), t = fromSlint(title)] {
+                account->deletePlaylist(id, t);
             });
         });
     });

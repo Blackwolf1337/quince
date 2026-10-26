@@ -64,22 +64,52 @@
         </translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="293"/>
+        <location filename="../src/ytm/Account.cpp" line="304"/>
         <source>Could not add to &quot;%1&quot;. %2</source>
         <translation>Konnte nicht zu „%1“ hinzugefügt werden. %2</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="296"/>
+        <location filename="../src/ytm/Account.cpp" line="307"/>
         <source>Added to &quot;%1&quot;</source>
         <translation>Zu „%1“ hinzugefügt</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="312"/>
+        <location filename="../src/ytm/Account.cpp" line="320"/>
+        <source>Could not remove the track. %1</source>
+        <translation>Titel konnte nicht entfernt werden. %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/Account.cpp" line="323"/>
+        <source>Removed from the playlist</source>
+        <translation>Aus der Playlist entfernt</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/Account.cpp" line="336"/>
+        <source>Could not rename the playlist. %1</source>
+        <translation>Playlist konnte nicht umbenannt werden. %1</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/Account.cpp" line="339"/>
+        <source>Renamed to &quot;%1&quot;</source>
+        <translation>Umbenannt in „%1“</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/Account.cpp" line="352"/>
+        <source>Could not delete &quot;%1&quot;. %2</source>
+        <translation>„%1“ konnte nicht gelöscht werden. %2</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/Account.cpp" line="355"/>
+        <source>Deleted &quot;%1&quot;</source>
+        <translation>„%1“ gelöscht</translation>
+    </message>
+    <message>
+        <location filename="../src/ytm/Account.cpp" line="373"/>
         <source>Could not create &quot;%1&quot;. %2</source>
         <translation>„%1“ konnte nicht erstellt werden. %2</translation>
     </message>
     <message>
-        <location filename="../src/ytm/Account.cpp" line="315"/>
+        <location filename="../src/ytm/Account.cpp" line="376"/>
         <source>Created &quot;%1&quot;</source>
         <translation>„%1“ erstellt</translation>
     </message>
@@ -343,7 +373,7 @@
 <context>
     <name>Tray</name>
     <message>
-        <location filename="../src/slint/Bindings.cpp" line="331"/>
+        <location filename="../src/slint/Bindings.cpp" line="333"/>
         <source>Nothing playing</source>
         <translation>Keine Wiedergabe</translation>
     </message>

@@ -68,6 +68,7 @@ struct PlaylistData
 {
     std::string title;
     std::string browseId;
+    bool owned = false;
 };
 
 TrackData trackOf(const QVariantMap &track)
@@ -234,7 +235,7 @@ void bindAccount(Account *account, const Window &window, ImageCache *images)
         std::vector<PlaylistData> list;
         for (const QVariant &v : a->playlists()) {
             const QVariantMap p = v.toMap();
-            list.push_back({ text(p, "title"), text(p, "browseId") });
+            list.push_back({ text(p, "title"), text(p, "browseId"), p.value(QStringLiteral("owned")).toBool() });
         }
         return list;
     },
@@ -244,6 +245,7 @@ void bindAccount(Account *account, const Window &window, ImageCache *images)
             ui::PlaylistEntry entry;
             entry.title = str(p.title);
             entry.browse_id = str(p.browseId);
+            entry.owned = p.owned;
             model->push_back(entry);
         }
         w.global<ui::Account>().set_playlists(model);
