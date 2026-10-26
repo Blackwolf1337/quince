@@ -58,7 +58,7 @@ sudo cmake --install build --prefix /usr
 
 ## Windows build
 
-The Windows build can be made on Linux with Docker: `packaging/windows/cross-build.sh`. It uses MSYS2's Windows libraries, keeps a cache of about 3 GB in `~/.cache/quince-windows` and puts the zip in the repo folder.
+The Windows build can be made on Linux with Docker: `packaging/windows/cross-build.sh`. It uses MSYS2's Windows libraries, keeps a cache of about 6 GB in `~/.cache/quince-windows` and puts the zip in the repo folder.
 
 On Windows, Slint is a shared library (`slint_cpp.dll`), shipped next to `quince.exe`. quince-login.exe and `WebView2Loader.dll` lie next to `quince.exe`. quince-login uses Microsoft Edge WebView2, the Edge engine that Windows 10 and 11 ship. The WebView2 SDK (NuGet package Microsoft.Web.WebView2 1.0.4314.35, BSD-3-Clause) is downloaded by `packaging/windows/fetch-webview2.sh` during the cross-build, and its license is installed as `licenses/WebView2-LICENSE.txt`. If WebView2 is missing on a PC, quince-login shows a message and exits. The Windows build makes its own mpv and FFmpeg with only what Quince uses (`packaging/windows/build-media.sh`), with MSYS2's libraries below them, and trims the data of ICU (`packaging/windows/trim-icu.sh`).
 

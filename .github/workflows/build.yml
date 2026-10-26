@@ -256,6 +256,10 @@ jobs:
     permissions:
       contents: write
     steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: CHANGELOG.md
+          sparse-checkout-cone-mode: false
       - uses: actions/download-artifact@v4
         with:
           merge-multiple: true
@@ -263,5 +267,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Quince ${GITHUB_REF_NAME#v}" \
-            --generate-notes Quince-*.zip quince-*.tar.zst
+          # the notes: this version's part of CHANGELOG.md, else GitHub's list of commits
+          ver=${GITHUB_REF_NAME#v}
+          awk -v v="## $ver" '$0 == v {on = 1; next} /^## / {on = 0} on' CHANGELOG.md > notes.md
+          if [ -s notes.md ]; then notes=(--notes-file notes.md); else notes=(--generate-notes); fi
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "Quince $ver" \
+            "${notes[@]}" Quince-*.zip quince-*.tar.zst
