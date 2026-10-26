@@ -222,6 +222,15 @@ export component MainWindow inherits Window {
                 App.now-playing-open = false;
                 return accept;
             }
+            if event.text == Key.Escape && Browse.selected-count > 0 {
+                Browse.select(-1, "clear");
+                return accept;
+            }
+            // every track of the open page, for the item menu
+            if event.modifiers.control && (event.text == "a" || event.text == "A") && !App.now-playing-open {
+                Browse.select(-1, "all");
+                return accept;
+            }
             if event.modifiers.control || event.modifiers.alt {
                 return reject;
             }

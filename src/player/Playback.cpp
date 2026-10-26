@@ -431,6 +431,19 @@ void Playback::addToQueue(const QVariantMap &item)
     requestQueue(body, QueueMode::AddEnd);
 }
 
+void Playback::addTracksToQueue(const QVariantList &items)
+{
+    if (items.isEmpty())
+        return;
+    if (m_queue->count() > 0) {
+        m_queue->append(items);
+        return;
+    }
+    m_albumContext.clear();
+    m_queue->setItems(items, 0);
+    startCurrent(0, m_startPaused);
+}
+
 void Playback::requestQueue(const QJsonObject &body, QueueMode mode)
 {
     // a new queue makes answers for the old one useless; additions do not

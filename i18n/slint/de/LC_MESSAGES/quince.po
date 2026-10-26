@@ -104,6 +104,11 @@ msgctxt "ItemMenuArea"
 msgid "Play next"
 msgstr "Als Nächstes abspielen"
 
+#: ui/item-menu.slint:84
+msgctxt "ItemMenuArea"
+msgid "{} selected"
+msgstr "{} ausgewählt"
+
 #: ui/item-menu.slint:86
 msgctxt "ItemMenuArea"
 msgid "Add to queue"

@@ -89,6 +89,43 @@ Facts factsOf(const QVariantMap &item, int serial)
     return f;
 }
 
+// the selected tracks of a page: the actions that take many at once
+void actOnMany(AppController &app, const QString &action, const QString &source, const std::vector<int> &rows)
+{
+    QVariantList items;
+    for (int row : rows) {
+        const QVariantMap item = lookupItem(source, row, -1);
+        if (!field(item, "videoId").isEmpty())
+            items.append(item);
+    }
+    if (items.isEmpty())
+        return;
+    Playback *playback = app.playback();
+    if (action == u"playNext") {
+        // each goes right after the playing track: the last first keeps the order
+        for (auto it = items.crbegin(); it != items.crend(); ++it)
+            playback->playNext(it->toMap());
+    } else if (action == u"addToQueue") {
+        playback->addTracksToQueue(items);
+    } else if (action == u"addToPlaylist") {
+        app.requestDialog(QStringLiteral("addToPlaylist"), { { QStringLiteral("items"), items } });
+    } else if (action == u"download") {
+        for (const QVariant &item : items)
+            app.downloads()->download(item.toMap());
+    } else if (action == u"removeFromPlaylist") {
+        QStringList videoIds;
+        QStringList setVideoIds;
+        for (const QVariant &v : items) {
+            const QVariantMap item = v.toMap();
+            if (field(item, "setVideoId").isEmpty())
+                continue;
+            videoIds.append(field(item, "videoId"));
+            setVideoIds.append(field(item, "setVideoId"));
+        }
+        app.account()->removeFromPlaylist(field(items.first().toMap(), "editPlaylistId"), videoIds, setVideoIds);
+    }
+}
+
 void act(AppController &app, const QString &action, const QString &source, int a, int b)
 {
     const QVariantMap item = lookupItem(source, a, b);
@@ -106,7 +143,7 @@ void act(AppController &app, const QString &action, const QString &source, int a
     else if (action == u"download")
         app.downloads()->download(item);
     else if (action == u"removeFromPlaylist")
-        app.account()->removeFromPlaylist(field(item, "editPlaylistId"), field(item, "videoId"), field(item, "setVideoId"));
+        app.account()->removeFromPlaylist(field(item, "editPlaylistId"), {field(item, "videoId")}, {field(item, "setVideoId")});
     else if (action == u"remove") {
         if (source == u"queue" && a != playback->queue()->current())
             playback->queue()->remove(a);
@@ -140,9 +177,22 @@ void bindItemMenu(AppController &app, const Window &window)
                 });
             });
         });
-        menu.on_act([app](const slint::SharedString &action, const slint::SharedString &source, int a, int b) {
-            toCore(app, [app, action = fromSlint(action), source = fromSlint(source), a, b] {
-                act(*app, action, source, a, b);
+        menu.on_act([app, window](const slint::SharedString &action, const slint::SharedString &source, int a, int b) {
+            // a selected track of a page: the menu is for the whole selection,
+            // which is done with afterwards
+            std::vector<int> rows;
+            if (source == "page" && b < 0) {
+                if (auto ui = window.lock()) {
+                    rows = selectedPageRows(**ui, a);
+                    if (!rows.empty())
+                        selectPageRows(**ui, -1, "clear");
+                }
+            }
+            toCore(app, [app, action = fromSlint(action), source = fromSlint(source), a, b, rows] {
+                if (rows.empty())
+                    act(*app, action, source, a, b);
+                else
+                    actOnMany(*app, action, source, rows);
             });
         });
     });

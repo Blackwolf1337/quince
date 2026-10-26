@@ -70,6 +70,9 @@ public:
     Q_INVOKABLE void previous();
     Q_INVOKABLE void playNext(const QVariantMap &item);
     Q_INVOKABLE void addToQueue(const QVariantMap &item);
+    // tracks for the end of the queue; into an empty queue they are the
+    // queue, without a radio after the first
+    void addTracksToQueue(const QVariantList &items);
     Q_INVOKABLE void startRadio(const QVariantMap &item);
 
     // after a rating went through: the track and its queue entries show it

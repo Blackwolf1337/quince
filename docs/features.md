@@ -10,10 +10,12 @@ The full list of what Quince can do, with all options.
 
 - The queue comes from YouTube Music (album, playlist or radio, automix after an album). The next track is prepared while the current one plays. Track changes are gapless, or a crossfade of 1 to 12 s.
 - Queue panel and right-click menus (play next, add to queue, radio, add to playlist, download, copy link). The last queue comes back paused on start (can be switched off). Copy link puts the music.youtube.com link of a track, album or playlist on the clipboard.
+- Multi-select on pages (playlists, albums, search results and others): Ctrl+click selects or unselects a track, Shift+click selects the tracks from the last Ctrl+clicked one to this one, Ctrl+A selects every track of the open page, and Esc clears the selection. A plain click plays as before and clears it. The right-click menu of a selected track then acts on all selected tracks (its first line shows how many): play next, add to queue, add to playlist, download and remove from playlist. Start radio, copy link, go to album and go to artist are for one track only. Tracks added to an empty queue become the queue. On macOS, Ctrl here is the Command key.
 
 ## Account
 
 - Sign in with Google: library, liked songs, history, likes and dislikes, add to playlist, new playlist. Plays count in the history. Premium accounts get 256 kbit/s Opus.
+- On the page of one of your own playlists, the right-click menu of a track has "Remove from playlist". Right-clicking one of your own playlists in the sidebar gives "Rename" and "Delete" (delete asks first).
 - Like or dislike a whole album or playlist from its page. Optional: skip disliked songs.
 
 ## Views

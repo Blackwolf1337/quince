@@ -9,6 +9,8 @@
 #include <QVariantMap>
 
 #include <functional>
+#include <string_view>
+#include <vector>
 
 class AppController;
 class ImageCache;
@@ -21,6 +23,12 @@ class VideoRenderer;
 using ItemLookup = std::function<QVariantMap(int a, int b)>;
 void registerItemSource(const QString &source, ItemLookup lookup);
 QVariantMap lookupItem(const QString &source, int a, int b);
+
+// The tracks selected on the open page (Slint thread, BrowseBindings.cpp):
+// the selection when row is one of at least two selected, else none
+std::vector<int> selectedPageRows(ui::MainWindow &w, int row);
+// mode: toggle or range (from the last toggled row) at row, all, clear
+void selectPageRows(ui::MainWindow &w, int row, std::string_view mode);
 
 // area A, BrowseBindings.cpp: pages, the page stack, back and forward, search results
 void bindBrowse(AppController &app, const bridge::Window &window, ImageCache *images);

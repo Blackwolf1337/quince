@@ -36,6 +36,8 @@ export struct PageRow {
     // header, chips, title, item, carousel, grid, card, text; footer for the
     // end of the list (loading, errors)
     type: string,
+    // a track row picked with Ctrl or Shift for the item menu
+    selected: bool,
     // header: detail, artist or title
     style: string,
     title: string,
@@ -116,4 +118,7 @@ export global Browse {
     callback retry();
     // the row came into view: its cover is wanted
     callback load-art(int);
+    // the selected track rows: toggle or range at a row, all, clear
+    in property <int> selected-count;
+    callback select(int, string);
 }

@@ -2,6 +2,7 @@
 
 #include <QJsonArray>
 #include <QObject>
+#include <QStringList>
 #include <QString>
 #include <QUrl>
 #include <QVariantList>
@@ -51,10 +52,10 @@ public:
     Q_INVOKABLE void rate(const QString &videoId, const QString &status);
     // the same for many tracks (album-actions), one request after the other
     Q_INVOKABLE void rateAll(const QStringList &videoIds, const QString &status);
-    Q_INVOKABLE void addToPlaylist(const QString &playlistId, const QString &videoId, const QString &title);
-    Q_INVOKABLE void createPlaylist(const QString &title, const QString &videoId);
-    // own playlists only; setVideoId is the track's place in the playlist
-    Q_INVOKABLE void removeFromPlaylist(const QString &playlistId, const QString &videoId, const QString &setVideoId);
+    void addToPlaylist(const QString &playlistId, const QStringList &videoIds, const QString &title);
+    void createPlaylist(const QString &title, const QStringList &videoIds);
+    // own playlists only; a setVideoId is the track's place in the playlist
+    void removeFromPlaylist(const QString &playlistId, const QStringList &videoIds, const QStringList &setVideoIds);
     Q_INVOKABLE void renamePlaylist(const QString &playlistId, const QString &title);
     Q_INVOKABLE void deletePlaylist(const QString &playlistId, const QString &title);
     Q_INVOKABLE void reloadPlaylists();

@@ -55,6 +55,7 @@ component PageRowView inherits VerticalLayout {
             source: "page";
             a: root.index;
             b: -1;
+            group: root.entry.selected ? Browse.selected-count : 1;
 
             ItemRow {
                 width: 100%;
@@ -62,9 +63,18 @@ component PageRowView inherits VerticalLayout {
                 entry: root.entry.item;
                 show-index: root.entry.album-tracks;
                 playable: root.entry.playable;
+                selected: root.entry.selected;
                 current: root.entry.video-id != "" && root.entry.video-id == Player.video-id;
                 activated => {
+                    if Browse.selected-count > 0 {
+                        Browse.select(-1, "clear");
+                    }
                     Browse.activate(root.index, -1);
+                }
+                select(mode) => {
+                    if root.entry.playable {
+                        Browse.select(root.index, mode);
+                    }
                 }
             }
         }

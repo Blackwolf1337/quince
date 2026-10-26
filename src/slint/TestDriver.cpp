@@ -77,13 +77,20 @@ void TestDriver::run(const QString &line)
     if (command == u"click" || command == u"move") {
         const slint::LogicalPosition pos({ parts.value(1).toFloat(), parts.value(2).toFloat() });
         const bool click = command == u"click";
-        const auto button = parts.value(3) == u"right" ? slint::PointerEventButton::Right : slint::PointerEventButton::Left;
-        bridge::toUi(m_window, [pos, click, button](ui::MainWindow &w) {
+        const auto button = parts.contains(QStringLiteral("right")) ? slint::PointerEventButton::Right : slint::PointerEventButton::Left;
+        // held while clicking
+        const slint::SharedString modifier = parts.contains(QStringLiteral("ctrl")) ? keyText(key_codes::Control)
+            : parts.contains(QStringLiteral("shift")) ? keyText(key_codes::Shift) : slint::SharedString();
+        bridge::toUi(m_window, [pos, click, button, modifier](ui::MainWindow &w) {
             w.window().dispatch_pointer_move_event(pos);
             if (!click)
                 return;
+            if (!modifier.empty())
+                w.window().dispatch_key_press_event(modifier);
             w.window().dispatch_pointer_press_event(pos, button);
             w.window().dispatch_pointer_release_event(pos, button);
+            if (!modifier.empty())
+                w.window().dispatch_key_release_event(modifier);
         });
     } else if (command == u"scroll") {
         // like a mouse wheel: notches of 120 as Slint's logical pixels
@@ -121,6 +128,10 @@ void TestDriver::run(const QString &line)
         });
     } else if (command == u"shot") {
         bridge::toUi(m_window, [file = parts.value(1), self = this](ui::MainWindow &w) { screenshot(w, file, self); });
+    } else if (command == u"selection") {
+        bridge::toUi(m_window, [](ui::MainWindow &w) {
+            qInfo("test: selection %d", w.global<ui::Browse>().get_selected_count());
+        });
     } else if (command == u"size") {
         bridge::toUi(m_window, [](ui::MainWindow &w) {
             const auto size = w.window().size();
