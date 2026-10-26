@@ -6,7 +6,7 @@
 
 <p align="center">
   A fast, native player for YouTube Music.<br>
-  Qt and libmpv instead of Electron: a track starts about 0.4 s after the click.
+  Slint, Qt and libmpv instead of Electron: a track starts about 0.4 s after the click.
 </p>
 
 <p align="center">
@@ -27,7 +27,7 @@
   <img src="docs/images/now-playing.jpg" width="860" alt="The Now Playing view with time-synced lyrics">
 </p>
 
-Quince is an alternative to Pear Desktop and the web app. There is no Electron and no yt-dlp. While playing it uses about 270 MiB of memory on the author's machine, against about 800 MiB for Pear Desktop.
+Quince is an alternative to Pear Desktop and the web app. There is no Electron and no yt-dlp. While playing it uses about 300 MiB of memory on the author's machine, against about 800 MiB for Pear Desktop.
 
 Unofficial, not affiliated with Google or YouTube.
 
@@ -71,7 +71,7 @@ Unofficial, not affiliated with Google or YouTube.
     </td>
     <td valign="top">
       <h3><img src="docs/images/icons/broadcast.svg" width="22" alt=""> Desktop</h3>
-      Discord Rich Presence, tray icon and notifications. MPRIS and system-wide shortcuts on Linux.
+      Discord Rich Presence, tray icon and notifications. Media controls on every system (MPRIS on Linux, the media overlay and media keys on Windows, Now Playing on macOS). System-wide shortcuts on Linux.
     </td>
   </tr>
 </table>
@@ -121,7 +121,7 @@ Start Quince. The home page loads from a cache and shows after about 0.7 s. On W
 
 You can play without an account. To use your library, liked songs and history, use "Sign in" in the sidebar. There are three ways.
 
-1. "Sign in with Google": a small separate window opens Google's sign-in. When it reaches YouTube Music, it hands the session to Quince and closes. It uses the web view of the system. On Linux it needs WebKitGTK 6 and is missing in builds made without it.
+1. "Sign in with Google": a small separate window opens Google's sign-in. When it reaches YouTube Music, it hands the session to Quince and closes. It works on all systems and uses the web view of the system: WebKitGTK 6 on Linux, WKWebView on macOS and Microsoft Edge WebView2 on Windows. On Linux it is missing in builds made without WebKitGTK 6.
 2. Take the session of a browser where you are already signed in. The Firefox family works on all systems. The Chromium family works on Linux (on macOS it is written but untested), not on Windows.
 3. Import a cookies.txt file (Netscape format).
 
@@ -145,7 +145,7 @@ Search or pick something on the home page and click a track. Click the cover or 
 | <kbd>Esc</kbd> | close the Now Playing view |
 | <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | mini player |
 
-Media keys work while the window has focus, and on Linux system-wide through MPRIS. Global shortcuts on Linux are described in [docs/usage.md](docs/usage.md).
+Media keys work system-wide on all three systems: through MPRIS on Linux, the media overlay on Windows and Now Playing on macOS. Global shortcuts on Linux are described in [docs/usage.md](docs/usage.md).
 
 ## Troubleshooting
 
@@ -199,7 +199,7 @@ Quince depends on YouTube's internal API. See [docs/maintenance.md](docs/mainten
 
 ## Credits
 
-Quince builds on ytmusicapi, yt-dlp (challenge solver), QuickJS-ng, Inter, MeCab with IPADIC, ICU, LRCLIB, Megalobiz, Genius and SponsorBlock. The full list with licenses is in [docs/credits.md](docs/credits.md).
+Quince builds on Slint, Qt, mpv, ytmusicapi, yt-dlp (challenge solver), QuickJS-ng, Inter, MeCab with IPADIC, ICU, LRCLIB, Megalobiz, Genius and SponsorBlock. The full list with licenses is in [docs/credits.md](docs/credits.md).
 
 ## License
 
