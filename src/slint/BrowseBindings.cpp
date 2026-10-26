@@ -42,6 +42,7 @@ struct ItemData
     bool explicitContent = false;
     bool unavailable = false;
     bool wide = false;
+    int wideBefore = 0; // wide cards before this one in its row
     bool playable = false;
 };
 
@@ -77,7 +78,7 @@ struct RowData
     std::string sortTitle;
     std::vector<std::string> sortOptions;
     int sortSelected = -1;
-    bool anyWide = false;
+    int wideCount = 0;
     bool compact = false;
     bool buttons = false;
     bool more = false;
@@ -176,7 +177,8 @@ RowData rowOf(const QString &type, const QVariantMap &row)
             return d;
         for (const QVariant &v : row.value(QStringLiteral("items")).toList()) {
             d.cards.push_back(itemOf(v.toMap()));
-            d.anyWide = d.anyWide || d.cards.back().wide;
+            d.cards.back().wideBefore = d.wideCount;
+            d.wideCount += d.cards.back().wide;
         }
     }
     return d;
@@ -228,11 +230,12 @@ ui::PageRow makeRow(const RowData &d)
         card.entry = listItem(c);
         card.video_id = str(c.videoId);
         card.wide = c.wide;
+        card.wide_before = c.wideBefore;
         card.playable = c.playable;
         card.color = slint::Color::from_argb_encoded(c.color);
         return card;
     });
-    row.any_wide = d.anyWide;
+    row.wide_count = d.wideCount;
     row.compact = d.compact;
     row.buttons = d.buttons;
     row.more = d.more;
@@ -377,7 +380,7 @@ void loadCardArt(ImageCache *images, const ui::PageRow &row, float scale)
 {
     if (row.buttons)
         return;
-    const int pixels = int((row.compact ? kRowArt : row.any_wide ? kWideCardArt : kCardArt) * scale);
+    const int pixels = int((row.compact ? kRowArt : row.wide_count > 0 ? kWideCardArt : kCardArt) * scale);
     std::weak_ptr<slint::Model<ui::PageCard>> weak = row.cards;
     for (size_t i = 0; i < row.cards->row_count(); i++) {
         const ui::PageCard card = *row.cards->row_data(i);

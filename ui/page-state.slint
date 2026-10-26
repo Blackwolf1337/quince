@@ -10,6 +10,8 @@ export struct PageCard {
     video-id: string,
     // a 16:9 cover
     wide: bool,
+    // the wide cards before it in its row (places it in a mixed carousel)
+    wide-before: int,
     // has a play button
     playable: bool,
     // the stripe of a mood or genre button, transparent for none
@@ -51,7 +53,8 @@ export struct PageRow {
     playable: bool,
     // carousel and grid
     cards: [PageCard],
-    any-wide: bool,
+    // the cards with a 16:9 cover
+    wide-count: int,
     compact: bool,
     buttons: bool,
     // title and carousel: a "More" link
