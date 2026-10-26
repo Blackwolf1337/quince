@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.28)
-project(quince VERSION 0.2.0 LANGUAGES CXX)
+project(quince VERSION 0.3.0 LANGUAGES CXX)
 if(APPLE)
     # notifications (src/slint/DesktopNotify.mm)
     enable_language(OBJCXX)
