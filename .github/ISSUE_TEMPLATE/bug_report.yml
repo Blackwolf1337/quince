@@ -1,0 +1,64 @@
+name: Bug report
+description: Something does not work as it should
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems do not go here. Report them privately, see SECURITY.md.
+  - type: textarea
+    id: what-happens
+    attributes:
+      label: What happens
+      description: What did you do and what did you see?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Start Quince
+        2. Click a track
+        3. ...
+  - type: input
+    id: version
+    attributes:
+      label: Quince version
+      description: "Run quince --version, or give the name of the file you downloaded"
+    validations:
+      required: true
+  - type: dropdown
+    id: system
+    attributes:
+      label: System
+      options:
+        - Linux
+        - Windows
+        - macOS
+    validations:
+      required: true
+  - type: input
+    id: system-version
+    attributes:
+      label: Distribution or system version
+      placeholder: "Arch Linux, Windows 11, macOS 15"
+  - type: dropdown
+    id: signed-in
+    attributes:
+      label: Signed in
+      options:
+        - "Yes, with Google"
+        - "Yes, with browser cookies or cookies.txt"
+        - "No"
+  - type: textarea
+    id: log
+    attributes:
+      label: Log output
+      description: Start Quince from a terminal and paste what it prints.
+      render: text

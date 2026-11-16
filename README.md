@@ -16,80 +16,37 @@
 </p>
 
 <p align="center">
-  <a href="#install">Install</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#getting-started">Getting started</a> ·
-  <a href="#shortcuts">Shortcuts</a> ·
-  <a href="#documentation">Docs</a>
+  <a href="#download">Download</a> ·
+  <a href="#building">Building</a> ·
+  <a href="#documentation">Documentation</a> ·
+  <a href="#contributing">Contributing</a> ·
+  <a href="#license">License</a>
 </p>
 
 <p align="center">
   <img src="docs/images/now-playing.jpg" width="860" alt="The Now Playing view with time-synced lyrics">
 </p>
 
-Quince is an alternative to Pear Desktop and the web app. There is no Electron and no yt-dlp. While playing it uses about 300 MiB of memory on the author's machine, against about 800 MiB for Pear Desktop.
+Quince is an alternative to Pear Desktop and the web app. There is no Electron and no yt-dlp. A track starts about 0.4 s after the click, and playing uses about 270 MiB of memory on the author's machine, against about 800 MiB for Pear Desktop.
 
 Unofficial, not affiliated with Google or YouTube.
 
 ## Features
 
-<table>
-  <tr>
-    <td width="50%" valign="top">
-      <h3><img src="docs/images/icons/library.svg" width="22" alt=""> Browse</h3>
-      Home, Explore, search with suggestions and filters, album, artist and playlist pages. Sign in with Google for your library, liked songs and history.
-    </td>
-    <td width="50%" valign="top">
-      <h3><img src="docs/images/icons/play.svg" width="22" alt=""> Play</h3>
-      Gapless playback or a crossfade of 1 to 12 s. A queue with play next, radio and add to playlist. The last queue comes back on start. Premium accounts get 256 kbit/s Opus.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3><img src="docs/images/icons/captions.svg" width="22" alt=""> Lyrics</h3>
-      Time-synced lyrics from several sources, with four line effects. Japanese, Korean and Chinese lyrics get Latin letters under the lines.
-    </td>
-    <td valign="top">
-      <h3><img src="docs/images/icons/visualizer.svg" width="22" alt=""> Watch</h3>
-      A Now Playing view with a large cover. Video mode from 360p to 2160p with captions, a visualizer when no video plays, and a mini player.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3><img src="docs/images/icons/volume.svg" width="22" alt=""> Sound</h3>
-      Equalizer, compressor, playback speed, skip silences and the choice of the output device. SponsorBlock skips the parts of music videos without music.
-    </td>
-    <td valign="top">
-      <h3><img src="docs/images/icons/download.svg" width="22" alt=""> Download</h3>
-      Tracks, albums and playlists as Opus, M4A or MP3, with tags and cover.
-    </td>
-  </tr>
-  <tr>
-    <td valign="top">
-      <h3><img src="docs/images/icons/palette.svg" width="22" alt=""> Look</h3>
-      A dark theme lit by the album's color. English and Deutsch.
-    </td>
-    <td valign="top">
-      <h3><img src="docs/images/icons/broadcast.svg" width="22" alt=""> Desktop</h3>
-      Discord Rich Presence, tray icon and notifications. Media controls on every system (MPRIS on Linux, the media overlay and media keys on Windows, Now Playing on macOS). System-wide shortcuts on Linux.
-    </td>
-  </tr>
-</table>
+- C++23 with Qt 6 core (network, database, player logic) and a Slint interface.
+- Playback through libmpv, gapless or with a crossfade, with equalizer, compressor and speed.
+- YouTube Music's internal API is called directly (ytmusicapi's way), with yt-dlp's challenge solver running in QuickJS-ng.
+- Home, Explore, search, album, artist and playlist pages, queue, multi-select, library and history when signed in.
+- Time-synced lyrics from LRCLIB, Megalobiz, YouTube Music and Genius, with romanization of Japanese, Korean and Chinese.
+- Video mode, visualizer and mini player.
+- Downloads as Opus, M4A or MP3 with tags and cover.
+- Sign-in through the web view of the system, a browser's cookies or a cookies.txt file. A real sign-in was tested on Linux only.
+- Media controls: MPRIS on Linux, SystemMediaTransportControls on Windows and Now Playing on macOS. The last two are written but have not been seen on a real Windows PC or Mac.
+- Discord Rich Presence, tray icon, notifications, English and German.
 
-All options are listed in [docs/features.md](docs/features.md).
+The user guide (install notes, sign-in, shortcuts, troubleshooting) is in [docs/guide.md](docs/guide.md).
 
-<table>
-  <tr>
-    <td width="50%"><img src="docs/images/home.jpg" alt="The home page"></td>
-    <td width="50%"><img src="docs/images/settings.jpg" alt="The settings"></td>
-  </tr>
-  <tr>
-    <td align="center"><sub>Home</sub></td>
-    <td align="center"><sub>Settings</sub></td>
-  </tr>
-</table>
-
-## Install
+## Download
 
 Downloads are on the [releases page](https://github.com/Blackwolf1337/quince/releases).
 
@@ -97,100 +54,35 @@ Downloads are on the [releases page](https://github.com/Blackwolf1337/quince/rel
 |---|---|---|
 | Windows (64-bit) | [Windows zip](https://github.com/Blackwolf1337/quince/releases/latest) | Portable: unzip anywhere and run `quince.exe` in the `Quince` folder. |
 | macOS (Apple Silicon) | [macOS zip](https://github.com/Blackwolf1337/quince/releases/latest) | Unzip and move Quince.app to Applications. |
-| macOS with Homebrew | [see below](#homebrew) | Builds from source with Homebrew's Qt and mpv. |
+| macOS with Homebrew | [see the guide](docs/guide.md#homebrew) | Builds from source with Homebrew's Qt and mpv. |
 | Arch Linux, EndeavourOS | [Arch tarball](https://github.com/Blackwolf1337/quince/releases/latest) | Files under usr/, built against Arch's libraries of the release day. No AUR package yet. |
 | Other Linux | [build from source](docs/building.md) | |
 
-On Windows the exe is not code-signed, so SmartScreen may warn on the first start ("More info", then "Run anyway"). The sign-in window needs Microsoft Edge WebView2, which Windows 10 and 11 ship.
+## Building
 
-On macOS the app is not notarized, so the first start is blocked. Open System Settings, Privacy & Security, and click "Open Anyway" (or right-click the app and choose Open).
-
-### Homebrew
+Requirements on Arch Linux and EndeavourOS:
 
 ```
-brew tap blackwolf1337/quince
-brew install quince
-ln -sf "$(brew --prefix quince)/Quince.app" ~/Applications/Quince.app
+sudo pacman -S --needed cmake ninja rust qt6-base qt6-tools webkitgtk-6.0 icu mpv ffmpeg fontconfig libglvnd
 ```
 
-The last line links the app once, so Launchpad and Spotlight find it. The command `quince` also starts it.
+Build and run:
 
-## Getting started
+```
+git clone https://github.com/Blackwolf1337/quince.git
+cd quince
+cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build build
+./build/quince
+```
 
-Start Quince. The home page loads from a cache and shows after about 0.7 s. On Windows the very first start can take a while, later starts take about a second.
-
-You can play without an account. To use your library, liked songs and history, use "Sign in" in the sidebar. There are three ways.
-
-1. "Sign in with Google": a small separate window opens Google's sign-in. When it reaches YouTube Music, it hands the session to Quince and closes. It works on all systems and uses the web view of the system: WebKitGTK 6 on Linux, WKWebView on macOS and Microsoft Edge WebView2 on Windows. On Linux it is missing in builds made without WebKitGTK 6.
-2. Take the session of a browser where you are already signed in. The Firefox family works on all systems. The Chromium family works on Linux (on macOS it is written but untested), not on Windows.
-3. Import a cookies.txt file (Netscape format).
-
-Sign out in the same place. More details are in [docs/usage.md](docs/usage.md).
-
-Search or pick something on the home page and click a track. Click the cover or title in the player bar to open the Now Playing view. Right-click a track for the menu. Settings has the sound, look, lyrics, download and language options.
-
-## Shortcuts
-
-| Keys | Action |
-|---|---|
-| <kbd>Space</kbd> | play or pause |
-| <kbd>Ctrl</kbd> + <kbd>←</kbd> / <kbd>→</kbd> | previous, next |
-| <kbd>Ctrl</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> | volume |
-| <kbd>M</kbd> | mute |
-| <kbd>Ctrl</kbd> + <kbd>F</kbd> or <kbd>/</kbd> | search |
-| <kbd>Alt</kbd> + <kbd>←</kbd> or the mouse back button | back |
-| <kbd>Alt</kbd> + <kbd>→</kbd> or the mouse forward button | forward |
-| <kbd>Ctrl</kbd> + <kbd>L</kbd> | lyrics |
-| <kbd>Ctrl</kbd> + <kbd>P</kbd> | Now Playing view |
-| <kbd>Esc</kbd> | close the Now Playing view, or clear the selection |
-| <kbd>Ctrl</kbd> + <kbd>A</kbd> | select every track of the page |
-| <kbd>Ctrl</kbd> + click / <kbd>Shift</kbd> + click | select tracks (the right-click menu then acts on all) |
-| <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>M</kbd> | mini player |
-
-Media keys work system-wide on all three systems: through MPRIS on Linux, the media overlay on Windows and Now Playing on macOS. Global shortcuts on Linux are described in [docs/usage.md](docs/usage.md).
-
-## Troubleshooting
-
-<details>
-<summary>Windows warns on the first start</summary>
-
-The exe is not code-signed. Click "More info", then "Run anyway".
-</details>
-
-<details>
-<summary>macOS blocks the first start</summary>
-
-The app is not notarized. Open System Settings, Privacy & Security, and click "Open Anyway", or right-click the app and choose Open.
-</details>
-
-<details>
-<summary>Chrome or Edge cookies do not work on Windows</summary>
-
-Chrome encrypts them with app-bound encryption since version 127. Use Firefox, or import a cookies.txt file.
-</details>
-
-<details>
-<summary>The first start on Windows is slow</summary>
-
-This is expected, later starts take about a second.
-</details>
-
-<details>
-<summary>YouTube asks to "Sign in to confirm you're not a bot"</summary>
-
-This happens when signed out, especially after many requests, and some tracks then do not play. Sign in or wait for some time.
-</details>
-
-<details>
-<summary>Playback or pages break after a YouTube change</summary>
-
-Quince depends on YouTube's internal API. See [docs/maintenance.md](docs/maintenance.md) for how the solver and the parser are updated.
-</details>
+[docs/building.md](docs/building.md) has the full requirements, the install step, the Windows and macOS builds and the translations.
 
 ## Documentation
 
 | | |
 |---|---|
+| [User guide](docs/guide.md) | install notes, sign-in, shortcuts, troubleshooting |
 | [Features](docs/features.md) | every feature and option in detail |
 | [Usage](docs/usage.md) | command line, global shortcuts, mini player on Hyprland, sign-in details, files |
 | [Building](docs/building.md) | requirements, build, install, Windows and macOS builds |
@@ -198,6 +90,14 @@ Quince depends on YouTube's internal API. See [docs/maintenance.md](docs/mainten
 | [Maintenance](docs/maintenance.md) | updating the solver and the parser, development tools |
 | [Architecture](docs/architecture.md) | how streaming works and the source layout |
 | [Credits](docs/credits.md) | credits and licenses of the parts Quince uses |
+
+## Contributing
+
+Bug reports, ideas and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [Code of Conduct](CODE_OF_CONDUCT.md) first.
+
+## Security
+
+Report security problems privately, as described in [SECURITY.md](SECURITY.md), never in a public issue.
 
 ## Credits
 
